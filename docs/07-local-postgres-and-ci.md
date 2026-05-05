@@ -82,12 +82,11 @@ npm run build
 - 执行 `npx prisma generate`。
 - 执行 `npx prisma migrate deploy`。
 - 执行安全 `npm run db:seed`。
-- 显式 bootstrap 测试用户。
 - 执行 `npm run typecheck`。
 - 执行 `npm run test`。
 - 执行 `npm run build`。
 
-CI 不使用 SQLite，不使用 localStorage production path。
+CI 不使用 SQLite，不使用 localStorage production path。CI 里的 `db:seed` 只补系统权限和缺失系统字段配置，不创建默认用户或客户。
 
 ## Production 禁令
 
@@ -95,12 +94,11 @@ CI 不使用 SQLite，不使用 localStorage production path。
 
 ```bash
 npx prisma migrate deploy
-npm run db:seed
 npm run build
 npm start
 ```
 
-`npm run db:seed` 不会创建用户或客户。默认用户 bootstrap 不属于生产部署步骤。
+`npm run db:seed` 不会创建、更新或删除用户和客户；如需补系统字典，必须作为独立人工步骤执行。默认用户 bootstrap 不属于生产部署步骤。
 
 生产环境禁止：
 

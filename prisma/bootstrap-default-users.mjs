@@ -7,7 +7,33 @@ if (process.env.ALLOW_DEFAULT_USER_BOOTSTRAP !== "true") {
   process.exit(1);
 }
 
+if (
+  process.env.NODE_ENV === "production" &&
+  process.env.BOOTSTRAP_DEFAULT_USERS_CONFIRM !== "I_UNDERSTAND_THIS_CREATES_USERS"
+) {
+  console.error(
+    "Refusing to bootstrap default users in production. Set BOOTSTRAP_DEFAULT_USERS_CONFIRM=I_UNDERSTAND_THIS_CREATES_USERS only after backup and manual approval."
+  );
+  process.exit(1);
+}
+
 const prisma = new PrismaClient();
+const seedEmails = seedUsers.map((user) => user.email);
+
+const nonDefaultUserCount = await prisma.user.count({
+  where: { email: { notIn: seedEmails } }
+});
+
+if (
+  nonDefaultUserCount > 0 &&
+  process.env.BOOTSTRAP_NON_DEFAULT_USERS_CONFIRM !== "I_UNDERSTAND_THIS_DATABASE_ALREADY_HAS_USERS"
+) {
+  await prisma.$disconnect();
+  console.error(
+    `Refusing to bootstrap default users because the database already has ${nonDefaultUserCount} non-default user(s). Set BOOTSTRAP_NON_DEFAULT_USERS_CONFIRM=I_UNDERSTAND_THIS_DATABASE_ALREADY_HAS_USERS only after confirming this is intentional.`
+  );
+  process.exit(1);
+}
 
 function hashPassword(password) {
   const salt = crypto.randomBytes(16).toString("base64url");

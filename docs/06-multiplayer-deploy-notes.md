@@ -17,25 +17,43 @@ NODE_ENV="production"
 ## 部署命令
 
 ```bash
-npm install
+cd /opt/kingaos
+git pull
+npm ci
 npx prisma generate
 npx prisma migrate deploy
-npm run db:seed
 npm run build
-npm start
+pm2 restart kingaos
 ```
 
 如果 `DATABASE_URL` 仍是占位值，不能宣称已经完成真实 PostgreSQL migration / seed，也不能宣称已经完成多人部署验证。
 
 `npm run db:seed` 是生产安全 seed：只维护权限字典和缺失的系统字段定义，不创建用户、不修改用户、不修改客户。
 
+`npm run db:seed` 不属于每次部署自动步骤。如确需补系统权限或缺失系统字段配置，必须单独执行：
+
+```bash
+npm run db:seed
+```
+
 默认用户初始化不是部署步骤。只有首次空库初始化或 demo/dev 初始化时，才允许人工显式执行：
 
 ```bash
-ALLOW_DEFAULT_USER_BOOTSTRAP=true npm run db:bootstrap-default-users
+ALLOW_DEFAULT_USER_BOOTSTRAP=true \
+BOOTSTRAP_DEFAULT_USERS_CONFIRM=I_UNDERSTAND_THIS_CREATES_USERS \
+npm run db:bootstrap-default-users
 ```
 
+如果数据库里已有任何非默认用户，bootstrap 会拒绝执行；除非额外设置 `BOOTSTRAP_NON_DEFAULT_USERS_CONFIRM=I_UNDERSTAND_THIS_DATABASE_ALREADY_HAS_USERS`。
+
 部署脚本禁止自动执行默认用户 bootstrap、客户 backfill 或任何会创建/修改业务数据的脚本。
+
+客户身份 backfill 默认只 dry-run。真正写入必须显式确认：
+
+```bash
+BACKFILL_CONFIRM=I_UNDERSTAND_THIS_CHANGES_BUSINESS_DATA \
+npm run backfill:customer-identities
+```
 
 生产环境 migration 只允许使用：
 
@@ -88,7 +106,6 @@ SESSION_COOKIE_SECURE="false"
 - `npx prisma validate`
 - `npx prisma generate`
 - `npx prisma migrate deploy`
-- `npm run db:seed`
 - `npm run typecheck`
 - `npm run test`
 - `npm run build`
