@@ -13,8 +13,13 @@
 - `DIRECT_URL` 可与 `DATABASE_URL` 相同，供 Prisma migration / seed 使用。
 - 不同电脑登录后，应看到同一套数据库数据。
 - 部署后执行 `npx prisma migrate deploy` 和 `npm run db:seed` 初始化结构和初始账号。
-- 客户国家 / 州省 / 城市同时保存 code 和 name：`countryCode`、`countryName`、`stateCode`、`stateName`、`cityName`。
+- 客户国家 / 地区、州 / 省、城市同时保存 code 和 name：`countryCode`、`countryName`、`stateCode`、`stateName`、`cityName`。
+- 国家 / 地区统一使用中文名称展示，并保存 `countryCode` 作为稳定查询值。
+- 地址层级只做到国家 / 地区 → 州 / 省 → 城市，不做区县、街道或更细行政层级。
 - 旧 `country` / `city` 字段继续保留兼容，详情和列表优先显示新字段，缺失时 fallback 到旧字段。
+- 管理员可以修改自定义字段类型；系统字段类型默认锁定。
+- 字段类型 UI 显示中文，内部值仍为 `text` / `textarea` / `number` / `date` / `select` / `boolean`。
+- 修改自定义字段类型不会清空客户 `customFields` 历史值。
 - 客户档案支持多个联系人，联系人数据保存到 `CustomerContact`。
 - 客户档案支持附件记录，附件元数据保存到 `CustomerAttachment`。
 - 当前附件第一版使用附件链接，`storageProvider=external_url`。

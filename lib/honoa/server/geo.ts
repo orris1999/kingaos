@@ -6,10 +6,12 @@ import {
   isValidCountryCode,
   isValidStateCode
 } from "@countrystatecity/countries";
+import { chineseCountryName } from "../shared/geo";
 
 export type GeoCountryOption = {
   code: string;
   name: string;
+  sourceName?: string;
 };
 
 export type GeoStateOption = {
@@ -25,8 +27,8 @@ let countriesCache: GeoCountryOption[] | null = null;
 const statesCache = new Map<string, GeoStateOption[]>();
 const citiesCache = new Map<string, GeoCityOption[]>();
 
-function countryDisplayName(country: { name: string; native?: string | null; translations?: Record<string, string> }) {
-  return country.translations?.["zh-CN"] || country.native || country.name;
+function countryDisplayName(countryCode: string, sourceName?: string | null) {
+  return chineseCountryName(countryCode) || sourceName || countryCode;
 }
 
 export async function listGeoCountries(): Promise<GeoCountryOption[]> {
@@ -37,7 +39,8 @@ export async function listGeoCountries(): Promise<GeoCountryOption[]> {
       const meta = await getCountryByCode(country.iso2).catch(() => null);
       return {
         code: country.iso2,
-        name: countryDisplayName(meta || country)
+        name: countryDisplayName(country.iso2, meta?.name || country.name),
+        sourceName: meta?.name || country.name
       };
     })
   );
@@ -46,8 +49,9 @@ export async function listGeoCountries(): Promise<GeoCountryOption[]> {
 }
 
 export async function getGeoCountryName(countryCode: string) {
-  const country = await getCountryByCode(countryCode);
-  return country ? countryDisplayName(country) : null;
+  const normalized = countryCode.trim().toUpperCase();
+  const country = await getCountryByCode(normalized);
+  return country ? countryDisplayName(normalized, country.name) : chineseCountryName(normalized);
 }
 
 export async function listGeoStates(countryCode: string): Promise<GeoStateOption[]> {
@@ -91,7 +95,7 @@ export async function validateCustomerGeoInput(input: {
   if (!countryCode && !input.countryName && !stateCode && !input.stateName && !cityName) return;
   if (!countryCode) throw new Error("请选择国家 / 地区。");
   if (!(await isValidCountryCode(countryCode))) throw new Error("国家 / 地区无效。");
-  if (stateCode && !(await isValidStateCode(countryCode, stateCode))) throw new Error("州 / 省 / 地区不属于所选国家 / 地区。");
+  if (stateCode && !(await isValidStateCode(countryCode, stateCode))) throw new Error("州 / 省不属于所选国家 / 地区。");
 }
 
 export async function resolveCustomerGeoInput(input: {

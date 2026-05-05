@@ -4,6 +4,7 @@ import {
   CUSTOMER_TYPES
 } from "../shared/constants";
 import type { ExportCustomer, ExportCustomerInput, User } from "../shared/domain-types";
+import { customerGeoDisplay, normalizeCustomerGeo } from "../shared/geo";
 import type { KingaStore } from "../shared/mock-store";
 import { newId, nowIso } from "../shared/mock-store";
 import { hasAnyPermission, hasPermission } from "../permissions/actions";
@@ -50,8 +51,7 @@ export function searchExportCustomers(store: KingaStore, actor: User, query: str
       customer.customerCode,
       customer.name,
       customer.customerType,
-      customer.country,
-      customer.city,
+      customerGeoDisplay(customer).full,
       customer.source,
       customer.status,
       customer.ownerName
@@ -79,18 +79,19 @@ export function createExportCustomer(store: KingaStore, actor: User, input: Expo
   if (!input.name.trim()) throw new Error("请填写客户名称。");
 
   const now = nowIso();
+  const geo = normalizeCustomerGeo(input);
   const customer: ExportCustomer = {
     id: newId("cus"),
     customerCode: nextCustomerCode(store),
     name: input.name.trim(),
     customerType: input.customerType || CUSTOMER_TYPES[0],
-    country: input.country || "",
-    countryCode: input.countryCode || null,
-    countryName: input.countryName || null,
-    stateCode: input.stateCode || null,
-    stateName: input.stateName || null,
-    cityName: input.cityName || null,
-    city: input.city || "",
+    country: geo.country,
+    countryCode: geo.countryCode,
+    countryName: geo.countryName,
+    stateCode: geo.stateCode,
+    stateName: geo.stateName,
+    cityName: geo.cityName,
+    city: geo.city,
     source: input.source || "",
     status: input.status || CUSTOMER_STATUSES[0],
     ownerUserId,
@@ -130,9 +131,25 @@ export function updateExportCustomer(store: KingaStore, actor: User, customerId:
   if (!owner) throw new Error("负责业务员无效或已停用。");
   if (!input.name.trim()) throw new Error("请填写客户名称。");
 
+  const geo = normalizeCustomerGeo({
+    countryCode: input.countryCode,
+    countryName: input.countryName,
+    stateCode: input.stateCode,
+    stateName: input.stateName,
+    cityName: input.cityName,
+    country: input.country ?? existing.country,
+    city: input.city ?? existing.city
+  });
   const next: ExportCustomer = {
     ...existing,
     ...pickSystemCustomerFields(input),
+    country: geo.country,
+    countryCode: geo.countryCode,
+    countryName: geo.countryName,
+    stateCode: geo.stateCode,
+    stateName: geo.stateName,
+    cityName: geo.cityName,
+    city: geo.city,
     name: input.name.trim(),
     ownerUserId,
     ownerName: owner.name,

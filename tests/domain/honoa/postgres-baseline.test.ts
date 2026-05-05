@@ -7,6 +7,7 @@ const schema = readFileSync(join(process.cwd(), "prisma/schema.prisma"), "utf8")
 const migration = readFileSync(join(process.cwd(), "prisma/migrations/20260505000000_init/migration.sql"), "utf8");
 const customerServerActions = readFileSync(join(process.cwd(), "lib/honoa/server/customers.ts"), "utf8");
 const authServerActions = readFileSync(join(process.cwd(), "lib/honoa/server/auth.ts"), "utf8");
+const fieldConfigServerActions = readFileSync(join(process.cwd(), "lib/honoa/server/field-config.ts"), "utf8");
 
 describe("KingaOS PostgreSQL production-lite baseline", () => {
   it("Prisma schema 使用 PostgreSQL 且不使用 SQLite", () => {
@@ -59,5 +60,12 @@ describe("KingaOS PostgreSQL production-lite baseline", () => {
     expect(authServerActions).toContain('sameSite: "lax"');
     expect(authServerActions).toContain("SESSION_COOKIE_SECURE");
     expect(authServerActions).toContain("shouldUseSecureSessionCookie()");
+  });
+
+  it("字段类型修改由服务端权限控制并写入 AuditLog", () => {
+    expect(fieldConfigServerActions).toContain('requireServerPermission(actor, "export.customers.fields.manage")');
+    expect(fieldConfigServerActions).toContain('"update_customer_field_type"');
+    expect(fieldConfigServerActions).toContain("oldFieldType");
+    expect(fieldConfigServerActions).toContain("newFieldType");
   });
 });

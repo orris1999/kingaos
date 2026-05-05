@@ -1,3 +1,4 @@
+import { CustomerFieldConfigForm } from "@/components/customer-field-config-form";
 import { Forbidden, KingaShell } from "@/components/kinga-shell";
 import { hasServerPermission, requireCurrentUser } from "@/lib/honoa/server/auth";
 import {
@@ -29,7 +30,7 @@ export default async function FieldSettingsPage() {
         </div>
         <section className="panel stack">
           <h2>添加字段</h2>
-          <form className="form-grid" action={createCustomerFieldConfigAction}>
+          <CustomerFieldConfigForm action={createCustomerFieldConfigAction}>
             <label>字段名称<input name="fieldLabel" required /></label>
             <label>分组<FieldGroupSelect /></label>
             <label>类型<FieldTypeSelect /></label>
@@ -38,7 +39,7 @@ export default async function FieldSettingsPage() {
             <label className="checkrow"><input name="isActive" type="checkbox" value="1" defaultChecked /><span>启用</span></label>
             <label style={{ gridColumn: "1 / -1" }}>下拉选项<textarea name="options" placeholder="select 类型使用，一行一个" /></label>
             <div><button type="submit">添加字段</button></div>
-          </form>
+          </CustomerFieldConfigForm>
         </section>
         <div className="table-wrap">
           <table>
@@ -47,7 +48,8 @@ export default async function FieldSettingsPage() {
               {fields.map((field) => (
                 <tr key={field.id}>
                   <td>
-                    <form className="form-grid" action={updateCustomerFieldConfigAction.bind(null, field.id)}>
+                    <CustomerFieldConfigForm action={updateCustomerFieldConfigAction.bind(null, field.id)} confirmTypeChange={!field.isSystemField}>
+                      <input type="hidden" name="initialFieldType" value={field.fieldType} />
                       <label>字段名称<input name="fieldLabel" defaultValue={field.fieldLabel} required /></label>
                       <label>字段 key<div className="readonly">{field.fieldKey}{field.isSystemField ? " / 系统字段" : ""}</div></label>
                       <label>分组<FieldGroupSelect defaultValue={field.fieldGroup} /></label>
@@ -55,13 +57,14 @@ export default async function FieldSettingsPage() {
                         类型
                         <FieldTypeSelect defaultValue={field.fieldType} disabled={field.isSystemField} />
                         <span className="tiny muted">当前类型：{fieldTypeLabel(field.fieldType)}</span>
+                        {field.isSystemField ? <span className="tiny muted">系统字段类型不可修改，避免影响客户档案基础结构。</span> : null}
                       </label>
                       <label>排序<input name="sortOrder" type="number" defaultValue={field.sortOrder} /></label>
                       <label className="checkrow"><input name="required" type="checkbox" value="1" defaultChecked={field.required} /><span>必填</span></label>
                       <label className="checkrow"><input name="isActive" type="checkbox" value="1" defaultChecked={field.isActive} /><span>启用</span></label>
                       <label>下拉选项<textarea name="options" defaultValue={field.options.join("\n")} /></label>
                       <div><button type="submit">保存</button></div>
-                    </form>
+                    </CustomerFieldConfigForm>
                   </td>
                 </tr>
               ))}
@@ -83,8 +86,11 @@ function FieldGroupSelect({ defaultValue }: { defaultValue?: CustomerFieldGroup 
 
 function FieldTypeSelect({ defaultValue, disabled }: { defaultValue?: CustomerFieldType; disabled?: boolean }) {
   return (
-    <select name="fieldType" defaultValue={defaultValue || "text"} disabled={disabled}>
-      {CUSTOMER_FIELD_TYPES.map((type) => <option key={type} value={type}>{fieldTypeLabel(type)}</option>)}
-    </select>
+    <>
+      {disabled ? <input type="hidden" name="fieldType" value={defaultValue || "text"} /> : null}
+      <select name="fieldType" defaultValue={defaultValue || "text"} disabled={disabled}>
+        {CUSTOMER_FIELD_TYPES.map((type) => <option key={type} value={type}>{fieldTypeLabel(type)}</option>)}
+      </select>
+    </>
   );
 }

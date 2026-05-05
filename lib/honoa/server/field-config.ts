@@ -73,16 +73,35 @@ export async function updateCustomerFieldConfigAction(fieldId: string, formData:
   const existing = await prisma.customerFieldConfig.findUnique({ where: { id: fieldId } });
   if (!existing) throw new Error("字段不存在。");
   const input = fieldInputFromForm(formData);
-  await prisma.customerFieldConfig.update({
-    where: { id: fieldId },
-    data: {
-      fieldLabel: input.fieldLabel,
-      fieldGroup: input.fieldGroup,
-      fieldType: existing.isSystemField ? existing.fieldType : input.fieldType,
-      required: input.required,
-      options: input.options,
-      sortOrder: input.sortOrder,
-      isActive: input.isActive
+  const nextFieldType = existing.isSystemField ? existing.fieldType : input.fieldType;
+  await prisma.$transaction(async (tx) => {
+    await tx.customerFieldConfig.update({
+      where: { id: fieldId },
+      data: {
+        fieldLabel: input.fieldLabel,
+        fieldGroup: input.fieldGroup,
+        fieldType: nextFieldType,
+        required: input.required,
+        options: input.options,
+        sortOrder: input.sortOrder,
+        isActive: input.isActive
+      }
+    });
+    if (!existing.isSystemField && existing.fieldType !== nextFieldType) {
+      await tx.auditLog.create({
+        data: {
+          actorUserId: actor.id,
+          action: "update_customer_field_type",
+          entityType: "CustomerFieldConfig",
+          entityId: fieldId,
+          metadata: {
+            fieldKey: existing.fieldKey,
+            fieldLabel: input.fieldLabel,
+            oldFieldType: existing.fieldType,
+            newFieldType: nextFieldType
+          }
+        }
+      });
     }
   });
   revalidatePath("/export/customers/settings/fields");

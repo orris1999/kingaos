@@ -15,6 +15,7 @@ import {
 } from "@/lib/honoa/shared/constants";
 import type { CustomerFieldConfig } from "@/lib/honoa/shared/domain-types";
 import { booleanFieldValueLabel } from "@/lib/honoa/shared/field-types";
+import { fieldValueCompatibilityMessage } from "@/lib/honoa/shared/field-values";
 
 export function ServerCustomerForm({
   actor,
@@ -138,6 +139,7 @@ function CustomerInput({
 }) {
   const value = fieldValue(customer, field);
   const label = `${field.fieldLabel}${field.required ? " *" : ""}`;
+  const compatibilityMessage = fieldValueCompatibilityMessage(value, field.fieldType, field.options);
   if (field.fieldKey === "ownerUserId") {
     const selectedOwner = customer?.ownerUserId || actor.id;
     if (!canChooseOwner) {
@@ -161,24 +163,43 @@ function CustomerInput({
     );
   }
   if (field.fieldType === "textarea") {
-    return <label>{label}<textarea name={field.fieldKey} defaultValue={String(value || "")} required={field.required} /></label>;
-  }
-  if (field.fieldType === "select") {
     return (
       <label>
         {label}
-        <select name={field.fieldKey} defaultValue={String(value || "")} required={field.required}>
+        <textarea name={field.fieldKey} defaultValue={String(value || "")} required={field.required} />
+        {compatibilityMessage ? <span className="tiny warn-text">{compatibilityMessage}</span> : null}
+      </label>
+    );
+  }
+  if (field.fieldType === "select") {
+    const stringValue = String(value || "");
+    const hasLegacyOption = Boolean(stringValue && !field.options.includes(stringValue));
+    return (
+      <label>
+        {label}
+        <select name={field.fieldKey} defaultValue={stringValue} required={field.required}>
           <option value="">请选择</option>
+          {hasLegacyOption ? <option value={stringValue}>历史值：{stringValue}</option> : null}
           {field.options.map((option) => <option key={option} value={option}>{option}</option>)}
         </select>
+        {compatibilityMessage ? <span className="tiny warn-text">{compatibilityMessage}</span> : null}
       </label>
     );
   }
   if (field.fieldType === "boolean") {
+    if (compatibilityMessage) {
+      return (
+        <label>
+          {label}
+          <input name={field.fieldKey} defaultValue={String(value || "")} />
+          <span className="tiny warn-text">{compatibilityMessage}</span>
+        </label>
+      );
+    }
     return (
       <label>
         {label}
-        <select name={field.fieldKey} defaultValue={value === true || value === "1" ? "1" : value === false || value === "0" ? "0" : ""}>
+        <select name={field.fieldKey} defaultValue={booleanSelectValue(value)}>
           <option value="">未填写</option>
           <option value="1">{booleanFieldValueLabel(true)}</option>
           <option value="0">{booleanFieldValueLabel(false)}</option>
@@ -186,17 +207,26 @@ function CustomerInput({
       </label>
     );
   }
+  const inputType = field.fieldType === "number" && !compatibilityMessage ? "number" : field.fieldType === "date" && !compatibilityMessage ? "date" : "text";
   return (
     <label>
       {label}
       <input
         name={field.fieldKey}
-        type={field.fieldType === "number" ? "number" : field.fieldType === "date" ? "date" : "text"}
+        type={inputType}
         defaultValue={String(value || "")}
         required={field.required}
       />
+      {compatibilityMessage ? <span className="tiny warn-text">{compatibilityMessage}</span> : null}
     </label>
   );
+}
+
+function booleanSelectValue(value: unknown) {
+  const normalized = String(value).trim().toLowerCase();
+  if (value === true || ["1", "true", "yes", "是"].includes(normalized)) return "1";
+  if (value === false || ["0", "false", "no", "否"].includes(normalized)) return "0";
+  return "";
 }
 
 function fieldValue(customer: Customer | undefined, field: CustomerFieldConfig): string | number | boolean {

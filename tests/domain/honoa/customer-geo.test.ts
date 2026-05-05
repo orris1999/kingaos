@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { customerGeoDisplay, normalizeCustomerGeo } from "@/lib/honoa/shared/geo";
+import { listGeoCountries } from "@/lib/honoa/server/geo";
+import { chineseCountryName, customerGeoDisplay, normalizeCustomerGeo } from "@/lib/honoa/shared/geo";
 
 const customerFormWizard = readFileSync(join(process.cwd(), "components/customer-form-wizard.tsx"), "utf8");
 const customerGeoSelector = readFileSync(join(process.cwd(), "components/customer-geo-selector.tsx"), "utf8");
@@ -14,6 +15,21 @@ describe("KingaOS export customer geo and step UI", () => {
     expect(geo.countryCode).toBe("CN");
     expect(geo.countryName).toBe("中国");
     expect(geo.country).toBe("中国");
+  });
+
+  it("国家 CN 和 US 显示为中文", () => {
+    expect(chineseCountryName("CN")).toBe("中国");
+    expect(chineseCountryName("US")).toBe("美国");
+  });
+
+  it("国家下拉数据统一返回中文国家名", async () => {
+    const countries = await listGeoCountries();
+    expect(countries.find((country) => country.code === "CN")?.name).toBe("中国");
+    expect(countries.find((country) => country.code === "US")?.name).toBe("美国");
+    expect(countries.find((country) => country.code === "DE")?.name).toBe("德国");
+    expect(countries.find((country) => country.code === "VN")?.name).toBe("越南");
+    expect(countries.find((country) => country.code === "IN")?.name).toBe("印度");
+    expect(countries.find((country) => country.code === "BR")?.name).toBe("巴西");
   });
 
   it("州省字段保存 stateCode / stateName", () => {
@@ -79,6 +95,16 @@ describe("KingaOS export customer geo and step UI", () => {
     expect(customerGeoSelector).toContain("/api/geo/cities?countryCode=");
     expect(customerGeoSelector).toContain("没有找到城市？手动输入");
     expect(customerGeoSelector).not.toContain("@countrystatecity/countries");
+  });
+
+  it("地址表单只显示 国家 / 地区、州 / 省、城市，不出现区县层级", () => {
+    expect(customerGeoSelector).toContain("国家 / 地区");
+    expect(customerGeoSelector).toContain("州 / 省");
+    expect(customerGeoSelector).toContain("城市");
+    expect(customerGeoSelector).not.toContain("州 / 省 / 地区");
+    expect(customerGeoSelector).not.toContain("区县");
+    expect(customerGeoSelector).not.toContain("行政区");
+    expect(customerGeoSelector).not.toContain("街道");
   });
 
   it("客户详情页采用分区 tab，避免一页无限下拉", () => {

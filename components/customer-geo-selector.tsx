@@ -5,6 +5,7 @@ import * as React from "react";
 type CountryOption = {
   code: string;
   name: string;
+  sourceName?: string;
 };
 
 type StateOption = {
@@ -127,18 +128,18 @@ export function CustomerGeoSelector({ initialValue }: { initialValue?: CustomerG
       </label>
 
       <label>
-        州 / 省 / 地区
+        州 / 省
         {!countryCode ? (
           <div className="readonly">请先选择国家 / 地区</div>
         ) : loadingStates ? (
           <div className="readonly">加载中...</div>
         ) : hasStates ? (
           <select value={stateCode} onChange={(event) => chooseState(event.target.value)}>
-            <option value="">请选择州 / 省 / 地区</option>
+            <option value="">请选择州 / 省</option>
             {states.map((state) => <option key={state.code} value={state.code}>{state.name}</option>)}
           </select>
         ) : (
-          <div className="readonly">该国家 / 地区暂无州省数据，可直接填写城市。</div>
+          <div className="readonly">该国家暂无州 / 省数据，可直接填写城市。</div>
         )}
       </label>
 
@@ -147,7 +148,7 @@ export function CustomerGeoSelector({ initialValue }: { initialValue?: CustomerG
         {!countryCode ? (
           <div className="readonly">请先选择国家 / 地区</div>
         ) : hasStates && !stateCode ? (
-          <div className="readonly">请先选择州 / 省 / 地区</div>
+          <div className="readonly">请先选择州 / 省</div>
         ) : manualCity || !canPickCity || (!loadingCities && cities.length === 0) ? (
           <input value={cityName} onChange={(event) => setCityName(event.target.value)} placeholder="手动输入城市" />
         ) : (

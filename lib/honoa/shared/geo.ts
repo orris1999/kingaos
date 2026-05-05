@@ -8,11 +8,25 @@ export type CustomerGeoInput = {
   city?: string | null;
 };
 
+let zhCountryNames: Intl.DisplayNames | null = null;
+
+export function chineseCountryName(countryCode?: string | null) {
+  const normalized = countryCode?.trim().toUpperCase();
+  if (!normalized) return null;
+  try {
+    zhCountryNames ||= new Intl.DisplayNames(["zh-CN"], { type: "region" });
+    const name = zhCountryNames.of(normalized);
+    return name && name !== normalized ? name : null;
+  } catch {
+    return null;
+  }
+}
+
 export function normalizeCustomerGeo(input: CustomerGeoInput) {
-  const countryName = input.countryName?.trim() || input.country?.trim() || "";
+  const countryName = chineseCountryName(input.countryCode) || input.countryName?.trim() || input.country?.trim() || "";
   const cityName = input.cityName?.trim() || input.city?.trim() || "";
   return {
-    countryCode: input.countryCode?.trim() || null,
+    countryCode: input.countryCode?.trim().toUpperCase() || null,
     countryName: countryName || null,
     stateCode: input.stateCode?.trim() || null,
     stateName: input.stateName?.trim() || null,
@@ -23,7 +37,7 @@ export function normalizeCustomerGeo(input: CustomerGeoInput) {
 }
 
 export function customerGeoDisplay(input: CustomerGeoInput) {
-  const country = input.countryName?.trim() || input.country?.trim() || "";
+  const country = chineseCountryName(input.countryCode) || input.countryName?.trim() || input.country?.trim() || "";
   const state = input.stateName?.trim() || "";
   const city = input.cityName?.trim() || input.city?.trim() || "";
   return {

@@ -7,7 +7,7 @@ import { canEditCustomerServer, contactsForDisplay, getExportCustomerForActor } 
 import { listCustomerFieldConfigsForActor } from "@/lib/honoa/server/field-config";
 import { CUSTOMER_GEO_FIELD_KEYS, CUSTOMER_LEGACY_CONTACT_FIELD_KEYS, CUSTOMER_SYSTEM_FIELD_KEYS } from "@/lib/honoa/shared/constants";
 import type { CustomerFieldConfig } from "@/lib/honoa/shared/domain-types";
-import { displayFieldValue } from "@/lib/honoa/shared/field-values";
+import { displayFieldValue, fieldValueCompatibilityMessage } from "@/lib/honoa/shared/field-values";
 import { customerGeoDisplay } from "@/lib/honoa/shared/geo";
 import type { Customer, CustomerAttachment } from "@prisma/client";
 
@@ -16,15 +16,18 @@ function formatDate(value: Date) {
 }
 
 function fieldValue(customer: Customer, field: CustomerFieldConfig) {
+  return displayFieldValue(rawFieldValue(customer, field), field.fieldType);
+}
+
+function rawFieldValue(customer: Customer, field: CustomerFieldConfig) {
   if (field.fieldKey === "createdAt") return formatDate(customer.createdAt);
   if (field.fieldKey === "updatedAt") return formatDate(customer.updatedAt);
   if (field.fieldKey === "ownerUserId") return customer.ownerName;
   if (CUSTOMER_SYSTEM_FIELD_KEYS.has(field.fieldKey)) {
-    return displayFieldValue((customer as unknown as Record<string, unknown>)[field.fieldKey], field.fieldType);
+    return (customer as unknown as Record<string, unknown>)[field.fieldKey];
   }
   const customFields = customer.customFields as Record<string, string | number | boolean>;
-  const value = customFields[field.fieldKey];
-  return displayFieldValue(value, field.fieldType);
+  return customFields[field.fieldKey];
 }
 
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -47,6 +50,9 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
             <div className="kv" key={field.id}>
               <b>{field.fieldLabel}</b>
               <span>{fieldValue(customer, field)}</span>
+              {fieldValueCompatibilityMessage(rawFieldValue(customer, field), field.fieldType, field.options) ? (
+                <span className="tiny warn-text">{fieldValueCompatibilityMessage(rawFieldValue(customer, field), field.fieldType, field.options)}</span>
+              ) : null}
             </div>
           ))}
         </div>
@@ -76,7 +82,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
               <h2>基础信息</h2>
               <div className="detail-grid">
                 <div className="kv"><b>国家 / 地区</b><span>{geo.country || "-"}</span></div>
-                <div className="kv"><b>州 / 省 / 地区</b><span>{geo.state || "-"}</span></div>
+                <div className="kv"><b>州 / 省</b><span>{geo.state || "-"}</span></div>
                 <div className="kv"><b>城市</b><span>{geo.city || "-"}</span></div>
               </div>
               {renderFields("基础信息")}
