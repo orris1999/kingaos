@@ -34,6 +34,8 @@ async function assertCanMutateTarget(actor: AuthUser, targetRole?: string, targe
 }
 
 export async function createUserAction(formData: FormData) {
+  "use server";
+
   const actor = await requireCurrentUser();
   requireServerPermission(actor, "users.create");
   const role = String(formData.get("role") || "staff");
@@ -59,6 +61,8 @@ export async function createUserAction(formData: FormData) {
 }
 
 export async function updateUserAction(userId: string, formData: FormData) {
+  "use server";
+
   const actor = await requireCurrentUser();
   requireServerPermission(actor, "users.edit");
   const target = await prisma.user.findUnique({ where: { id: userId }, include: { permissions: true } });

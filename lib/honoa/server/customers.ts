@@ -75,6 +75,8 @@ function customerPayloadFromForm(formData: FormData) {
 }
 
 export async function createExportCustomerAction(formData: FormData) {
+  "use server";
+
   const actor = await requireCurrentUser();
   requireServerPermission(actor, "export.customers.create");
   const { payload, customFields } = customerPayloadFromForm(formData);
@@ -140,6 +142,8 @@ function isUniqueConstraintError(error: unknown) {
 }
 
 export async function updateExportCustomerAction(customerId: string, formData: FormData) {
+  "use server";
+
   const actor = await requireCurrentUser();
   const existing = await prisma.customer.findUnique({ where: { id: customerId } });
   if (!existing || !canEditCustomerServer(actor, existing)) throw new Error("当前账号不能编辑该客户。");

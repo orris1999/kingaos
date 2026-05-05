@@ -41,6 +41,8 @@ export async function listCustomerFieldConfigsForActor(actor?: AuthUser, include
 }
 
 export async function createCustomerFieldConfigAction(formData: FormData) {
+  "use server";
+
   const actor = await requireCurrentUser();
   requireServerPermission(actor, "export.customers.fields.manage");
   const input = fieldInputFromForm(formData);
@@ -64,6 +66,8 @@ export async function createCustomerFieldConfigAction(formData: FormData) {
 }
 
 export async function updateCustomerFieldConfigAction(fieldId: string, formData: FormData) {
+  "use server";
+
   const actor = await requireCurrentUser();
   requireServerPermission(actor, "export.customers.fields.manage");
   const existing = await prisma.customerFieldConfig.findUnique({ where: { id: fieldId } });
