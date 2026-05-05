@@ -65,7 +65,10 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
             <div>
               <div className="breadcrumbs">KingaOS / 出口部 / 客户档案 / 客户详情</div>
               <h1>{customer.name}</h1>
-              <p><span className="tag">客户编号：{customer.customerCode}</span></p>
+              <p className="actions">
+                <span className="tag">客户编号：{customer.customerCode}</span>
+                {customer.duplicateApprovalStatus === "approved_duplicate" ? <span className="tag warn">重复客户例外</span> : null}
+              </p>
             </div>
             <div className="actions">
               {canEdit ? <Link className="button" href={`/export/customers/${customer.id}/edit`}>编辑客户</Link> : null}
@@ -76,6 +79,13 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
             <div className="kv"><b>负责人</b><span>{customer.ownerName}</span></div>
             <div className="kv"><b>创建时间</b><span>{formatDate(customer.createdAt)}</span></div>
             <div className="kv"><b>更新时间</b><span>{formatDate(customer.updatedAt)}</span></div>
+            {customer.duplicateApprovalStatus === "approved_duplicate" ? (
+              <>
+                <div className="kv"><b>重复客户审核人</b><span>{customer.duplicateApprovedByName || "-"}</span></div>
+                <div className="kv"><b>重复客户审核时间</b><span>{customer.duplicateApprovedAt ? formatDate(customer.duplicateApprovedAt) : "-"}</span></div>
+                <div className="kv"><b>重复客户审核原因</b><span>{customer.duplicateApprovalReason || "-"}</span></div>
+              </>
+            ) : null}
           </section>
           <CustomerDetailTabs>
             <section className="panel stack">

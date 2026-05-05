@@ -12,6 +12,14 @@
     "typecheck": "tsc --noEmit",
     "db:migrate": "prisma migrate deploy",
     "db:seed": "node prisma/seed.mjs",
+    "db:local:up": "docker compose -f docker-compose.local.yml up -d",
+    "db:local:down": "docker compose -f docker-compose.local.yml down",
+    "db:local:logs": "docker compose -f docker-compose.local.yml logs -f",
+    "db:dev:migrate": "DATABASE_URL=\"postgresql://kingaos_app:kingaos_dev_password@localhost:5433/kingaos_dev?schema=public\" DIRECT_URL=\"postgresql://kingaos_app:kingaos_dev_password@localhost:5433/kingaos_dev?schema=public\" prisma migrate dev",
+    "db:dev:seed": "DATABASE_URL=\"postgresql://kingaos_app:kingaos_dev_password@localhost:5433/kingaos_dev?schema=public\" DIRECT_URL=\"postgresql://kingaos_app:kingaos_dev_password@localhost:5433/kingaos_dev?schema=public\" node prisma/seed.mjs",
+    "db:test:migrate": "DATABASE_URL=\"postgresql://kingaos_app:kingaos_test_password@localhost:5434/kingaos_test?schema=public\" DIRECT_URL=\"postgresql://kingaos_app:kingaos_test_password@localhost:5434/kingaos_test?schema=public\" prisma migrate deploy",
+    "db:test:seed": "DATABASE_URL=\"postgresql://kingaos_app:kingaos_test_password@localhost:5434/kingaos_test?schema=public\" DIRECT_URL=\"postgresql://kingaos_app:kingaos_test_password@localhost:5434/kingaos_test?schema=public\" node prisma/seed.mjs",
+    "backfill:customer-identities": "node scripts/backfill-customer-identities.mjs",
     "postinstall": "prisma generate"
   },
   "dependencies": {

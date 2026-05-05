@@ -18,16 +18,18 @@ describe("KingaOS PostgreSQL production-lite baseline", () => {
   });
 
   it("Prisma schema 包含多人共享核心模型", () => {
-    for (const model of ["User", "Permission", "UserPermission", "UserSession", "Customer", "CustomerFieldConfig", "AuditLog"]) {
+    for (const model of ["User", "Permission", "UserPermission", "UserSession", "Customer", "CustomerIdentity", "CustomerDuplicateReviewRequest", "CustomerFieldConfig", "AuditLog"]) {
       expect(schema).toContain(`model ${model} {`);
     }
   });
 
   it("Prisma schema 保留关键 unique 和 index 约束", () => {
     expect(schema).toContain("email           String    @unique");
-    expect(schema).toContain("key         String   @unique");
+    expect(schema).toMatch(/key\s+String\s+@unique/);
     expect(schema).toContain("@@unique([userId, permissionKey])");
-    expect(schema).toContain("customerCode         String    @unique");
+    expect(schema).toMatch(/customerCode\s+String\s+@unique/);
+    expect(schema).toContain("@@unique([scope, normalizedName])");
+    expect(schema).toContain("@@index([normalizedName])");
     expect(schema).toContain("@@index([ownerUserId])");
     expect(schema).toContain("@@index([department])");
     expect(schema).toContain("@@index([status])");

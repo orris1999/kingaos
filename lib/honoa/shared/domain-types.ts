@@ -17,6 +17,8 @@ export type PermissionKey =
   | "export.customers.edit_own"
   | "export.customers.edit_all"
   | "export.customers.fields.manage"
+  | "export.customers.duplicate_review.view"
+  | "export.customers.duplicate_review.manage"
   | "domestic.dashboard.view"
   | "technical.dashboard.view"
   | "finance.dashboard.view";
@@ -64,6 +66,14 @@ export type ExportCustomer = {
   id: string;
   customerCode: string;
   name: string;
+  customerIdentityId?: string | null;
+  normalizedCustomerName?: string | null;
+  duplicateApprovalStatus?: "none" | "approved_duplicate" | "needs_duplicate_review";
+  duplicateApprovalRequestId?: string | null;
+  duplicateApprovedByUserId?: string | null;
+  duplicateApprovedByName?: string | null;
+  duplicateApprovedAt?: string | null;
+  duplicateApprovalReason?: string | null;
   customerType: string;
   country: string;
   countryCode: string | null;
@@ -99,10 +109,43 @@ export type ExportCustomer = {
   archivedAt: string | null;
 };
 
+export type CustomerIdentity = {
+  id: string;
+  scope: "export_customer";
+  displayName: string;
+  normalizedName: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CustomerDuplicateReviewRequest = {
+  id: string;
+  department: "export";
+  moduleKey: "export_customer";
+  requestedByUserId: string;
+  requestedByName?: string | null;
+  proposedCustomerName: string;
+  normalizedName: string;
+  existingIdentityId?: string | null;
+  existingCustomerIds: string[];
+  requestedPayload: Record<string, unknown>;
+  requestReason?: string | null;
+  status: "pending" | "approved" | "rejected" | "cancelled";
+  decidedByUserId?: string | null;
+  decidedByName?: string | null;
+  decisionNote?: string | null;
+  decidedAt?: string | null;
+  createdCustomerId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type ExportCustomerInput = Partial<Omit<ExportCustomer, "id" | "customerCode" | "department" | "ownerName" | "createdByUserId" | "createdAt" | "updatedAt" | "archivedAt">> & {
   name: string;
   ownerUserId?: string;
   customFields?: Record<string, string | boolean | number>;
+  duplicateApprovalReason?: string;
+  allowDuplicateWithApproval?: boolean;
 };
 
 export type UserInput = {

@@ -11,3 +11,13 @@ export class PermissionDeniedError extends DomainError {
     this.name = "PermissionDeniedError";
   }
 }
+
+export class DuplicateCustomerNameError extends DomainError {
+  constructor(
+    message = "客户名称已存在，不能直接重复建档。",
+    public readonly duplicateReviewRequestId?: string
+  ) {
+    super(message);
+    this.name = "DuplicateCustomerNameError";
+  }
+}

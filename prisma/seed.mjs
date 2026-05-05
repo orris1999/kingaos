@@ -16,14 +16,18 @@ const ADMIN_DEFAULT_PERMISSIONS = [
   "export.customers.view_all",
   "export.customers.create",
   "export.customers.edit_all",
-  "export.customers.fields.manage"
+  "export.customers.fields.manage",
+  "export.customers.duplicate_review.view",
+  "export.customers.duplicate_review.manage"
 ];
 
 const EXPORT_MANAGER_DEFAULT_PERMISSIONS = [
   "export.dashboard.view",
   "export.customers.view_all",
   "export.customers.create",
-  "export.customers.edit_all"
+  "export.customers.edit_all",
+  "export.customers.duplicate_review.view",
+  "export.customers.duplicate_review.manage"
 ];
 
 const EXPORT_STAFF_DEFAULT_PERMISSIONS = [
@@ -144,7 +148,9 @@ const permissionGroups = [
       ["export.customers.create", "新建出口部客户"],
       ["export.customers.edit_own", "编辑自己客户"],
       ["export.customers.edit_all", "编辑出口部全部客户"],
-      ["export.customers.fields.manage", "管理出口部客户档案字段"]
+      ["export.customers.fields.manage", "管理出口部客户档案字段"],
+      ["export.customers.duplicate_review.view", "查看重复客户审核"],
+      ["export.customers.duplicate_review.manage", "审核重复客户例外"]
     ]
   },
   { group: "国内部", reserved: true, items: [["domestic.dashboard.view", "查看国内部入口，暂未开放"]] },

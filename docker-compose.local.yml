@@ -1,0 +1,40 @@
+services:
+  kingaos-dev-postgres:
+    image: postgres:16-alpine
+    container_name: kingaos-dev-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: kingaos_app
+      POSTGRES_PASSWORD: kingaos_dev_password
+      POSTGRES_DB: kingaos_dev
+    ports:
+      - "5433:5432"
+    volumes:
+      - kingaos_dev_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kingaos_app -d kingaos_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  kingaos-test-postgres:
+    image: postgres:16-alpine
+    container_name: kingaos-test-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: kingaos_app
+      POSTGRES_PASSWORD: kingaos_test_password
+      POSTGRES_DB: kingaos_test
+    ports:
+      - "5434:5432"
+    volumes:
+      - kingaos_test_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kingaos_app -d kingaos_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  kingaos_dev_pgdata:
+  kingaos_test_pgdata:

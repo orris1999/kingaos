@@ -9,6 +9,8 @@ export const STORAGE_KEYS = {
   currentUser: "kingaos.currentUser",
   permissions: "kingaos.permissions",
   customers: "kingaos.export.customers",
+  customerIdentities: "kingaos.export.customerIdentities",
+  customerDuplicateReviews: "kingaos.export.customerDuplicateReviews",
   customerFieldConfigs: "kingaos.export.customerFieldConfigs"
 } as const;
 

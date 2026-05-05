@@ -30,13 +30,13 @@ model User {
 }
 
 model Permission {
-  id          String   @id @default(cuid())
-  key         String   @unique
-  label       String
-  group       String
-  reserved    Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  key       String   @unique
+  label     String
+  group     String
+  reserved  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   userPermissions UserPermission[]
 }
@@ -54,10 +54,10 @@ model UserPermission {
 }
 
 model UserSession {
-  id               String   @id @default(cuid())
-  sessionTokenHash String   @unique
+  id               String    @id @default(cuid())
+  sessionTokenHash String    @unique
   userId           String
-  createdAt        DateTime @default(now())
+  createdAt        DateTime  @default(now())
   expiresAt        DateTime
   revokedAt        DateTime?
 
@@ -69,50 +69,103 @@ model UserSession {
 }
 
 model Customer {
-  id                   String    @id @default(cuid())
-  customerCode         String    @unique
-  name                 String
-  customerType         String
-  country              String    @default("")
-  countryCode          String?
-  countryName          String?
-  stateCode            String?
-  stateName            String?
-  cityName             String?
-  city                 String    @default("")
-  source               String    @default("")
-  status               String
-  ownerUserId          String
-  ownerName            String
-  department           String    @default("export")
-  contactName          String    @default("")
-  contactTitle         String    @default("")
-  phone                String    @default("")
-  email                String    @default("")
-  wechatOrWhatsapp     String    @default("")
-  companyName          String    @default("")
-  companyWebsite       String    @default("")
-  companyAddress       String    @default("")
-  mainProducts         String    @default("")
-  purchaseNeed         String    @default("")
-  sourceNote           String    @default("")
-  expectedPurchaseNeed String    @default("")
-  customerNotes        String    @default("")
-  internalNotes        String    @default("")
-  specialReminder      String    @default("")
-  customFields         Json      @default("{}")
-  createdByUserId      String
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
-  archivedAt           DateTime?
+  id                         String            @id @default(cuid())
+  customerCode               String            @unique
+  name                       String
+  customerIdentityId         String?
+  customerIdentity           CustomerIdentity? @relation(fields: [customerIdentityId], references: [id], onDelete: SetNull)
+  normalizedCustomerName     String?
+  duplicateApprovalStatus    String            @default("none")
+  duplicateApprovalRequestId String?
+  duplicateApprovedByUserId  String?
+  duplicateApprovedByName    String?
+  duplicateApprovedAt        DateTime?
+  duplicateApprovalReason    String?
+  customerType               String
+  country                    String            @default("")
+  countryCode                String?
+  countryName                String?
+  stateCode                  String?
+  stateName                  String?
+  cityName                   String?
+  city                       String            @default("")
+  source                     String            @default("")
+  status                     String
+  ownerUserId                String
+  ownerName                  String
+  department                 String            @default("export")
+  contactName                String            @default("")
+  contactTitle               String            @default("")
+  phone                      String            @default("")
+  email                      String            @default("")
+  wechatOrWhatsapp           String            @default("")
+  companyName                String            @default("")
+  companyWebsite             String            @default("")
+  companyAddress             String            @default("")
+  mainProducts               String            @default("")
+  purchaseNeed               String            @default("")
+  sourceNote                 String            @default("")
+  expectedPurchaseNeed       String            @default("")
+  customerNotes              String            @default("")
+  internalNotes              String            @default("")
+  specialReminder            String            @default("")
+  customFields               Json              @default("{}")
+  createdByUserId            String
+  createdAt                  DateTime          @default(now())
+  updatedAt                  DateTime          @updatedAt
+  archivedAt                 DateTime?
 
   contacts    CustomerContact[]
   attachments CustomerAttachment[]
 
+  @@index([customerIdentityId])
+  @@index([normalizedCustomerName])
+  @@index([duplicateApprovalStatus])
   @@index([ownerUserId])
   @@index([department])
   @@index([status])
   @@index([updatedAt])
+}
+
+model CustomerIdentity {
+  id             String   @id @default(cuid())
+  scope          String   @default("export_customer")
+  displayName    String
+  normalizedName String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  customers Customer[]
+
+  @@unique([scope, normalizedName])
+  @@index([normalizedName])
+}
+
+model CustomerDuplicateReviewRequest {
+  id                   String    @id @default(cuid())
+  department           String    @default("export")
+  moduleKey            String    @default("export_customer")
+  requestedByUserId    String
+  requestedByName      String?
+  proposedCustomerName String
+  normalizedName       String
+  existingIdentityId   String?
+  existingCustomerIds  Json?
+  requestedPayload     Json?
+  requestReason        String?
+  status               String    @default("pending")
+  decidedByUserId      String?
+  decidedByName        String?
+  decisionNote         String?
+  decidedAt            DateTime?
+  createdCustomerId    String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@index([department])
+  @@index([normalizedName])
+  @@index([status])
+  @@index([requestedByUserId])
 }
 
 model CustomerContact {
@@ -180,13 +233,13 @@ model CustomerFieldConfig {
 }
 
 model AuditLog {
-  id           String   @id @default(cuid())
-  actorUserId  String?
-  action       String
-  entityType   String
-  entityId     String?
-  metadata     Json     @default("{}")
-  createdAt    DateTime @default(now())
+  id          String   @id @default(cuid())
+  actorUserId String?
+  action      String
+  entityType  String
+  entityId    String?
+  metadata    Json     @default("{}")
+  createdAt   DateTime @default(now())
 
   @@index([actorUserId])
   @@index([entityType])

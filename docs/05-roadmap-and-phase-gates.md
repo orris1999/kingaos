@@ -6,6 +6,8 @@
 
 技术：Next.js 15 + React 18 + TypeScript + npm + Prisma + PostgreSQL + 服务端 session / httpOnly cookie + 服务端权限校验 + Vitest + Playwright + Domain Action。
 
+数据库变更门禁：先在本地 Docker PostgreSQL 验证，再通过 GitHub Actions，最后才允许部署生产。生产环境只允许 `npx prisma migrate deploy`，禁止 `npx prisma migrate reset`、`npx prisma db push --force-reset`、`npx prisma migrate dev`。
+
 ## 当前上线门
 
 多人试用前必须满足：
@@ -17,6 +19,7 @@
 5. `npm run typecheck`、`npm run test`、`npm run build` 通过。
 6. super_admin 可用 `superadmin@kingaos.local / roserose` 登录。
 7. 未开放模块只能显示入口或未开放页面，不能进入真实功能。
+8. GitHub Actions 已使用 PostgreSQL 完成 migration、seed、typecheck、test、build。
 
 ## 当前客户档案能力
 
@@ -31,6 +34,8 @@
 - 真实文件上传需要在后续对象存储阶段接入阿里云 OSS。
 - 字段类型 UI 显示中文；内部值仍使用 `text` / `textarea` / `number` / `date` / `select` / `boolean`。
 - 管理员可以修改自定义字段类型，系统字段类型默认锁定，修改类型不会清空历史 `customFields`。
+- 客户名称默认不允许重复；服务端通过规范化名称阻止加点、加空格、大小写变化和全角半角变化绕过。
+- 重复客户必须提交业务经理 / 管理员审核，审核通过后才允许例外建档，并保留 AuditLog。
 
 ## 需要 ADR 的变化
 

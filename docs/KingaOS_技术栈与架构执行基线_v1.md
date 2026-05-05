@@ -10,6 +10,7 @@
 - [04-current-persistence-stage.md](./04-current-persistence-stage.md)
 - [05-roadmap-and-phase-gates.md](./05-roadmap-and-phase-gates.md)
 - [06-multiplayer-deploy-notes.md](./06-multiplayer-deploy-notes.md)
+- [07-local-postgres-and-ci.md](./07-local-postgres-and-ci.md)
 
 硬口径摘要：
 
@@ -19,6 +20,9 @@ Prisma + PostgreSQL + server session/httpOnly cookie + server-side permission + 
 业务核心：lib/honoa/**
 测试：tests/domain/honoa/** 和 tests/e2e/**
 production/admin trial/salesperson usage 默认走 PostgreSQL，不走 localStorage 或 SQLite。
+本地 Docker PostgreSQL：kingaos_dev:5433，kingaos_test:5434。
+GitHub Actions 每次 push / pull request 自动执行 migration、seed、typecheck、test、build。
+生产环境只允许 npx prisma migrate deploy，禁止 migrate reset / db push --force-reset / migrate dev。
 ```
 
 当前真实开放范围：
@@ -37,6 +41,8 @@ KingaOS -> 登录 / 权限 / 用户管理 / 出口部 -> 客户档案
 - 附件链接记录，暂不做真实文件上传。
 - 字段配置，字段类型 UI 显示中文，内部值保持英文枚举。
 - 自定义字段允许管理员修改字段类型，系统字段类型默认锁定，修改类型不会清空历史客户 `customFields`。
+- 客户名称默认不允许重复；服务端按规范化名称判重，加点、加空格、大小写和全角半角变化不能绕过。
+- 重复客户必须提交业务经理 / 管理员审核，审核通过后才允许例外建档，并写入 AuditLog。
 
 地理数据红线：
 

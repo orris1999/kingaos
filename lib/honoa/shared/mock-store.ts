@@ -1,4 +1,4 @@
-import type { CustomerFieldConfig, ExportCustomer, User, UserPermission } from "./domain-types";
+import type { CustomerDuplicateReviewRequest, CustomerFieldConfig, CustomerIdentity, ExportCustomer, User, UserPermission } from "./domain-types";
 import type { StorageLike } from "./storage";
 import { STORAGE_KEYS } from "./storage";
 
@@ -47,6 +47,18 @@ export function createKingaStore(storage: StorageLike) {
     },
     saveCustomers(customers: ExportCustomer[]) {
       writeJson(storage, STORAGE_KEYS.customers, customers);
+    },
+    getCustomerIdentities(): CustomerIdentity[] {
+      return readJson<CustomerIdentity[]>(storage, STORAGE_KEYS.customerIdentities, []);
+    },
+    saveCustomerIdentities(identities: CustomerIdentity[]) {
+      writeJson(storage, STORAGE_KEYS.customerIdentities, identities);
+    },
+    getCustomerDuplicateReviewRequests(): CustomerDuplicateReviewRequest[] {
+      return readJson<CustomerDuplicateReviewRequest[]>(storage, STORAGE_KEYS.customerDuplicateReviews, []);
+    },
+    saveCustomerDuplicateReviewRequests(requests: CustomerDuplicateReviewRequest[]) {
+      writeJson(storage, STORAGE_KEYS.customerDuplicateReviews, requests);
     },
     getCustomerFieldConfigs(): CustomerFieldConfig[] {
       return readJson<CustomerFieldConfig[]>(storage, STORAGE_KEYS.customerFieldConfigs, []);

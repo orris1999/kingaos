@@ -4,6 +4,9 @@ import {
   CUSTOMER_TYPES
 } from "../shared/constants";
 import type { ExportCustomer, ExportCustomerInput, User } from "../shared/domain-types";
+import type { CustomerDuplicateReviewRequest, CustomerIdentity } from "../shared/domain-types";
+import { normalizeCustomerName } from "../shared/customer-name-normalizer";
+import { DuplicateCustomerNameError } from "../shared/errors";
 import { customerGeoDisplay, normalizeCustomerGeo } from "../shared/geo";
 import type { KingaStore } from "../shared/mock-store";
 import { newId, nowIso } from "../shared/mock-store";
@@ -23,6 +26,10 @@ export function canEditCustomer(store: KingaStore, actor: User, customer: Export
 
 export function canAssignCustomerOwner(store: KingaStore, actor: User): boolean {
   return hasPermission(store, actor, "export.customers.view_all") || hasPermission(store, actor, "export.customers.edit_all");
+}
+
+export function canManageDuplicateReview(store: KingaStore, actor: User): boolean {
+  return hasPermission(store, actor, "export.customers.duplicate_review.manage");
 }
 
 export function getExportOwners(store: KingaStore): User[] {
@@ -69,6 +76,23 @@ export function getExportCustomerById(store: KingaStore, actor: User, customerId
 }
 
 export function createExportCustomer(store: KingaStore, actor: User, input: ExportCustomerInput): ExportCustomer {
+  return createExportCustomerInternal(store, actor, input, {});
+}
+
+type ApprovedDuplicateContext = {
+  reviewRequestId?: string;
+  approvedByUserId?: string;
+  approvedByName?: string;
+  approvedAt?: string;
+  reason?: string;
+};
+
+function createExportCustomerInternal(
+  store: KingaStore,
+  actor: User,
+  input: ExportCustomerInput,
+  approvedDuplicate: ApprovedDuplicateContext
+): ExportCustomer {
   if (!hasPermission(store, actor, "export.customers.create")) throw new Error("当前账号没有新建出口部客户的权限。");
   const ownerUserId = canAssignCustomerOwner(store, actor) ? input.ownerUserId || actor.id : actor.id;
   if (!canAssignCustomerOwner(store, actor) && input.ownerUserId && input.ownerUserId !== actor.id) {
@@ -77,6 +101,15 @@ export function createExportCustomer(store: KingaStore, actor: User, input: Expo
   const owner = store.getUsers().find((user) => user.id === ownerUserId && user.department === "export" && user.isActive);
   if (!owner) throw new Error("负责业务员无效或已停用。");
   if (!input.name.trim()) throw new Error("请填写客户名称。");
+  const normalizedCustomerName = normalizeCustomerName(input.name);
+  if (!normalizedCustomerName) throw new Error("请填写有效客户名称。");
+  const duplicate = checkCustomerDuplicateName(store, input.name);
+  const mayApproveDuplicate = canManageDuplicateReview(store, actor) && input.allowDuplicateWithApproval && input.duplicateApprovalReason?.trim();
+  if (duplicate.isDuplicate && !approvedDuplicate.reviewRequestId && !mayApproveDuplicate) {
+    const request = createCustomerDuplicateReviewRequest(store, actor, { ...input, ownerUserId }, input.duplicateApprovalReason || "");
+    throw new DuplicateCustomerNameError("客户名称已存在，已提交重复客户审核申请。", request.id);
+  }
+  const identity = duplicate.identity || ensureCustomerIdentity(store, input.name, normalizedCustomerName);
 
   const now = nowIso();
   const geo = normalizeCustomerGeo(input);
@@ -84,6 +117,14 @@ export function createExportCustomer(store: KingaStore, actor: User, input: Expo
     id: newId("cus"),
     customerCode: nextCustomerCode(store),
     name: input.name.trim(),
+    customerIdentityId: identity.id,
+    normalizedCustomerName,
+    duplicateApprovalStatus: duplicate.isDuplicate || approvedDuplicate.reviewRequestId ? "approved_duplicate" : "none",
+    duplicateApprovalRequestId: approvedDuplicate.reviewRequestId || null,
+    duplicateApprovedByUserId: approvedDuplicate.approvedByUserId || (mayApproveDuplicate ? actor.id : null),
+    duplicateApprovedByName: approvedDuplicate.approvedByName || (mayApproveDuplicate ? actor.name : null),
+    duplicateApprovedAt: approvedDuplicate.approvedAt || (mayApproveDuplicate ? now : null),
+    duplicateApprovalReason: approvedDuplicate.reason || (mayApproveDuplicate ? input.duplicateApprovalReason!.trim() : null),
     customerType: input.customerType || CUSTOMER_TYPES[0],
     country: geo.country,
     countryCode: geo.countryCode,
@@ -130,6 +171,18 @@ export function updateExportCustomer(store: KingaStore, actor: User, customerId:
   const owner = store.getUsers().find((user) => user.id === ownerUserId && user.department === "export" && user.isActive);
   if (!owner) throw new Error("负责业务员无效或已停用。");
   if (!input.name.trim()) throw new Error("请填写客户名称。");
+  const normalizedCustomerName = normalizeCustomerName(input.name);
+  if (!normalizedCustomerName) throw new Error("请填写有效客户名称。");
+  const currentNormalized = existing.normalizedCustomerName || normalizeCustomerName(existing.name);
+  const duplicate = checkCustomerDuplicateName(store, input.name, customerId);
+  if (normalizedCustomerName !== currentNormalized && duplicate.isDuplicate) {
+    const request = createCustomerDuplicateReviewRequest(store, actor, { ...input, ownerUserId }, input.duplicateApprovalReason || "");
+    throw new DuplicateCustomerNameError("客户名称已存在，已提交重复客户审核申请。", request.id);
+  }
+  const identity =
+    normalizedCustomerName === currentNormalized && existing.customerIdentityId
+      ? store.getCustomerIdentities().find((item) => item.id === existing.customerIdentityId) || ensureCustomerIdentity(store, input.name, normalizedCustomerName)
+      : duplicate.identity || ensureCustomerIdentity(store, input.name, normalizedCustomerName);
 
   const geo = normalizeCustomerGeo({
     countryCode: input.countryCode,
@@ -151,6 +204,8 @@ export function updateExportCustomer(store: KingaStore, actor: User, customerId:
     cityName: geo.cityName,
     city: geo.city,
     name: input.name.trim(),
+    customerIdentityId: identity.id,
+    normalizedCustomerName,
     ownerUserId,
     ownerName: owner.name,
     customFields: input.customFields || existing.customFields,
@@ -161,6 +216,113 @@ export function updateExportCustomer(store: KingaStore, actor: User, customerId:
   };
   store.saveCustomers(customers.map((customer) => (customer.id === customerId ? next : customer)));
   return next;
+}
+
+export function checkCustomerDuplicateName(store: KingaStore, proposedName: string, excludeCustomerId?: string) {
+  const normalizedName = normalizeCustomerName(proposedName);
+  const identity = store.getCustomerIdentities().find((item) => item.scope === "export_customer" && item.normalizedName === normalizedName) || null;
+  const existingCustomers = store
+    .getCustomers()
+    .filter((customer) => customer.id !== excludeCustomerId)
+    .filter((customer) => (identity ? customer.customerIdentityId === identity.id : false) || normalizeCustomerName(customer.name) === normalizedName);
+  return {
+    normalizedName,
+    identity,
+    existingCustomers,
+    isDuplicate: existingCustomers.length > 0
+  };
+}
+
+function ensureCustomerIdentity(store: KingaStore, displayName: string, normalizedName: string): CustomerIdentity {
+  const existing = store.getCustomerIdentities().find((item) => item.scope === "export_customer" && item.normalizedName === normalizedName);
+  if (existing) return existing;
+  const now = nowIso();
+  const identity: CustomerIdentity = {
+    id: newId("cid"),
+    scope: "export_customer",
+    displayName: displayName.trim(),
+    normalizedName,
+    createdAt: now,
+    updatedAt: now
+  };
+  store.saveCustomerIdentities([...store.getCustomerIdentities(), identity]);
+  return identity;
+}
+
+export function createCustomerDuplicateReviewRequest(
+  store: KingaStore,
+  actor: User,
+  input: ExportCustomerInput,
+  requestReason = ""
+): CustomerDuplicateReviewRequest {
+  const duplicate = checkCustomerDuplicateName(store, input.name);
+  if (!duplicate.isDuplicate) throw new Error("未检测到重复客户，无需提交审核。");
+  const now = nowIso();
+  const request: CustomerDuplicateReviewRequest = {
+    id: newId("cdr"),
+    department: "export",
+    moduleKey: "export_customer",
+    requestedByUserId: actor.id,
+    requestedByName: actor.name,
+    proposedCustomerName: input.name.trim(),
+    normalizedName: duplicate.normalizedName,
+    existingIdentityId: duplicate.identity?.id || null,
+    existingCustomerIds: duplicate.existingCustomers.map((customer) => customer.id),
+    requestedPayload: { ...input },
+    requestReason: requestReason.trim() || null,
+    status: "pending",
+    decidedByUserId: null,
+    decidedByName: null,
+    decisionNote: null,
+    decidedAt: null,
+    createdCustomerId: null,
+    createdAt: now,
+    updatedAt: now
+  };
+  store.saveCustomerDuplicateReviewRequests([...store.getCustomerDuplicateReviewRequests(), request]);
+  return request;
+}
+
+export function listCustomerDuplicateReviewRequests(store: KingaStore, actor: User): CustomerDuplicateReviewRequest[] {
+  const requests = store.getCustomerDuplicateReviewRequests();
+  if (hasPermission(store, actor, "export.customers.duplicate_review.view")) return requests;
+  return requests.filter((request) => request.requestedByUserId === actor.id);
+}
+
+export function approveCustomerDuplicateReviewRequest(
+  store: KingaStore,
+  actor: User,
+  requestId: string,
+  decisionNote: string
+): ExportCustomer {
+  if (!canManageDuplicateReview(store, actor)) throw new Error("当前账号不能审核重复客户。");
+  const requests = store.getCustomerDuplicateReviewRequests();
+  const request = requests.find((item) => item.id === requestId);
+  if (!request || request.status !== "pending") throw new Error("审核申请不存在或已处理。");
+  if (request.requestedByUserId === actor.id) throw new Error("不能审核自己的重复客户申请。");
+  const now = nowIso();
+  const customer = createExportCustomerInternal(
+    store,
+    actor,
+    request.requestedPayload as ExportCustomerInput,
+    { reviewRequestId: request.id, approvedByUserId: actor.id, approvedByName: actor.name, approvedAt: now, reason: decisionNote }
+  );
+  store.saveCustomerDuplicateReviewRequests(requests.map((item) => item.id === requestId
+    ? { ...item, status: "approved", decidedByUserId: actor.id, decidedByName: actor.name, decisionNote, decidedAt: now, createdCustomerId: customer.id, updatedAt: now }
+    : item));
+  return customer;
+}
+
+export function rejectCustomerDuplicateReviewRequest(store: KingaStore, actor: User, requestId: string, decisionNote: string) {
+  if (!canManageDuplicateReview(store, actor)) throw new Error("当前账号不能审核重复客户。");
+  const requests = store.getCustomerDuplicateReviewRequests();
+  const request = requests.find((item) => item.id === requestId);
+  if (!request || request.status !== "pending") throw new Error("审核申请不存在或已处理。");
+  if (request.requestedByUserId === actor.id) throw new Error("不能审核自己的重复客户申请。");
+  const now = nowIso();
+  store.saveCustomerDuplicateReviewRequests(requests.map((item) => item.id === requestId
+    ? { ...item, status: "rejected", decidedByUserId: actor.id, decidedByName: actor.name, decisionNote, decidedAt: now, updatedAt: now }
+    : item));
 }
 
 function pickSystemCustomerFields(input: ExportCustomerInput): Partial<ExportCustomer> {

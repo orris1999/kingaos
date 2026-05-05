@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { CustomerFormWizard } from "@/components/customer-form-wizard";
 import { CustomerGeoSelector } from "@/components/customer-geo-selector";
 import { CustomerContactEditor } from "@/components/customer-contact-editor";
-import { createExportCustomerAction, updateExportCustomerAction, canAssignOwnerServer } from "@/lib/honoa/server/customers";
+import { createExportCustomerAction, updateExportCustomerAction, canAssignOwnerServer, canManageDuplicateReviewServer } from "@/lib/honoa/server/customers";
 import { mapFieldConfig } from "@/lib/honoa/server/field-config";
 import type { AuthUser } from "@/lib/honoa/server/auth";
 import {
@@ -33,6 +33,7 @@ export function ServerCustomerForm({
     .filter((field) => field.isActive && !CUSTOMER_READONLY_FORM_FIELDS.has(field.fieldKey) && !CUSTOMER_LEGACY_CONTACT_FIELD_KEYS.has(field.fieldKey) && !CUSTOMER_GEO_FIELD_KEYS.has(field.fieldKey));
   const action = customer ? updateExportCustomerAction.bind(null, customer.id) : createExportCustomerAction;
   const canChooseOwner = canAssignOwnerServer(actor);
+  const canApproveDuplicate = canManageDuplicateReviewServer(actor);
   const contacts = customer?.contacts?.length
     ? customer.contacts
     : customer && [customer.contactName, customer.contactTitle, customer.phone, customer.email, customer.wechatOrWhatsapp].some(Boolean)
@@ -73,6 +74,16 @@ export function ServerCustomerForm({
         <section className="panel stack">
           <h2>确认并保存</h2>
           <p className="muted">请确认客户名称、客户类型、国家 / 州省 / 城市、主要联系人、公司名称、主要产品需求、附件数量和备注信息。确认无误后点击“保存客户”。</p>
+          <label>
+            重复客户审核申请原因
+            <textarea name="duplicateReviewReason" placeholder="如果系统检测到客户名称已存在，请填写为什么仍需建档或改名。业务员提交后由业务经理审核；经理 / 管理员直接确认例外时也必须填写。" />
+          </label>
+          {canApproveDuplicate ? (
+            <label className="checkrow">
+              <input name="duplicateApprovalConfirmed" type="checkbox" value="1" />
+              <span>如果系统检测到重名客户，我确认按“重复客户例外”建档，并记录审核人、审核时间和审核原因。</span>
+            </label>
+          ) : null}
           {customer ? <p className="muted">附件可在保存客户后，通过编辑页下方的附件区域继续添加或删除。</p> : <p className="muted">新建客户保存后，可在客户编辑页添加附件链接。</p>}
         </section>
       </CustomerFormWizard>

@@ -27,6 +27,22 @@ npm start
 
 如果 `DATABASE_URL` 仍是占位值，不能宣称已经完成真实 PostgreSQL migration / seed，也不能宣称已经完成多人部署验证。
 
+生产环境 migration 只允许使用：
+
+```bash
+npx prisma migrate deploy
+```
+
+生产环境禁止使用：
+
+```bash
+npx prisma migrate reset
+npx prisma db push --force-reset
+npx prisma migrate dev
+```
+
+部署生产前建议先备份数据库。所有数据库结构变更必须先在本地 Docker PostgreSQL 和 GitHub Actions 中通过。
+
 ## Serverless 连接池
 
 阿里云 ECS + RDS PostgreSQL 路线下，应用运行、migration 和 seed 都可以走 RDS 内网地址，因此 `DATABASE_URL` 与 `DIRECT_URL` 可以相同。
