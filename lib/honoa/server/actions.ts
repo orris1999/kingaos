@@ -7,7 +7,8 @@ import { loginWithPassword, logoutCurrentSession, homePathForUser, requireCurren
 export async function loginAction(formData: FormData) {
   const email = String(formData.get("email") || "");
   const password = String(formData.get("password") || "");
-  const user = await loginWithPassword(email, password);
+  const user = await loginWithPassword(email, password).catch(() => null);
+  if (!user) redirect("/login?error=invalid");
   redirect(homePathForUser(user));
 }
 
