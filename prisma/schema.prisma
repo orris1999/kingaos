@@ -1,0 +1,143 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id              String    @id @default(cuid())
+  name            String
+  email           String    @unique
+  passwordHash    String
+  department      String
+  role            String
+  isActive        Boolean   @default(true)
+  createdByUserId String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  lastLoginAt     DateTime?
+
+  permissions UserPermission[]
+  sessions    UserSession[]
+
+  @@index([department])
+  @@index([role])
+  @@index([isActive])
+}
+
+model Permission {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  label       String
+  group       String
+  reserved    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userPermissions UserPermission[]
+}
+
+model UserPermission {
+  id            String @id @default(cuid())
+  userId        String
+  permissionKey String
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionKey], references: [key], onDelete: Cascade)
+
+  @@unique([userId, permissionKey])
+  @@index([permissionKey])
+}
+
+model UserSession {
+  id               String   @id @default(cuid())
+  sessionTokenHash String   @unique
+  userId           String
+  createdAt        DateTime @default(now())
+  expiresAt        DateTime
+  revokedAt        DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([revokedAt])
+}
+
+model Customer {
+  id                   String    @id @default(cuid())
+  customerCode         String    @unique
+  name                 String
+  customerType         String
+  country              String    @default("")
+  city                 String    @default("")
+  source               String    @default("")
+  status               String
+  ownerUserId          String
+  ownerName            String
+  department           String    @default("export")
+  contactName          String    @default("")
+  contactTitle         String    @default("")
+  phone                String    @default("")
+  email                String    @default("")
+  wechatOrWhatsapp     String    @default("")
+  companyName          String    @default("")
+  companyWebsite       String    @default("")
+  companyAddress       String    @default("")
+  mainProducts         String    @default("")
+  purchaseNeed         String    @default("")
+  sourceNote           String    @default("")
+  expectedPurchaseNeed String    @default("")
+  customerNotes        String    @default("")
+  internalNotes        String    @default("")
+  specialReminder      String    @default("")
+  customFields         Json      @default("{}")
+  createdByUserId      String
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  archivedAt           DateTime?
+
+  @@index([ownerUserId])
+  @@index([department])
+  @@index([status])
+  @@index([updatedAt])
+}
+
+model CustomerFieldConfig {
+  id            String   @id @default(cuid())
+  moduleKey     String
+  fieldKey      String
+  fieldLabel    String
+  fieldType     String
+  fieldGroup    String
+  required      Boolean  @default(false)
+  options       Json     @default("[]")
+  sortOrder     Int
+  isActive      Boolean  @default(true)
+  isSystemField Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([moduleKey, fieldKey])
+  @@index([moduleKey])
+  @@index([fieldGroup])
+  @@index([sortOrder])
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  actorUserId  String?
+  action       String
+  entityType   String
+  entityId     String?
+  metadata     Json     @default("{}")
+  createdAt    DateTime @default(now())
+
+  @@index([actorUserId])
+  @@index([entityType])
+  @@index([createdAt])
+}

@@ -1,0 +1,36 @@
+{
+  "name": "kingaos",
+  "version": "0.1.0",
+  "private": true,
+  "description": "KingaOS internal business operation system production-lite baseline",
+  "scripts": {
+    "dev": "next dev -H 127.0.0.1",
+    "build": "next build",
+    "start": "next start -H 127.0.0.1",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "prisma migrate deploy",
+    "db:seed": "node prisma/seed.mjs",
+    "postinstall": "prisma generate"
+  },
+  "dependencies": {
+    "@prisma/client": "6.19.3",
+    "next": "15.5.15",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.59.1",
+    "@types/node": "20.14.10",
+    "@types/react": "18.3.3",
+    "@types/react-dom": "18.3.0",
+    "prisma": "6.19.3",
+    "rollup": "npm:@rollup/wasm-node@^4.60.3",
+    "typescript": "5.5.3",
+    "vitest": "2.1.9"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
