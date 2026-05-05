@@ -8,9 +8,11 @@ import {
   CUSTOMER_TYPES
 } from "../shared/constants";
 import { normalizeCustomerAttachment, normalizeCustomerContacts, type CustomerContactDraft } from "../shared/customer-relations";
+import { customerGeoDisplay, normalizeCustomerGeo } from "../shared/geo";
 import type { AuthUser } from "./auth";
 import { hasAnyServerPermission, hasServerPermission, requireCurrentUser, requireServerPermission } from "./auth";
 import { prisma } from "./db";
+import { resolveCustomerGeoInput } from "./geo";
 
 export function canViewCustomerServer(actor: AuthUser, customer: { ownerUserId: string; department: string }) {
   if (customer.department !== "export") return false;
@@ -47,8 +49,7 @@ export async function listExportCustomersForActor(actor: AuthUser, query = "") {
       customer.customerCode,
       customer.name,
       customer.customerType,
-      customer.country,
-      customer.city,
+      customerGeoDisplay(customer).full,
       customer.source,
       customer.status,
       customer.ownerName,
@@ -167,11 +168,25 @@ export async function createExportCustomerAction(formData: FormData) {
   if (!owner) throw new Error("负责业务员无效或已停用。");
   const name = String(payload.name || "").trim();
   if (!name) throw new Error("请填写客户名称。");
+  const geo = await resolveCustomerGeoInput(normalizeCustomerGeo({
+    countryCode: String(payload.countryCode || ""),
+    countryName: String(payload.countryName || ""),
+    stateCode: String(payload.stateCode || ""),
+    stateName: String(payload.stateName || ""),
+    cityName: String(payload.cityName || ""),
+    country: String(payload.country || ""),
+    city: String(payload.city || "")
+  }));
   const customer = await createCustomerWithRetry({
     name,
     customerType: String(payload.customerType || CUSTOMER_TYPES[0]),
-    country: String(payload.country || ""),
-    city: String(payload.city || ""),
+    country: geo.country,
+    countryCode: geo.countryCode,
+    countryName: geo.countryName,
+    stateCode: geo.stateCode,
+    stateName: geo.stateName,
+    cityName: geo.cityName,
+    city: geo.city,
     source: String(payload.source || ""),
     status: String(payload.status || CUSTOMER_STATUSES[0]),
     ownerUserId,
@@ -240,14 +255,28 @@ export async function updateExportCustomerAction(customerId: string, formData: F
   if (!owner) throw new Error("负责业务员无效或已停用。");
   const name = String(payload.name || "").trim();
   if (!name) throw new Error("请填写客户名称。");
+  const geo = await resolveCustomerGeoInput(normalizeCustomerGeo({
+    countryCode: String(payload.countryCode || ""),
+    countryName: String(payload.countryName || ""),
+    stateCode: String(payload.stateCode || ""),
+    stateName: String(payload.stateName || ""),
+    cityName: String(payload.cityName || ""),
+    country: String(payload.country || existing.country),
+    city: String(payload.city || existing.city)
+  }));
   await prisma.$transaction(async (tx) => {
     await tx.customer.update({
       where: { id: customerId },
       data: {
         name,
         customerType: String(payload.customerType || CUSTOMER_TYPES[0]),
-        country: String(payload.country || ""),
-        city: String(payload.city || ""),
+        country: geo.country,
+        countryCode: geo.countryCode,
+        countryName: geo.countryName,
+        stateCode: geo.stateCode,
+        stateName: geo.stateName,
+        cityName: geo.cityName,
+        city: geo.city,
         source: String(payload.source || ""),
         status: String(payload.status || CUSTOMER_STATUSES[0]),
         ownerUserId,

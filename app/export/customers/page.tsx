@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Forbidden, KingaShell } from "@/components/kinga-shell";
 import { hasAnyServerPermission, hasServerPermission, requireCurrentUser } from "@/lib/honoa/server/auth";
 import { canEditCustomerServer, listExportCustomersForActor, primaryContactSummary } from "@/lib/honoa/server/customers";
+import { customerGeoDisplay } from "@/lib/honoa/shared/geo";
 
 function formatDate(value: Date) {
   return value.toLocaleString("zh-CN", { hour12: false });
@@ -32,23 +33,25 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
           </div>
         </div>
         <form className="panel" action="/export/customers">
-          <label>搜索客户<input name="q" defaultValue={q} placeholder="客户编号、名称、国家、城市、状态、负责人" /></label>
+          <label>搜索客户<input name="q" defaultValue={q} placeholder="客户编号、名称、国家、州省、城市、状态、负责人" /></label>
         </form>
         <div className="table-wrap">
           <table>
             <thead>
-              <tr><th>客户编号</th><th>客户名称</th><th>客户类型</th><th>国家 / 地区</th><th>城市</th><th>客户状态</th><th>负责业务员</th><th>主要联系人</th><th>联系电话</th><th>邮箱</th><th>最近更新时间</th><th>操作</th></tr>
+              <tr><th>客户编号</th><th>客户名称</th><th>客户类型</th><th>国家 / 地区</th><th>州 / 省 / 地区</th><th>城市</th><th>客户状态</th><th>负责业务员</th><th>主要联系人</th><th>联系电话</th><th>邮箱</th><th>最近更新时间</th><th>操作</th></tr>
             </thead>
             <tbody>
-              {customers.length === 0 ? <tr><td colSpan={12}>暂无客户</td></tr> : customers.map((customer) => {
+              {customers.length === 0 ? <tr><td colSpan={13}>暂无客户</td></tr> : customers.map((customer) => {
                 const contact = primaryContactSummary(customer);
+                const geo = customerGeoDisplay(customer);
                 return (
                   <tr key={customer.id}>
                     <td>{customer.customerCode}</td>
                     <td>{customer.name}</td>
                     <td>{customer.customerType}</td>
-                    <td>{customer.country}</td>
-                    <td>{customer.city}</td>
+                    <td>{geo.country || "-"}</td>
+                    <td>{geo.state || "-"}</td>
+                    <td>{geo.city || "-"}</td>
                     <td>{customer.status}</td>
                     <td>{customer.ownerName}</td>
                     <td>{contact?.name || "-"}</td>

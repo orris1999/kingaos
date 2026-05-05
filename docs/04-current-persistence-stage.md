@@ -13,12 +13,22 @@
 - `DIRECT_URL` 可与 `DATABASE_URL` 相同，供 Prisma migration / seed 使用。
 - 不同电脑登录后，应看到同一套数据库数据。
 - 部署后执行 `npx prisma migrate deploy` 和 `npm run db:seed` 初始化结构和初始账号。
+- 客户国家 / 州省 / 城市同时保存 code 和 name：`countryCode`、`countryName`、`stateCode`、`stateName`、`cityName`。
+- 旧 `country` / `city` 字段继续保留兼容，详情和列表优先显示新字段，缺失时 fallback 到旧字段。
 - 客户档案支持多个联系人，联系人数据保存到 `CustomerContact`。
 - 客户档案支持附件记录，附件元数据保存到 `CustomerAttachment`。
 - 当前附件第一版使用附件链接，`storageProvider=external_url`。
 - 不把文件二进制或 base64 存入 PostgreSQL。
 - 未配置阿里云 OSS / 对象存储前，不做真实文件上传。
 - 不使用 ECS 本地磁盘作为长期正式附件存储。
+
+## 地理数据来源
+
+- 数据包：`@countrystatecity/countries`
+- License：`ODbL-1.0`
+- 使用方式：只在服务端 route handler / server adapter 中按需读取，前端通过 `/api/geo/countries`、`/api/geo/states`、`/api/geo/cities` 懒加载。
+- 前端不直接 import 该 server-side 数据包，也不一次性加载全部城市数据。
+- 如未来对外分发、公开数据或再发布衍生数据库，需要按 ODbL 的 attribution、share-alike、keep open 要求做法务复核。
 
 ## Session
 

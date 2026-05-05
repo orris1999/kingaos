@@ -97,11 +97,18 @@ export const CUSTOMER_LEGACY_CONTACT_FIELD_KEYS = new Set([
   "wechatOrWhatsapp"
 ]);
 
+export const CUSTOMER_GEO_FIELD_KEYS = new Set(["country", "countryCode", "countryName", "stateCode", "stateName", "city", "cityName"]);
+
 export const CUSTOMER_SYSTEM_FIELD_KEYS = new Set([
   "name",
   "customerCode",
   "customerType",
   "country",
+  "countryCode",
+  "countryName",
+  "stateCode",
+  "stateName",
+  "cityName",
   "city",
   "source",
   "ownerUserId",

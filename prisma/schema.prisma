@@ -74,6 +74,11 @@ model Customer {
   name                 String
   customerType         String
   country              String    @default("")
+  countryCode          String?
+  countryName          String?
+  stateCode            String?
+  stateName            String?
+  cityName             String?
   city                 String    @default("")
   source               String    @default("")
   status               String

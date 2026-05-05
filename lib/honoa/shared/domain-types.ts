@@ -66,6 +66,11 @@ export type ExportCustomer = {
   name: string;
   customerType: string;
   country: string;
+  countryCode: string | null;
+  countryName: string | null;
+  stateCode: string | null;
+  stateName: string | null;
+  cityName: string | null;
   city: string;
   source: string;
   status: string;

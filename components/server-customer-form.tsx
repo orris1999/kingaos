@@ -1,10 +1,14 @@
 import type { Customer, CustomerContact, CustomerFieldConfig as DbFieldConfig, User } from "@prisma/client";
+import type { ReactNode } from "react";
+import { CustomerFormWizard } from "@/components/customer-form-wizard";
+import { CustomerGeoSelector } from "@/components/customer-geo-selector";
 import { CustomerContactEditor } from "@/components/customer-contact-editor";
 import { createExportCustomerAction, updateExportCustomerAction, canAssignOwnerServer } from "@/lib/honoa/server/customers";
 import { mapFieldConfig } from "@/lib/honoa/server/field-config";
 import type { AuthUser } from "@/lib/honoa/server/auth";
 import {
   CUSTOMER_FIELD_GROUPS,
+  CUSTOMER_GEO_FIELD_KEYS,
   CUSTOMER_LEGACY_CONTACT_FIELD_KEYS,
   CUSTOMER_READONLY_FORM_FIELDS,
   CUSTOMER_SYSTEM_FIELD_KEYS
@@ -25,7 +29,7 @@ export function ServerCustomerForm({
 }) {
   const activeFields = fields
     .map(mapFieldConfig)
-    .filter((field) => field.isActive && !CUSTOMER_READONLY_FORM_FIELDS.has(field.fieldKey) && !CUSTOMER_LEGACY_CONTACT_FIELD_KEYS.has(field.fieldKey));
+    .filter((field) => field.isActive && !CUSTOMER_READONLY_FORM_FIELDS.has(field.fieldKey) && !CUSTOMER_LEGACY_CONTACT_FIELD_KEYS.has(field.fieldKey) && !CUSTOMER_GEO_FIELD_KEYS.has(field.fieldKey));
   const action = customer ? updateExportCustomerAction.bind(null, customer.id) : createExportCustomerAction;
   const canChooseOwner = canAssignOwnerServer(actor);
   const contacts = customer?.contacts?.length
@@ -50,33 +54,72 @@ export function ServerCustomerForm({
         <h1>{customer ? `编辑客户：${customer.name}` : "新建客户"}</h1>
         {customer ? <p><span className="tag">客户编号：{customer.customerCode}</span></p> : null}
       </div>
-      {CUSTOMER_FIELD_GROUPS.map((group) => {
-        const groupFields = activeFields.filter((field) => field.fieldGroup === group);
-        if (groupFields.length === 0) return null;
-        return (
-          <section className="panel stack" key={group}>
-            <h2>{group}</h2>
-            <div className="form-grid">
-              {groupFields.map((field) => (
-                <CustomerInput
-                  key={field.id}
-                  field={field}
-                  customer={customer}
-                  actor={actor}
-                  owners={owners}
-                  canChooseOwner={canChooseOwner}
-                />
-              ))}
-            </div>
-          </section>
-        );
-      })}
-      <CustomerContactEditor contacts={contacts} />
-      <div className="actions">
-        <button type="submit">{customer ? "保存修改" : "保存客户"}</button>
-        <a className="button ghost" href={customer ? `/export/customers/${customer.id}` : "/export/customers"}>返回</a>
-      </div>
+      <CustomerFormWizard isEdit={Boolean(customer)}>
+        <CustomerStep group="基础信息" fields={activeFields} customer={customer} actor={actor} owners={owners} canChooseOwner={canChooseOwner}>
+          <label>
+            客户编号
+            <div className="readonly">{customer?.customerCode || "保存后系统自动生成"}</div>
+          </label>
+          <CustomerGeoSelector initialValue={customer} />
+        </CustomerStep>
+        <section className="stack">
+          <CustomerContactEditor contacts={contacts} />
+          <CustomerStep group="联系人信息" fields={activeFields} customer={customer} actor={actor} owners={owners} canChooseOwner={canChooseOwner} hideEmpty />
+        </section>
+        <CustomerStep group="公司信息" fields={activeFields} customer={customer} actor={actor} owners={owners} canChooseOwner={canChooseOwner} />
+        <CustomerStep group="合作信息" fields={activeFields} customer={customer} actor={actor} owners={owners} canChooseOwner={canChooseOwner} />
+        <CustomerStep group="备注 / 特殊提醒" fields={activeFields} customer={customer} actor={actor} owners={owners} canChooseOwner={canChooseOwner} title="附件与备注" />
+        <section className="panel stack">
+          <h2>确认并保存</h2>
+          <p className="muted">请确认客户名称、客户类型、国家 / 州省 / 城市、主要联系人、公司名称、主要产品需求、附件数量和备注信息。确认无误后点击“保存客户”。</p>
+          {customer ? <p className="muted">附件可在保存客户后，通过编辑页下方的附件区域继续添加或删除。</p> : <p className="muted">新建客户保存后，可在客户编辑页添加附件链接。</p>}
+        </section>
+      </CustomerFormWizard>
+      <a className="button ghost" href={customer ? `/export/customers/${customer.id}` : "/export/customers"}>返回</a>
     </form>
+  );
+}
+
+function CustomerStep({
+  group,
+  fields,
+  customer,
+  actor,
+  owners,
+  canChooseOwner,
+  children,
+  hideEmpty,
+  title
+}: {
+  group: CustomerFieldConfig["fieldGroup"];
+  fields: CustomerFieldConfig[];
+  customer?: Customer;
+  actor: AuthUser;
+  owners: User[];
+  canChooseOwner: boolean;
+  children?: ReactNode;
+  hideEmpty?: boolean;
+  title?: string;
+}) {
+  const groupFields = fields.filter((field) => field.fieldGroup === group);
+  if (hideEmpty && groupFields.length === 0 && !children) return null;
+  return (
+    <section className="panel stack">
+      <h2>{title || group}</h2>
+      <div className="form-grid">
+        {groupFields.map((field) => (
+          <CustomerInput
+            key={field.id}
+            field={field}
+            customer={customer}
+            actor={actor}
+            owners={owners}
+            canChooseOwner={canChooseOwner}
+          />
+        ))}
+        {children}
+      </div>
+    </section>
   );
 }
 
