@@ -1,11 +1,13 @@
 import Link from "next/link";
+import { CustomerAttachmentsPanel } from "@/components/customer-attachments-panel";
 import { Forbidden, KingaShell } from "@/components/kinga-shell";
 import { requireCurrentUser } from "@/lib/honoa/server/auth";
-import { canEditCustomerServer, getExportCustomerForActor } from "@/lib/honoa/server/customers";
+import { canEditCustomerServer, contactsForDisplay, getExportCustomerForActor } from "@/lib/honoa/server/customers";
 import { listCustomerFieldConfigsForActor } from "@/lib/honoa/server/field-config";
-import { CUSTOMER_FIELD_GROUPS, CUSTOMER_SYSTEM_FIELD_KEYS } from "@/lib/honoa/shared/constants";
+import { CUSTOMER_FIELD_GROUPS, CUSTOMER_LEGACY_CONTACT_FIELD_KEYS, CUSTOMER_SYSTEM_FIELD_KEYS } from "@/lib/honoa/shared/constants";
 import type { CustomerFieldConfig } from "@/lib/honoa/shared/domain-types";
-import type { Customer } from "@prisma/client";
+import { displayFieldValue } from "@/lib/honoa/shared/field-values";
+import type { Customer, CustomerAttachment } from "@prisma/client";
 
 function formatDate(value: Date) {
   return value.toLocaleString("zh-CN", { hour12: false });
@@ -16,12 +18,11 @@ function fieldValue(customer: Customer, field: CustomerFieldConfig) {
   if (field.fieldKey === "updatedAt") return formatDate(customer.updatedAt);
   if (field.fieldKey === "ownerUserId") return customer.ownerName;
   if (CUSTOMER_SYSTEM_FIELD_KEYS.has(field.fieldKey)) {
-    return String((customer as unknown as Record<string, unknown>)[field.fieldKey] || "-");
+    return displayFieldValue((customer as unknown as Record<string, unknown>)[field.fieldKey], field.fieldType);
   }
   const customFields = customer.customFields as Record<string, string | number | boolean>;
   const value = customFields[field.fieldKey];
-  if (typeof value === "boolean") return value ? "是" : "否";
-  return String(value || "-");
+  return displayFieldValue(value, field.fieldType);
 }
 
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -30,6 +31,8 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
   try {
     const customer = await getExportCustomerForActor(user, id);
     const fields = await listCustomerFieldConfigsForActor(undefined, false);
+    const contacts = contactsForDisplay(customer);
+    const canEdit = canEditCustomerServer(user, customer);
     return (
       <KingaShell user={user}>
         <div className="stack">
@@ -40,7 +43,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
               <p><span className="tag">客户编号：{customer.customerCode}</span></p>
             </div>
             <div className="actions">
-              {canEditCustomerServer(user, customer) ? <Link className="button" href={`/export/customers/${customer.id}/edit`}>编辑客户</Link> : null}
+              {canEdit ? <Link className="button" href={`/export/customers/${customer.id}/edit`}>编辑客户</Link> : null}
               <Link className="button ghost" href="/export/customers">返回列表</Link>
             </div>
           </div>
@@ -50,7 +53,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
             <div className="kv"><b>更新时间</b><span>{formatDate(customer.updatedAt)}</span></div>
           </section>
           {CUSTOMER_FIELD_GROUPS.map((group) => {
-            const groupFields = fields.filter((field) => field.fieldGroup === group);
+            const groupFields = fields.filter((field) => field.fieldGroup === group && !CUSTOMER_LEGACY_CONTACT_FIELD_KEYS.has(field.fieldKey));
             if (groupFields.length === 0) return null;
             return (
               <section className="panel" key={group}>
@@ -66,6 +69,28 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
               </section>
             );
           })}
+          <section className="panel stack">
+            <h2>联系人信息</h2>
+            {contacts.length === 0 ? <p className="muted">暂无联系人</p> : null}
+            {contacts.map((contact) => (
+              <div className="subpanel detail-grid" key={contact.id}>
+                <div className="kv">
+                  <b>联系人姓名</b>
+                  <span>{contact.name} {contact.isPrimary ? <span className="tag ok">主要联系人</span> : null}</span>
+                </div>
+                <div className="kv"><b>职位</b><span>{contact.title || "-"}</span></div>
+                <div className="kv"><b>电话</b><span>{contact.phone || "-"}</span></div>
+                <div className="kv"><b>邮箱</b><span>{contact.email || "-"}</span></div>
+                <div className="kv"><b>WhatsApp / 微信</b><span>{contact.wechatOrWhatsapp || "-"}</span></div>
+                <div className="kv"><b>备注</b><span>{contact.notes || "-"}</span></div>
+              </div>
+            ))}
+          </section>
+          <CustomerAttachmentsPanel
+            customerId={customer.id}
+            attachments={(customer.attachments || []) as CustomerAttachment[]}
+            editable={canEdit}
+          />
         </div>
       </KingaShell>
     );

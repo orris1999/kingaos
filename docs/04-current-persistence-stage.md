@@ -3,7 +3,7 @@
 确认日期：2026-05-05  
 状态：POSTGRESQL_PRODUCTION_LITE_BASELINE
 
-当前多人版本默认使用 PostgreSQL + Prisma。用户、权限、session、客户、字段配置和审计日志都保存到 PostgreSQL。
+当前多人版本默认使用 PostgreSQL + Prisma。用户、权限、session、客户、客户联系人、客户附件元数据、字段配置和审计日志都保存到 PostgreSQL。
 
 ## 生产路径
 
@@ -13,6 +13,12 @@
 - `DIRECT_URL` 可与 `DATABASE_URL` 相同，供 Prisma migration / seed 使用。
 - 不同电脑登录后，应看到同一套数据库数据。
 - 部署后执行 `npx prisma migrate deploy` 和 `npm run db:seed` 初始化结构和初始账号。
+- 客户档案支持多个联系人，联系人数据保存到 `CustomerContact`。
+- 客户档案支持附件记录，附件元数据保存到 `CustomerAttachment`。
+- 当前附件第一版使用附件链接，`storageProvider=external_url`。
+- 不把文件二进制或 base64 存入 PostgreSQL。
+- 未配置阿里云 OSS / 对象存储前，不做真实文件上传。
+- 不使用 ECS 本地磁盘作为长期正式附件存储。
 
 ## Session
 

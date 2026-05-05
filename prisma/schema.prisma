@@ -101,10 +101,56 @@ model Customer {
   updatedAt            DateTime  @updatedAt
   archivedAt           DateTime?
 
+  contacts    CustomerContact[]
+  attachments CustomerAttachment[]
+
   @@index([ownerUserId])
   @@index([department])
   @@index([status])
   @@index([updatedAt])
+}
+
+model CustomerContact {
+  id               String   @id @default(cuid())
+  customerId       String
+  customer         Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  name             String
+  title            String?
+  phone            String?
+  email            String?
+  wechatOrWhatsapp String?
+  isPrimary        Boolean  @default(false)
+  notes            String?
+  sortOrder        Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([customerId])
+  @@index([customerId, isPrimary])
+  @@index([customerId, sortOrder])
+}
+
+model CustomerAttachment {
+  id               String    @id @default(cuid())
+  customerId       String
+  customer         Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  attachmentName   String
+  attachmentType   String?
+  fileUrl          String?
+  storageProvider  String    @default("external_url")
+  storageKey       String?
+  mimeType         String?
+  fileSize         Int?
+  description      String?
+  uploadedByUserId String?
+  uploadedByName   String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
+
+  @@index([customerId])
+  @@index([attachmentType])
+  @@index([deletedAt])
 }
 
 model CustomerFieldConfig {

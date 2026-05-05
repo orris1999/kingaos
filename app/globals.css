@@ -91,6 +91,13 @@ a:hover {
   padding: 20px;
 }
 
+.subpanel {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  background: #fafbfc;
+}
+
 .card {
   display: block;
   min-height: 128px;
@@ -154,6 +161,11 @@ p {
 .tag.danger {
   color: var(--danger);
   background: #ffe7ed;
+}
+
+.danger-text {
+  color: var(--danger);
+  border-color: #f1aeb5;
 }
 
 button,

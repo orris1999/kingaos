@@ -1,13 +1,16 @@
-import type { Customer, CustomerFieldConfig as DbFieldConfig, User } from "@prisma/client";
+import type { Customer, CustomerContact, CustomerFieldConfig as DbFieldConfig, User } from "@prisma/client";
+import { CustomerContactEditor } from "@/components/customer-contact-editor";
 import { createExportCustomerAction, updateExportCustomerAction, canAssignOwnerServer } from "@/lib/honoa/server/customers";
 import { mapFieldConfig } from "@/lib/honoa/server/field-config";
 import type { AuthUser } from "@/lib/honoa/server/auth";
 import {
   CUSTOMER_FIELD_GROUPS,
+  CUSTOMER_LEGACY_CONTACT_FIELD_KEYS,
   CUSTOMER_READONLY_FORM_FIELDS,
   CUSTOMER_SYSTEM_FIELD_KEYS
 } from "@/lib/honoa/shared/constants";
 import type { CustomerFieldConfig } from "@/lib/honoa/shared/domain-types";
+import { booleanFieldValueLabel } from "@/lib/honoa/shared/field-types";
 
 export function ServerCustomerForm({
   actor,
@@ -16,13 +19,30 @@ export function ServerCustomerForm({
   owners
 }: {
   actor: AuthUser;
-  customer?: Customer;
+  customer?: Customer & { contacts?: CustomerContact[] };
   fields: DbFieldConfig[];
   owners: User[];
 }) {
-  const activeFields = fields.map(mapFieldConfig).filter((field) => field.isActive && !CUSTOMER_READONLY_FORM_FIELDS.has(field.fieldKey));
+  const activeFields = fields
+    .map(mapFieldConfig)
+    .filter((field) => field.isActive && !CUSTOMER_READONLY_FORM_FIELDS.has(field.fieldKey) && !CUSTOMER_LEGACY_CONTACT_FIELD_KEYS.has(field.fieldKey));
   const action = customer ? updateExportCustomerAction.bind(null, customer.id) : createExportCustomerAction;
   const canChooseOwner = canAssignOwnerServer(actor);
+  const contacts = customer?.contacts?.length
+    ? customer.contacts
+    : customer && [customer.contactName, customer.contactTitle, customer.phone, customer.email, customer.wechatOrWhatsapp].some(Boolean)
+      ? [{
+          id: "",
+          name: customer.contactName,
+          title: customer.contactTitle,
+          phone: customer.phone,
+          email: customer.email,
+          wechatOrWhatsapp: customer.wechatOrWhatsapp,
+          isPrimary: true,
+          notes: "",
+          sortOrder: 0
+        }]
+      : [];
   return (
     <form className="stack" action={action}>
       <div>
@@ -51,6 +71,7 @@ export function ServerCustomerForm({
           </section>
         );
       })}
+      <CustomerContactEditor contacts={contacts} />
       <div className="actions">
         <button type="submit">{customer ? "保存修改" : "保存客户"}</button>
         <a className="button ghost" href={customer ? `/export/customers/${customer.id}` : "/export/customers"}>返回</a>
@@ -111,7 +132,16 @@ function CustomerInput({
     );
   }
   if (field.fieldType === "boolean") {
-    return <label className="checkrow"><input name={field.fieldKey} type="checkbox" value="1" defaultChecked={value === true || value === "1"} /><span>{label}</span></label>;
+    return (
+      <label>
+        {label}
+        <select name={field.fieldKey} defaultValue={value === true || value === "1" ? "1" : value === false || value === "0" ? "0" : ""}>
+          <option value="">未填写</option>
+          <option value="1">{booleanFieldValueLabel(true)}</option>
+          <option value="0">{booleanFieldValueLabel(false)}</option>
+        </select>
+      </label>
+    );
   }
   return (
     <label>

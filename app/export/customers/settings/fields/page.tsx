@@ -7,6 +7,7 @@ import {
 } from "@/lib/honoa/server/field-config";
 import { CUSTOMER_FIELD_GROUPS, CUSTOMER_FIELD_TYPES } from "@/lib/honoa/shared/constants";
 import type { CustomerFieldGroup, CustomerFieldType } from "@/lib/honoa/shared/domain-types";
+import { fieldTypeLabel } from "@/lib/honoa/shared/field-types";
 
 export default async function FieldSettingsPage() {
   const user = await requireCurrentUser();
@@ -50,7 +51,11 @@ export default async function FieldSettingsPage() {
                       <label>字段名称<input name="fieldLabel" defaultValue={field.fieldLabel} required /></label>
                       <label>字段 key<div className="readonly">{field.fieldKey}{field.isSystemField ? " / 系统字段" : ""}</div></label>
                       <label>分组<FieldGroupSelect defaultValue={field.fieldGroup} /></label>
-                      <label>类型<FieldTypeSelect defaultValue={field.fieldType} disabled={field.isSystemField} /></label>
+                      <label>
+                        类型
+                        <FieldTypeSelect defaultValue={field.fieldType} disabled={field.isSystemField} />
+                        <span className="tiny muted">当前类型：{fieldTypeLabel(field.fieldType)}</span>
+                      </label>
                       <label>排序<input name="sortOrder" type="number" defaultValue={field.sortOrder} /></label>
                       <label className="checkrow"><input name="required" type="checkbox" value="1" defaultChecked={field.required} /><span>必填</span></label>
                       <label className="checkrow"><input name="isActive" type="checkbox" value="1" defaultChecked={field.isActive} /><span>启用</span></label>
@@ -79,7 +84,7 @@ function FieldGroupSelect({ defaultValue }: { defaultValue?: CustomerFieldGroup 
 function FieldTypeSelect({ defaultValue, disabled }: { defaultValue?: CustomerFieldType; disabled?: boolean }) {
   return (
     <select name="fieldType" defaultValue={defaultValue || "text"} disabled={disabled}>
-      {CUSTOMER_FIELD_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}
+      {CUSTOMER_FIELD_TYPES.map((type) => <option key={type} value={type}>{fieldTypeLabel(type)}</option>)}
     </select>
   );
 }
