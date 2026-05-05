@@ -16,7 +16,17 @@ type ContactInput = {
 };
 
 function blankContact(sortOrder: number): ContactInput {
-  return { clientKey: crypto.randomUUID(), name: "", title: "", phone: "", email: "", wechatOrWhatsapp: "", isPrimary: false, notes: "", sortOrder };
+  return {
+    clientKey: `contact_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+    name: "",
+    title: "",
+    phone: "",
+    email: "",
+    wechatOrWhatsapp: "",
+    isPrimary: false,
+    notes: "",
+    sortOrder
+  };
 }
 
 function withClientKeys(contacts: ContactInput[]) {
