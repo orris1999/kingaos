@@ -42,7 +42,7 @@ export function CustomerGeoSelector({ initialValue }: { initialValue?: CustomerG
   const [loadingCities, setLoadingCities] = React.useState(false);
 
   React.useEffect(() => {
-    fetch("/api/geo/countries")
+    fetch("/api/geo/countries", { cache: "no-store" })
       .then((response) => (response.ok ? response.json() : []))
       .then((data: CountryOption[]) => {
         setCountries(data);
@@ -57,7 +57,7 @@ export function CustomerGeoSelector({ initialValue }: { initialValue?: CustomerG
       return;
     }
     setLoadingStates(true);
-    fetch(`/api/geo/states?countryCode=${encodeURIComponent(countryCode)}`)
+    fetch(`/api/geo/states?countryCode=${encodeURIComponent(countryCode)}`, { cache: "no-store" })
       .then((response) => (response.ok ? response.json() : []))
       .then((data: StateOption[]) => {
         setStates(data);
@@ -76,7 +76,7 @@ export function CustomerGeoSelector({ initialValue }: { initialValue?: CustomerG
       return;
     }
     setLoadingCities(true);
-    fetch(`/api/geo/cities?countryCode=${encodeURIComponent(countryCode)}&stateCode=${encodeURIComponent(stateCode)}`)
+    fetch(`/api/geo/cities?countryCode=${encodeURIComponent(countryCode)}&stateCode=${encodeURIComponent(stateCode)}`, { cache: "no-store" })
       .then((response) => (response.ok ? response.json() : []))
       .then((data: CityOption[]) => setCities(data))
       .catch(() => setCities([]))

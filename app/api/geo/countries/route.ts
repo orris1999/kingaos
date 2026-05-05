@@ -8,7 +8,7 @@ export async function GET() {
   const countries = await listGeoCountries();
   return NextResponse.json(countries, {
     headers: {
-      "Cache-Control": "private, max-age=3600"
+      "Cache-Control": "no-store"
     }
   });
 }

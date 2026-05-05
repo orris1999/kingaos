@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
   const cities = await listGeoCities(countryCode, stateCode);
   return NextResponse.json(cities, {
     headers: {
-      "Cache-Control": "private, max-age=1800"
+      "Cache-Control": "no-store"
     }
   });
 }

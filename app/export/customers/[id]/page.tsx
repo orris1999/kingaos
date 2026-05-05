@@ -81,9 +81,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
             <section className="panel stack">
               <h2>基础信息</h2>
               <div className="detail-grid">
-                <div className="kv"><b>国家 / 地区</b><span>{geo.country || "-"}</span></div>
-                <div className="kv"><b>州 / 省</b><span>{geo.state || "-"}</span></div>
-                <div className="kv"><b>城市</b><span>{geo.city || "-"}</span></div>
+                <div className="kv"><b>地址</b><span>{geo.full}</span></div>
               </div>
               {renderFields("基础信息")}
             </section>

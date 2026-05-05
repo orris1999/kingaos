@@ -6,7 +6,7 @@ import {
   listCustomerFieldConfigsForActor,
   updateCustomerFieldConfigAction
 } from "@/lib/honoa/server/field-config";
-import { CUSTOMER_FIELD_GROUPS, CUSTOMER_FIELD_TYPES } from "@/lib/honoa/shared/constants";
+import { CUSTOMER_FIELD_GROUPS, CUSTOMER_FIELD_TYPES, CUSTOMER_GEO_FIELD_KEYS } from "@/lib/honoa/shared/constants";
 import type { CustomerFieldGroup, CustomerFieldType } from "@/lib/honoa/shared/domain-types";
 import { fieldTypeLabel } from "@/lib/honoa/shared/field-types";
 
@@ -19,7 +19,11 @@ export default async function FieldSettingsPage() {
       </KingaShell>
     );
   }
-  const fields = await listCustomerFieldConfigsForActor(user, true);
+  const fields = (await listCustomerFieldConfigsForActor(user, true))
+    .filter((field) => !CUSTOMER_GEO_FIELD_KEYS.has(field.fieldKey))
+    .sort((a, b) => Number(a.isSystemField) - Number(b.isSystemField) || a.sortOrder - b.sortOrder);
+  const customFields = fields.filter((field) => !field.isSystemField);
+  const systemFields = fields.filter((field) => field.isSystemField);
   return (
     <KingaShell user={user}>
       <div className="stack">
@@ -41,11 +45,28 @@ export default async function FieldSettingsPage() {
             <div><button type="submit">添加字段</button></div>
           </CustomerFieldConfigForm>
         </section>
-        <div className="table-wrap">
-          <table>
-            <thead><tr><th>字段配置</th></tr></thead>
-            <tbody>
-              {fields.map((field) => (
+        <section className="panel stack">
+          <h2>自定义字段</h2>
+          <p className="muted">自定义字段可以修改字段类型。修改类型前系统会提示确认，不会清空历史客户数据。</p>
+          <FieldConfigTable fields={customFields} />
+        </section>
+        <section className="panel stack">
+          <h2>系统字段</h2>
+          <p className="muted">系统字段类型不可修改，避免影响客户档案基础结构。地址字段已由国家 / 州 / 城市联动控件维护，不在这里单独配置。</p>
+          <FieldConfigTable fields={systemFields} />
+        </section>
+      </div>
+    </KingaShell>
+  );
+}
+
+function FieldConfigTable({ fields }: { fields: Awaited<ReturnType<typeof listCustomerFieldConfigsForActor>> }) {
+  return (
+    <div className="table-wrap">
+      <table>
+        <thead><tr><th>字段配置</th></tr></thead>
+        <tbody>
+          {fields.length === 0 ? <tr><td>暂无字段</td></tr> : fields.map((field) => (
                 <tr key={field.id}>
                   <td>
                     <CustomerFieldConfigForm action={updateCustomerFieldConfigAction.bind(null, field.id)} confirmTypeChange={!field.isSystemField}>
@@ -67,12 +88,10 @@ export default async function FieldSettingsPage() {
                     </CustomerFieldConfigForm>
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </KingaShell>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
