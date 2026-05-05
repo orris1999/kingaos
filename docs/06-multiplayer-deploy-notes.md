@@ -27,6 +27,16 @@ npm start
 
 如果 `DATABASE_URL` 仍是占位值，不能宣称已经完成真实 PostgreSQL migration / seed，也不能宣称已经完成多人部署验证。
 
+`npm run db:seed` 是生产安全 seed：只维护权限字典和缺失的系统字段定义，不创建用户、不修改用户、不修改客户。
+
+默认用户初始化不是部署步骤。只有首次空库初始化或 demo/dev 初始化时，才允许人工显式执行：
+
+```bash
+ALLOW_DEFAULT_USER_BOOTSTRAP=true npm run db:bootstrap-default-users
+```
+
+部署脚本禁止自动执行默认用户 bootstrap、客户 backfill 或任何会创建/修改业务数据的脚本。
+
 生产环境 migration 只允许使用：
 
 ```bash

@@ -44,6 +44,7 @@ cp .env.local.example .env.local
 npm run db:local:up
 npm run db:dev:migrate
 npm run db:dev:seed
+npm run db:dev:bootstrap
 npm run dev
 ```
 
@@ -63,6 +64,7 @@ cp .env.test.example .env.test
 npm run db:local:up
 npm run db:test:migrate
 npm run db:test:seed
+npm run db:test:bootstrap
 npm run typecheck
 npm run test
 npm run build
@@ -79,7 +81,8 @@ npm run build
 - 执行 `npx prisma validate`。
 - 执行 `npx prisma generate`。
 - 执行 `npx prisma migrate deploy`。
-- 执行 `npm run db:seed`。
+- 执行安全 `npm run db:seed`。
+- 显式 bootstrap 测试用户。
 - 执行 `npm run typecheck`。
 - 执行 `npm run test`。
 - 执行 `npm run build`。
@@ -96,6 +99,8 @@ npm run db:seed
 npm run build
 npm start
 ```
+
+`npm run db:seed` 不会创建用户或客户。默认用户 bootstrap 不属于生产部署步骤。
 
 生产环境禁止：
 

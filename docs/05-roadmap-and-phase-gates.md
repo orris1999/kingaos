@@ -8,6 +8,8 @@
 
 数据库变更门禁：先在本地 Docker PostgreSQL 验证，再通过 GitHub Actions，最后才允许部署生产。生产环境只允许 `npx prisma migrate deploy`，禁止 `npx prisma migrate reset`、`npx prisma db push --force-reset`、`npx prisma migrate dev`。
 
+生产部署 seed 必须是安全 seed：不创建用户、不修改用户、不创建客户、不修改客户。默认用户 bootstrap、客户 backfill 只能人工显式执行，不能作为部署脚本的一部分。
+
 ## 当前上线门
 
 多人试用前必须满足：
@@ -15,7 +17,7 @@
 1. `DATABASE_URL` 指向可用 PostgreSQL。
 2. `SESSION_SECRET` 使用足够长的随机值。
 3. `npx prisma migrate deploy` 执行成功。
-4. `npm run db:seed` 执行成功。
+4. 生产安全 `npm run db:seed` 执行成功，且没有创建/修改用户或客户。
 5. `npm run typecheck`、`npm run test`、`npm run build` 通过。
 6. super_admin 可用 `superadmin@kingaos.local / roserose` 登录。
 7. 未开放模块只能显示入口或未开放页面，不能进入真实功能。

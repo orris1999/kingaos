@@ -23,6 +23,8 @@ production/admin trial/salesperson usage 默认走 PostgreSQL，不走 localStor
 本地 Docker PostgreSQL：kingaos_dev:5433，kingaos_test:5434。
 GitHub Actions 每次 push / pull request 自动执行 migration、seed、typecheck、test、build。
 生产环境只允许 npx prisma migrate deploy，禁止 migrate reset / db push --force-reset / migrate dev。
+生产 db:seed 必须是安全 seed，不创建用户、不修改用户、不创建客户、不修改客户。
+默认用户 bootstrap 和客户 backfill 必须人工显式执行，不能放进部署脚本。
 ```
 
 当前真实开放范围：
