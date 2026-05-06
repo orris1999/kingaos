@@ -31,7 +31,8 @@
 - 客户附件支持 `storageProvider=aliyun_oss` 的真实文件上传；PostgreSQL 只保存 `storageKey`、MIME、大小、上传人等元数据。
 - OSS Bucket 必须私有；上传使用服务端生成的短时 PUT 预签名 URL，下载 / 预览使用服务端生成的短时 GET 预签名 URL。
 - 阿里云 AccessKey 只能在服务端 `.env` 使用，不能暴露到浏览器，不能使用 `NEXT_PUBLIC_*`。
-- OSS 未配置时，页面 fallback 到附件链接，`storageProvider=external_url`。
+- 新增附件不再使用旧“附件链接”提交入口；历史 `storageProvider=external_url` 附件仅保留兼容展示和下载。
+- 附件类型配置保存在 `CustomerFieldConfig(moduleKey=export_customer_attachment, fieldKey=attachmentType)`，由拥有字段配置权限的管理员 / 超级管理员维护。
 - 客户名称默认不允许重复。
 - 系统会对客户名称执行规范化：trim、Unicode NFKC、转小写、删除空白、删除常见标点和符号。
 - 加点、加空格、大小写变化、全角半角变化不能绕过重复客户检测。

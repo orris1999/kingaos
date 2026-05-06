@@ -93,7 +93,13 @@ export const CUSTOMER_TYPES = ["工厂", "贸易商", "终端客户", "代理商
 
 export const CUSTOMER_STATUSES = ["新客户", "跟进中", "已报价", "已成交", "暂停合作", "已归档"];
 
-export const CUSTOMER_ATTACHMENT_TYPES = ["名片", "营业执照", "聊天记录", "报价资料", "协议文件", "客户资料", "其他"];
+export const DEFAULT_CUSTOMER_ATTACHMENT_TYPES = ["名片", "营业执照", "聊天记录", "报价资料", "协议文件", "客户资料", "其他"];
+
+export const CUSTOMER_ATTACHMENT_CONFIG_MODULE_KEY = "export_customer_attachment";
+
+export const CUSTOMER_ATTACHMENT_TYPE_FIELD_KEY = "attachmentType";
+
+export const CUSTOMER_ATTACHMENT_TYPES = DEFAULT_CUSTOMER_ATTACHMENT_TYPES;
 
 export const CUSTOMER_LEGACY_CONTACT_FIELD_KEYS = new Set([
   "contactName",

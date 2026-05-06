@@ -87,7 +87,7 @@ export function CustomerOssUpload({
   return (
     <div className="subpanel stack">
       <h3>上传文件</h3>
-      {!ossConfigured ? <p className="muted">OSS 尚未配置，暂时只能添加附件链接。</p> : null}
+      {!ossConfigured ? <p className="muted">OSS 尚未配置，暂时不能上传文件。请联系管理员配置阿里云 OSS。</p> : null}
       <div className="form-grid">
         <label>
           选择文件

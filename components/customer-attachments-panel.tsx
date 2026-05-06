@@ -1,12 +1,11 @@
 import type { CustomerAttachment } from "@prisma/client";
 import { CustomerAttachmentDownloadButton, CustomerOssUpload } from "@/components/customer-oss-upload";
 import {
-  createCustomerAttachmentAction,
   deleteCustomerAttachmentAction,
   updateCustomerAttachmentAction
 } from "@/lib/honoa/server/customers";
+import { getCustomerAttachmentTypes } from "@/lib/honoa/server/field-config";
 import { isOssConfigured } from "@/lib/honoa/server/oss";
-import { CUSTOMER_ATTACHMENT_TYPES } from "@/lib/honoa/shared/constants";
 
 function formatDate(value: Date) {
   return value.toLocaleString("zh-CN", { hour12: false });
@@ -19,15 +18,22 @@ function formatFileSize(value?: number | null) {
   return `${(value / 1024 / 1024).toFixed(1)} MB`;
 }
 
-function AttachmentTypeSelect({ defaultValue }: { defaultValue?: string | null }) {
+function attachmentTypeOptions(types: string[], defaultValue?: string | null) {
+  const options = [...types];
+  const value = defaultValue?.trim();
+  if (value && !options.includes(value)) options.push(value);
+  return options;
+}
+
+function AttachmentTypeSelect({ types, defaultValue }: { types: string[]; defaultValue?: string | null }) {
   return (
     <select name="attachmentType" defaultValue={defaultValue || "其他"}>
-      {CUSTOMER_ATTACHMENT_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}
+      {attachmentTypeOptions(types, defaultValue).map((type) => <option key={type} value={type}>{type}</option>)}
     </select>
   );
 }
 
-export function CustomerAttachmentsPanel({
+export async function CustomerAttachmentsPanel({
   customerId,
   attachments,
   editable
@@ -37,11 +43,12 @@ export function CustomerAttachmentsPanel({
   editable: boolean;
 }) {
   const ossReady = isOssConfigured();
+  const attachmentTypes = await getCustomerAttachmentTypes();
   return (
     <section className="panel stack">
       <div>
         <h2>附件</h2>
-        <p className="muted">支持上传文件到私有阿里云 OSS，也可以继续添加附件链接。数据库只保存附件元数据，不保存文件二进制。</p>
+        <p className="muted">支持上传文件到私有阿里云 OSS。数据库只保存附件元数据，不保存文件二进制。</p>
       </div>
       {attachments.length === 0 ? <p className="muted">暂无附件</p> : null}
       {attachments.map((attachment) => (
@@ -49,7 +56,7 @@ export function CustomerAttachmentsPanel({
           {editable ? (
             <form className="form-grid" action={updateCustomerAttachmentAction.bind(null, customerId, attachment.id)}>
               <label>附件名称<input name="attachmentName" defaultValue={attachment.attachmentName} required /></label>
-              <label>附件类型<AttachmentTypeSelect defaultValue={attachment.attachmentType} /></label>
+              <label>附件类型<AttachmentTypeSelect types={attachmentTypes} defaultValue={attachment.attachmentType} /></label>
               {attachment.storageProvider === "aliyun_oss" ? (
                 <div className="readonly">
                   阿里云 OSS 文件<br />
@@ -88,19 +95,7 @@ export function CustomerAttachmentsPanel({
         </div>
       ))}
       {editable ? (
-        <>
-          <CustomerOssUpload customerId={customerId} attachmentTypes={CUSTOMER_ATTACHMENT_TYPES} ossConfigured={ossReady} />
-          <div className="subpanel stack">
-            <h3>添加附件链接</h3>
-            <form className="form-grid" action={createCustomerAttachmentAction.bind(null, customerId)}>
-              <label>附件名称<input name="attachmentName" required /></label>
-              <label>附件类型<AttachmentTypeSelect /></label>
-              <label>附件链接<input name="fileUrl" type="url" placeholder="https://..." required /></label>
-              <label style={{ gridColumn: "1 / -1" }}>附件说明<textarea name="description" /></label>
-              <div><button type="submit">添加附件</button></div>
-            </form>
-          </div>
-        </>
+        <CustomerOssUpload customerId={customerId} attachmentTypes={attachmentTypes} ossConfigured={ossReady} />
       ) : null}
     </section>
   );

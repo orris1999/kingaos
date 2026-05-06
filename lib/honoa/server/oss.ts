@@ -56,7 +56,7 @@ export function isOssConfigured(env: OssEnv = process.env) {
 
 export function getOssConfig(env: OssEnv = process.env): OssConfig {
   if (!isOssConfigured(env)) {
-    throw new Error("OSS 尚未配置，暂时只能添加附件链接。");
+    throw new Error("OSS 尚未配置，暂时不能上传文件。请联系管理员配置阿里云 OSS。");
   }
   const uploadPrefix = (env.ALIYUN_OSS_UPLOAD_PREFIX || "customers").replace(/^\/+|\/+$/g, "");
   if (uploadPrefix !== "customers") {

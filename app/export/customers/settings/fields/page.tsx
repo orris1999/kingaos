@@ -3,7 +3,9 @@ import { Forbidden, KingaShell } from "@/components/kinga-shell";
 import { hasServerPermission, requireCurrentUser } from "@/lib/honoa/server/auth";
 import {
   createCustomerFieldConfigAction,
+  getCustomerAttachmentTypes,
   listCustomerFieldConfigsForActor,
+  updateCustomerAttachmentTypesAction,
   updateCustomerFieldConfigAction
 } from "@/lib/honoa/server/field-config";
 import { CUSTOMER_FIELD_GROUPS, CUSTOMER_FIELD_TYPES, CUSTOMER_GEO_FIELD_KEYS } from "@/lib/honoa/shared/constants";
@@ -24,6 +26,7 @@ export default async function FieldSettingsPage() {
     .sort((a, b) => Number(a.isSystemField) - Number(b.isSystemField) || a.sortOrder - b.sortOrder);
   const customFields = fields.filter((field) => !field.isSystemField);
   const systemFields = fields.filter((field) => field.isSystemField);
+  const attachmentTypes = await getCustomerAttachmentTypes();
   return (
     <KingaShell user={user}>
       <div className="stack">
@@ -44,6 +47,17 @@ export default async function FieldSettingsPage() {
             <label style={{ gridColumn: "1 / -1" }}>下拉选项<textarea name="options" placeholder="select 类型使用，一行一个" /></label>
             <div><button type="submit">添加字段</button></div>
           </CustomerFieldConfigForm>
+        </section>
+        <section className="panel stack">
+          <h2>附件类型配置</h2>
+          <p className="muted">这里维护客户附件上传框里的“附件类型”下拉选项。每行一个类型；系统会自动保留“其他”。</p>
+          <form className="form-grid" action={updateCustomerAttachmentTypesAction}>
+            <label style={{ gridColumn: "1 / -1" }}>
+              附件类型
+              <textarea name="attachmentTypes" defaultValue={attachmentTypes.join("\n")} rows={7} />
+            </label>
+            <div><button type="submit">保存附件类型</button></div>
+          </form>
         </section>
         <section className="panel stack">
           <h2>自定义字段</h2>

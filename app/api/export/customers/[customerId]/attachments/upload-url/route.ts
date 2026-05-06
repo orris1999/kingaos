@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/honoa/server/auth";
 import { canEditCustomerServer } from "@/lib/honoa/server/customers";
 import { prisma } from "@/lib/honoa/server/db";
+import { getCustomerAttachmentTypes } from "@/lib/honoa/server/field-config";
 import { generatePutSignedUrl, isOssConfigured, validateOssUploadRequest } from "@/lib/honoa/server/oss";
-import { CUSTOMER_ATTACHMENT_TYPES } from "@/lib/honoa/shared/constants";
 
 export const runtime = "nodejs";
 
@@ -16,12 +16,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "当前账号不能维护该客户附件。" }, { status: 403 });
   }
   if (!isOssConfigured()) {
-    return NextResponse.json({ error: "OSS 尚未配置，暂时只能添加附件链接。" }, { status: 503 });
+    return NextResponse.json({ error: "OSS 尚未配置，暂时不能上传文件。请联系管理员配置阿里云 OSS。" }, { status: 503 });
   }
   const body = await request.json().catch(() => null);
   if (!body || typeof body !== "object") return NextResponse.json({ error: "请求格式无效。" }, { status: 400 });
   const attachmentType = String(body.attachmentType || "其他");
-  if (!CUSTOMER_ATTACHMENT_TYPES.includes(attachmentType)) {
+  if (!(await getCustomerAttachmentTypes()).includes(attachmentType)) {
     return NextResponse.json({ error: "附件类型无效。" }, { status: 400 });
   }
   try {

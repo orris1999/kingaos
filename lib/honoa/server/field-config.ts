@@ -1,6 +1,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
+  CUSTOMER_ATTACHMENT_CONFIG_MODULE_KEY,
+  CUSTOMER_ATTACHMENT_TYPE_FIELD_KEY,
+  DEFAULT_CUSTOMER_ATTACHMENT_TYPES,
   CUSTOMER_FIELD_GROUPS,
   CUSTOMER_FIELD_TYPES
 } from "../shared/constants";
@@ -38,6 +41,95 @@ export async function listCustomerFieldConfigsForActor(actor?: AuthUser, include
     if (groupDelta !== 0) return groupDelta;
     return a.sortOrder - b.sortOrder;
   });
+}
+
+function normalizeAttachmentTypeOptions(input: string[]) {
+  const options = input
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const unique = Array.from(new Set(options));
+  if (!unique.includes("其他")) unique.push("其他");
+  return unique;
+}
+
+export async function getCustomerAttachmentTypes() {
+  const config = await prisma.customerFieldConfig.upsert({
+    where: {
+      moduleKey_fieldKey: {
+        moduleKey: CUSTOMER_ATTACHMENT_CONFIG_MODULE_KEY,
+        fieldKey: CUSTOMER_ATTACHMENT_TYPE_FIELD_KEY
+      }
+    },
+    create: {
+      moduleKey: CUSTOMER_ATTACHMENT_CONFIG_MODULE_KEY,
+      fieldKey: CUSTOMER_ATTACHMENT_TYPE_FIELD_KEY,
+      fieldLabel: "附件类型",
+      fieldType: "select",
+      fieldGroup: "基础信息",
+      required: false,
+      options: DEFAULT_CUSTOMER_ATTACHMENT_TYPES,
+      sortOrder: 10,
+      isActive: true,
+      isSystemField: true
+    },
+    update: {}
+  });
+  const options = Array.isArray(config.options) ? (config.options as string[]) : DEFAULT_CUSTOMER_ATTACHMENT_TYPES;
+  return normalizeAttachmentTypeOptions(options);
+}
+
+export async function updateCustomerAttachmentTypesAction(formData: FormData) {
+  "use server";
+
+  const actor = await requireCurrentUser();
+  requireServerPermission(actor, "export.customers.fields.manage");
+  const options = normalizeAttachmentTypeOptions(
+    String(formData.get("attachmentTypes") || "")
+      .split(/\r?\n|,/)
+      .map((item) => item.trim())
+  );
+  await prisma.$transaction(async (tx) => {
+    const existing = await tx.customerFieldConfig.upsert({
+      where: {
+        moduleKey_fieldKey: {
+          moduleKey: CUSTOMER_ATTACHMENT_CONFIG_MODULE_KEY,
+          fieldKey: CUSTOMER_ATTACHMENT_TYPE_FIELD_KEY
+        }
+      },
+      create: {
+        moduleKey: CUSTOMER_ATTACHMENT_CONFIG_MODULE_KEY,
+        fieldKey: CUSTOMER_ATTACHMENT_TYPE_FIELD_KEY,
+        fieldLabel: "附件类型",
+        fieldType: "select",
+        fieldGroup: "基础信息",
+        required: false,
+        options,
+        sortOrder: 10,
+        isActive: true,
+        isSystemField: true
+      },
+      update: {
+        options,
+        isActive: true
+      }
+    });
+    await tx.auditLog.create({
+      data: {
+        actorUserId: actor.id,
+        action: "customer_attachment_types.update",
+        entityType: "CustomerFieldConfig",
+        entityId: existing.id,
+        metadata: {
+          moduleKey: CUSTOMER_ATTACHMENT_CONFIG_MODULE_KEY,
+          fieldKey: CUSTOMER_ATTACHMENT_TYPE_FIELD_KEY,
+          options
+        }
+      }
+    });
+  });
+  revalidatePath("/export/customers/settings/fields");
+  revalidatePath("/export/customers");
+  redirect("/export/customers/settings/fields");
 }
 
 export async function createCustomerFieldConfigAction(formData: FormData) {

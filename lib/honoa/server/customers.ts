@@ -2,7 +2,6 @@ import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
-  CUSTOMER_ATTACHMENT_TYPES,
   CUSTOMER_STATUSES,
   CUSTOMER_SYSTEM_FIELD_KEYS,
   CUSTOMER_TYPES
@@ -13,6 +12,7 @@ import { customerGeoDisplay, normalizeCustomerGeo } from "../shared/geo";
 import type { AuthUser } from "./auth";
 import { hasAnyServerPermission, hasServerPermission, requireCurrentUser, requireServerPermission } from "./auth";
 import { prisma } from "./db";
+import { getCustomerAttachmentTypes } from "./field-config";
 import { resolveCustomerGeoInput } from "./geo";
 import { assertCustomerOssObjectKey, generateGetSignedUrl, validateOssUploadRequest } from "./oss";
 
@@ -884,7 +884,7 @@ export async function createCustomerAttachmentAction(customerId: string, formDat
   });
   if (!input.attachmentName) throw new Error("请填写附件名称。");
   if (!input.fileUrl) throw new Error("请填写附件链接。");
-  if (!CUSTOMER_ATTACHMENT_TYPES.includes(input.attachmentType)) throw new Error("附件类型无效。");
+  if (!(await getCustomerAttachmentTypes()).includes(input.attachmentType)) throw new Error("附件类型无效。");
   const created = await prisma.customerAttachment.create({
     data: {
       customerId,
@@ -921,7 +921,7 @@ export async function updateCustomerAttachmentAction(customerId: string, attachm
   });
   if (!input.attachmentName) throw new Error("请填写附件名称。");
   if (existing.storageProvider !== "aliyun_oss" && !input.fileUrl) throw new Error("请填写附件链接。");
-  if (!CUSTOMER_ATTACHMENT_TYPES.includes(input.attachmentType)) throw new Error("附件类型无效。");
+  if (!(await getCustomerAttachmentTypes()).includes(input.attachmentType)) throw new Error("附件类型无效。");
   const updated = await prisma.customerAttachment.update({
     where: { id: attachmentId },
     data: {
@@ -981,7 +981,7 @@ export async function createCustomerAttachmentFromOss(actor: AuthUser, customerI
     mimeType: input.mimeType
   });
   if (!attachmentName) throw new Error("请填写附件名称。");
-  if (!CUSTOMER_ATTACHMENT_TYPES.includes(attachmentType)) throw new Error("附件类型无效。");
+  if (!(await getCustomerAttachmentTypes()).includes(attachmentType)) throw new Error("附件类型无效。");
   const created = await prisma.customerAttachment.create({
     data: {
       customerId,

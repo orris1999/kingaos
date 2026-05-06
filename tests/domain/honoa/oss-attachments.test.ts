@@ -24,6 +24,8 @@ const uploadUrlRoute = readFileSync(join(process.cwd(), "app/api/export/customer
 const createAttachmentRoute = readFileSync(join(process.cwd(), "app/api/export/customers/[customerId]/attachments/route.ts"), "utf8");
 const downloadRoute = readFileSync(join(process.cwd(), "app/api/export/customers/[customerId]/attachments/[attachmentId]/download-url/route.ts"), "utf8");
 const customerServer = readFileSync(join(process.cwd(), "lib/honoa/server/customers.ts"), "utf8");
+const fieldConfigServer = readFileSync(join(process.cwd(), "lib/honoa/server/field-config.ts"), "utf8");
+const fieldSettingsPage = readFileSync(join(process.cwd(), "app/export/customers/settings/fields/page.tsx"), "utf8");
 const attachmentPanel = readFileSync(join(process.cwd(), "components/customer-attachments-panel.tsx"), "utf8");
 const ossUploadClient = readFileSync(join(process.cwd(), "components/customer-oss-upload.tsx"), "utf8");
 
@@ -86,11 +88,23 @@ describe("KingaOS OSS customer attachments", () => {
     expect(customerServer).toContain("customer_attachment.delete");
   });
 
-  it("前端直接 PUT 到 OSS，再保存 metadata，并保留附件链接 fallback", () => {
+  it("前端直接 PUT 到 OSS，再保存 metadata，不再显示旧附件链接提交表单", () => {
     expect(ossUploadClient).toContain('method: "PUT"');
     expect(ossUploadClient).toContain("uploadPayload.uploadUrl");
     expect(ossUploadClient).toContain("objectKey");
-    expect(ossUploadClient).toContain("OSS 尚未配置，暂时只能添加附件链接");
-    expect(attachmentPanel).toContain("添加附件链接");
+    expect(ossUploadClient).toContain("OSS 尚未配置，暂时不能上传文件");
+    expect(attachmentPanel).not.toContain("添加附件链接");
+    expect(attachmentPanel).not.toContain("createCustomerAttachmentAction");
+  });
+
+  it("附件类型由管理员在字段配置页维护，并用于服务端校验", () => {
+    expect(fieldConfigServer).toContain("getCustomerAttachmentTypes");
+    expect(fieldConfigServer).toContain("updateCustomerAttachmentTypesAction");
+    expect(fieldConfigServer).toContain("customer_attachment_types.update");
+    expect(fieldSettingsPage).toContain("附件类型配置");
+    expect(fieldSettingsPage).toContain("保存附件类型");
+    expect(uploadUrlRoute).toContain("getCustomerAttachmentTypes");
+    expect(customerServer).toContain("await getCustomerAttachmentTypes()");
+    expect(attachmentPanel).toContain("getCustomerAttachmentTypes");
   });
 });

@@ -84,7 +84,7 @@ export function ServerCustomerForm({
               <span>如果系统检测到重名客户，我确认按“重复客户例外”建档，并记录审核人、审核时间和审核原因。</span>
             </label>
           ) : null}
-          {customer ? <p className="muted">附件可在保存客户后，通过编辑页下方的附件区域继续添加或删除。</p> : <p className="muted">新建客户保存后，可在客户编辑页添加附件链接。</p>}
+          {customer ? <p className="muted">附件可在保存客户后，通过编辑页下方的附件区域继续上传或删除。</p> : <p className="muted">新建客户保存后，可在客户编辑页上传附件文件。</p>}
         </section>
       </CustomerFormWizard>
       <a className="button ghost" href={customer ? `/export/customers/${customer.id}` : "/export/customers"}>返回</a>
