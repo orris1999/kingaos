@@ -145,3 +145,34 @@ pm2 restart kingaos
 财务官方收款账号只能通过应用内权限页面维护，不允许通过 seed、bootstrap、backfill 或部署脚本自动创建示例账号。停用账号只做状态变更，不物理删除历史引用；已引用客户需要在页面提示重新选择有效账号。
 
 客户字段修改历史只由服务端客户编辑事务生成，不允许前端提交旧值伪造历史。历史记录不保存完整银行账号全文，不对外展示，不用于字段回滚或版本恢复。
+
+客户字段修改历史必须去噪：
+
+- `null`、`undefined`、空字符串、纯空格字符串都视为同一个“未填写”状态。
+- `未填写 -> 未填写` 不允许写入历史。
+- 用户打开编辑页但没有实际修改字段时，不允许新增历史记录。
+- 自定义字段只有真实值变化时才记录；未填写字段、停用字段不写历史。
+- 默认收款方案按 `receiptAccountId` 比较，不按显示文本比较。
+
+生产冒烟测试默认只做只读检查，例如登录页、列表页、详情页、权限页是否可访问。禁止为了验证部署而修改真实客户字段、写入 `部署验证xxxx`、创建测试客户、创建测试用户、创建测试收款账号或创建测试附件。如必须验证写入链路，只能使用本地 dev 数据库、staging 数据库，或经人工确认的专用测试客户。
+
+客户历史垃圾清理必须先 dry-run：
+
+```bash
+npm run cleanup:customer-history-spam:dry-run
+```
+
+真正删除精确 spam 记录必须显式确认：
+
+```bash
+CLEANUP_CUSTOMER_HISTORY_SPAM_CONFIRM=I_UNDERSTAND_THIS_DELETES_SPAM_HISTORY \
+npm run cleanup:customer-history-spam:apply
+```
+
+cleanup 只允许清理以下明确 spam：
+
+- old/new 归一化后完全相等的历史。
+- oldDisplayValue 和 newDisplayValue 都是“未填写”的历史。
+- 明确包含“部署验证”字样的历史。
+
+cleanup 不属于部署流程，不允许自动运行。

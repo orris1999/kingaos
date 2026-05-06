@@ -6,6 +6,7 @@ export type FieldHistoryConfig = {
   fieldGroup?: string | null;
   fieldType?: string | null;
   options?: string[];
+  isActive?: boolean;
 };
 
 export type ReceiptAccountHistorySummary = {
@@ -14,19 +15,29 @@ export type ReceiptAccountHistorySummary = {
   accountCode: string;
 } | null;
 
+export type CustomerFieldHistoryStoredValue = string | number | boolean | null | Record<string, unknown> | unknown[];
+
 export type CustomerFieldHistoryDraft = {
   fieldKey: string;
   fieldLabel: string;
   fieldGroup?: string | null;
   fieldKind: "system" | "custom" | "relation";
   fieldType?: string | null;
-  oldValue: string | number | boolean | null;
-  newValue: string | number | boolean | null;
+  oldValue: CustomerFieldHistoryStoredValue;
+  newValue: CustomerFieldHistoryStoredValue;
   oldDisplayValue: string;
   newDisplayValue: string;
   changeType: "set" | "update" | "clear";
   source: "customer_edit" | "receipt_account_select";
   metadata?: Record<string, string | null>;
+};
+
+export type CustomerFieldHistoryRecordLike = {
+  fieldType?: string | null;
+  oldValue?: unknown;
+  newValue?: unknown;
+  oldDisplayValue?: string | null;
+  newDisplayValue?: string | null;
 };
 
 export const CUSTOMER_HISTORY_SYSTEM_FIELD_KEYS = [
@@ -51,17 +62,37 @@ const FALLBACK_SYSTEM_FIELD_CONFIGS: Record<string, FieldHistoryConfig> = {
   specialReminder: { fieldKey: "specialReminder", fieldLabel: "特殊提醒", fieldGroup: "备注 / 特殊提醒", fieldType: "textarea" }
 };
 
+export function normalizeHistoryComparableValue(value: unknown, fieldType?: string | null): string {
+  const normalized = normalizeHistoryStoredValue(value, fieldType);
+  if (normalized === null) return "empty:null";
+  if (typeof normalized === "object") return `json:${stableStringify(normalized)}`;
+  return `${typeof normalized}:${String(normalized)}`;
+}
+
+export function hasMeaningfulFieldChange(oldValue: unknown, newValue: unknown, fieldType?: string | null) {
+  return normalizeHistoryComparableValue(oldValue, fieldType) !== normalizeHistoryComparableValue(newValue, fieldType);
+}
+
 export function displayHistoryValue(value: unknown, fieldType?: string | null) {
-  if (isEmptyHistoryValue(value)) return "未填写";
-  if (fieldType === "boolean") return booleanFieldValueLabel(value);
-  if (typeof value === "object") {
+  const normalized = normalizeHistoryStoredValue(value, fieldType);
+  if (normalized === null) return "未填写";
+  if (fieldType === "boolean") return booleanFieldValueLabel(normalized);
+  if (fieldType === "number" && typeof normalized === "number") return String(normalized);
+  if (typeof normalized === "object") {
     try {
-      return JSON.stringify(value);
+      return stableStringify(normalized);
     } catch {
       return "无法显示的历史值";
     }
   }
-  return String(value);
+  return String(normalized);
+}
+
+export function isMeaningfulHistoryRecord(record: CustomerFieldHistoryRecordLike) {
+  const oldDisplay = normalizeDisplayText(record.oldDisplayValue);
+  const newDisplay = normalizeDisplayText(record.newDisplayValue);
+  if (oldDisplay === "未填写" && newDisplay === "未填写") return false;
+  return hasMeaningfulFieldChange(record.oldValue, record.newValue, record.fieldType);
 }
 
 export function receiptAccountHistoryDisplay(account: ReceiptAccountHistorySummary) {
@@ -70,8 +101,8 @@ export function receiptAccountHistoryDisplay(account: ReceiptAccountHistorySumma
 }
 
 export function historyChangeType(oldValue: unknown, newValue: unknown): CustomerFieldHistoryDraft["changeType"] {
-  if (isEmptyHistoryValue(oldValue) && !isEmptyHistoryValue(newValue)) return "set";
-  if (!isEmptyHistoryValue(oldValue) && isEmptyHistoryValue(newValue)) return "clear";
+  if (isEmptyHistoryValue(normalizeHistoryStoredValue(oldValue)) && !isEmptyHistoryValue(normalizeHistoryStoredValue(newValue))) return "set";
+  if (!isEmptyHistoryValue(normalizeHistoryStoredValue(oldValue)) && isEmptyHistoryValue(normalizeHistoryStoredValue(newValue))) return "clear";
   return "update";
 }
 
@@ -103,8 +134,8 @@ export function buildCustomerFieldChangeHistoryDrafts({
       fieldGroup: config.fieldGroup,
       fieldType: config.fieldType,
       fieldKind: "system",
-      oldValue: normalizeHistoryScalar(oldCustomer[fieldKey]),
-      newValue: normalizeHistoryScalar(newCustomer[fieldKey]),
+      oldValue: normalizeHistoryStoredValue(oldCustomer[fieldKey], config.fieldType),
+      newValue: normalizeHistoryStoredValue(newCustomer[fieldKey], config.fieldType),
       source: "customer_edit"
     });
   }
@@ -118,14 +149,15 @@ export function buildCustomerFieldChangeHistoryDrafts({
 
   for (const fieldKey of unionKeys(oldCustomFields, newCustomFields)) {
     const config = configs.get(fieldKey);
+    if (config?.isActive === false) continue;
     appendFieldHistoryDraft(drafts, {
       fieldKey,
       fieldLabel: config?.fieldLabel || `未知字段：${fieldKey}`,
       fieldGroup: config?.fieldGroup,
       fieldType: config?.fieldType,
       fieldKind: "custom",
-      oldValue: normalizeHistoryScalar(oldCustomFields[fieldKey]),
-      newValue: normalizeHistoryScalar(newCustomFields[fieldKey]),
+      oldValue: normalizeHistoryStoredValue(oldCustomFields[fieldKey], config?.fieldType),
+      newValue: normalizeHistoryStoredValue(newCustomFields[fieldKey], config?.fieldType),
       source: "customer_edit",
       metadata: config ? { customFieldId: config.fieldKey } : undefined
     });
@@ -138,7 +170,7 @@ function appendFieldHistoryDraft(
   drafts: CustomerFieldHistoryDraft[],
   draft: Omit<CustomerFieldHistoryDraft, "oldDisplayValue" | "newDisplayValue" | "changeType">
 ) {
-  if (historyValuesEqual(draft.oldValue, draft.newValue)) return;
+  if (!hasMeaningfulFieldChange(draft.oldValue, draft.newValue, draft.fieldType)) return;
   drafts.push({
     ...draft,
     oldDisplayValue: displayHistoryValue(draft.oldValue, draft.fieldType),
@@ -183,10 +215,9 @@ function appendReceiptAccountHistoryDraft(
   });
 }
 
-function normalizeHistoryScalar(value: unknown): CustomerFieldHistoryDraft["oldValue"] {
-  if (value === null || value === undefined) return null;
-  if (typeof value === "boolean" || typeof value === "number") return value;
-  return String(value).trim();
+function normalizeHistoryScalar(value: unknown): CustomerFieldHistoryStoredValue {
+  const normalized = normalizeHistoryStoredValue(value);
+  return normalized;
 }
 
 function normalizeNullableString(value: unknown) {
@@ -196,13 +227,79 @@ function normalizeNullableString(value: unknown) {
 }
 
 function isEmptyHistoryValue(value: unknown) {
-  return value === null || value === undefined || value === "";
-}
-
-function historyValuesEqual(a: unknown, b: unknown) {
-  return JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+  return value === null || value === undefined || (typeof value === "string" && value.trim() === "");
 }
 
 function unionKeys(a: Record<string, unknown>, b: Record<string, unknown>) {
   return Array.from(new Set([...Object.keys(a), ...Object.keys(b)])).sort();
+}
+
+function normalizeHistoryStoredValue(value: unknown, fieldType?: string | null): CustomerFieldHistoryStoredValue {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    if (fieldType === "boolean") {
+      const boolValue = parseBooleanHistoryValue(trimmed);
+      return boolValue === null ? trimmed : boolValue;
+    }
+    if (fieldType === "number") {
+      const numeric = Number(trimmed);
+      return Number.isFinite(numeric) ? numeric : trimmed;
+    }
+    if (fieldType === "date") return normalizeDateHistoryValue(trimmed);
+    return trimmed;
+  }
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (value instanceof Date) return fieldType === "date" ? normalizeDateHistoryValue(value.toISOString()) : value.toISOString();
+  if (Array.isArray(value)) return value.map((item) => normalizeNestedHistoryValue(item));
+  if (typeof value === "object") return normalizeObjectHistoryValue(value as Record<string, unknown>);
+  return String(value).trim() || null;
+}
+
+function normalizeNestedHistoryValue(value: unknown): unknown {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "string") return value.trim();
+  if (typeof value === "boolean" || typeof value === "number") return value;
+  if (value instanceof Date) return value.toISOString();
+  if (Array.isArray(value)) return value.map((item) => normalizeNestedHistoryValue(item));
+  if (typeof value === "object") return normalizeObjectHistoryValue(value as Record<string, unknown>);
+  return String(value).trim();
+}
+
+function normalizeObjectHistoryValue(value: Record<string, unknown>) {
+  return Object.keys(value)
+    .sort()
+    .reduce<Record<string, unknown>>((acc, key) => {
+      acc[key] = normalizeNestedHistoryValue(value[key]);
+      return acc;
+    }, {});
+}
+
+function parseBooleanHistoryValue(value: unknown): boolean | null {
+  if (value === true || value === false) return value;
+  const normalized = String(value).trim().toLowerCase();
+  if (["1", "true", "yes", "y", "是"].includes(normalized)) return true;
+  if (["0", "false", "no", "n", "否"].includes(normalized)) return false;
+  return null;
+}
+
+function normalizeDateHistoryValue(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const parsed = new Date(trimmed);
+  if (Number.isNaN(parsed.getTime())) return trimmed;
+  return parsed.toISOString().slice(0, 10);
+}
+
+function stableStringify(value: unknown): string {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map((item) => stableStringify(item)).join(",")}]`;
+  const record = value as Record<string, unknown>;
+  return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${stableStringify(record[key])}`).join(",")}}`;
+}
+
+function normalizeDisplayText(value: unknown) {
+  return String(value ?? "").trim();
 }

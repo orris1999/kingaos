@@ -282,6 +282,23 @@ BACKFILL_CONFIRM=I_UNDERSTAND_THIS_CHANGES_BUSINESS_DATA \
 npm run backfill:customer-identities
 ```
 
+客户字段修改历史必须去噪。系统把 `null`、`undefined`、空字符串和纯空格统一视为“未填写”，不会记录 `未填写 -> 未填写`。打开客户编辑页但没有实际修改字段时，不应新增任何 `CustomerFieldChangeHistory`。
+
+历史垃圾清理默认只 dry-run：
+
+```bash
+npm run cleanup:customer-history-spam:dry-run
+```
+
+真正删除明确 spam 历史必须显式确认：
+
+```bash
+CLEANUP_CUSTOMER_HISTORY_SPAM_CONFIRM=I_UNDERSTAND_THIS_DELETES_SPAM_HISTORY \
+npm run cleanup:customer-history-spam:apply
+```
+
+生产冒烟测试默认只能做只读检查，例如登录页 200、super_admin 可登录、列表和详情页可打开、权限页面可访问、未开放模块仍未开放。禁止为了验证部署而修改真实客户字段、写入 `部署验证xxxx`、创建测试客户、创建测试用户、创建测试收款账号或创建测试附件。写入功能只能在本地 dev 数据库、staging 数据库，或经人工明确确认的专用测试客户上验证。
+
 ## 地理数据
 
 国家 / 州 / 省 / 城市数据通过服务端 API 按需读取，不在 client component 中直接 import 全量数据，也不把全量城市数据一次性打进前端 bundle。

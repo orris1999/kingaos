@@ -7,7 +7,7 @@ import {
   CUSTOMER_TYPES
 } from "../shared/constants";
 import { normalizeCustomerName } from "../shared/customer-name-normalizer";
-import { buildCustomerFieldChangeHistoryDrafts } from "../shared/customer-field-history";
+import { buildCustomerFieldChangeHistoryDrafts, isMeaningfulHistoryRecord } from "../shared/customer-field-history";
 import { normalizeCustomerAttachment, normalizeCustomerContacts, type CustomerContactDraft } from "../shared/customer-relations";
 import { customerGeoDisplay, normalizeCustomerGeo } from "../shared/geo";
 import type { AuthUser } from "./auth";
@@ -95,7 +95,7 @@ export async function listCustomerFieldChangeHistoryForActor(actor: AuthUser, cu
     where: { customerId },
     orderBy: { changedAt: "desc" },
     take: 100
-  });
+  }).then((histories) => histories.filter(isMeaningfulHistoryRecord));
 }
 
 export async function getExportOwners() {
@@ -487,8 +487,9 @@ function recordFromJson(value: Prisma.JsonValue | null): Record<string, unknown>
   return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
 }
 
-function historyJsonValue(value: string | number | boolean | null) {
-  return value === null ? Prisma.JsonNull : value;
+function historyJsonValue(value: unknown) {
+  if (value === null || value === undefined) return Prisma.JsonNull;
+  return value as Prisma.InputJsonValue;
 }
 
 function receiptAccountSummary(account?: { id: string; displayName: string; accountCode: string } | null) {

@@ -23,6 +23,8 @@
     "db:test:seed": "DATABASE_URL=\"postgresql://kingaos_app:kingaos_test_password@localhost:5434/kingaos_test?schema=public\" DIRECT_URL=\"postgresql://kingaos_app:kingaos_test_password@localhost:5434/kingaos_test?schema=public\" node prisma/seed.mjs",
     "db:test:bootstrap": "DATABASE_URL=\"postgresql://kingaos_app:kingaos_test_password@localhost:5434/kingaos_test?schema=public\" DIRECT_URL=\"postgresql://kingaos_app:kingaos_test_password@localhost:5434/kingaos_test?schema=public\" ALLOW_DEFAULT_USER_BOOTSTRAP=true node prisma/bootstrap-default-users.mjs",
     "backfill:customer-identities": "node scripts/backfill-customer-identities.mjs",
+    "cleanup:customer-history-spam:dry-run": "node scripts/cleanup-customer-field-history-spam.mjs --dry-run",
+    "cleanup:customer-history-spam:apply": "node scripts/cleanup-customer-field-history-spam.mjs --apply",
     "postinstall": "prisma generate"
   },
   "dependencies": {
