@@ -172,6 +172,17 @@ p {
   color: var(--warn);
 }
 
+.ok-text {
+  color: var(--ok);
+}
+
+.inline-stack {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 button,
 .button {
   appearance: none;

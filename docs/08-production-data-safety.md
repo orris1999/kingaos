@@ -12,6 +12,19 @@
 - `CustomerAttachment`
 - 由客户档案产生的客户资料、联系人、附件、客户身份、重复客户审核记录
 
+客户附件真实文件保存在私有阿里云 OSS Bucket。PostgreSQL 只保存附件元数据，例如 `storageProvider`、`storageKey`、MIME、文件大小、上传人和软删除时间。
+
+附件安全红线：
+
+- 不把文件二进制存进 PostgreSQL。
+- 不把 base64 存进 PostgreSQL。
+- 不把正式附件长期存在 ECS 本地磁盘。
+- AccessKey 只能在服务端 `.env` 使用，不能暴露给浏览器。
+- OSS Bucket 必须私有。
+- 上传使用服务端生成的短时 PUT 预签名 URL。
+- 下载 / 预览使用服务端生成的短时 GET 预签名 URL。
+- `.env`、`.env.local`、`.env.production` 禁止提交。
+
 ## Seed 红线
 
 `npm run db:seed` 只允许维护系统级字典：

@@ -3,7 +3,7 @@
 确认日期：2026-05-05  
 状态：POSTGRESQL_PRODUCTION_LITE_BASELINE
 
-当前多人版本默认使用 PostgreSQL + Prisma。用户、权限、session、客户、客户联系人、客户附件元数据、字段配置和审计日志都保存到 PostgreSQL。
+当前多人版本默认使用 PostgreSQL + Prisma。用户、权限、session、客户、客户联系人、客户附件元数据、字段配置和审计日志都保存到 PostgreSQL。真实附件文件保存到私有阿里云 OSS Bucket。
 客户名称判重使用 `CustomerIdentity` 和 `CustomerDuplicateReviewRequest` 持久化，不能只靠前端校验或简单 `Customer.name unique`。
 
 ## 生产路径
@@ -28,14 +28,16 @@
 - 修改自定义字段类型不会清空客户 `customFields` 历史值。
 - 客户档案支持多个联系人，联系人数据保存到 `CustomerContact`。
 - 客户档案支持附件记录，附件元数据保存到 `CustomerAttachment`。
-- 当前附件第一版使用附件链接，`storageProvider=external_url`。
+- 客户附件支持 `storageProvider=aliyun_oss` 的真实文件上传；PostgreSQL 只保存 `storageKey`、MIME、大小、上传人等元数据。
+- OSS Bucket 必须私有；上传使用服务端生成的短时 PUT 预签名 URL，下载 / 预览使用服务端生成的短时 GET 预签名 URL。
+- 阿里云 AccessKey 只能在服务端 `.env` 使用，不能暴露到浏览器，不能使用 `NEXT_PUBLIC_*`。
+- OSS 未配置时，页面 fallback 到附件链接，`storageProvider=external_url`。
 - 客户名称默认不允许重复。
 - 系统会对客户名称执行规范化：trim、Unicode NFKC、转小写、删除空白、删除常见标点和符号。
 - 加点、加空格、大小写变化、全角半角变化不能绕过重复客户检测。
 - 重复客户必须提交业务经理 / 管理员审核；审核通过后才允许例外建档。
 - 重复客户检测、提交审核、审核通过、审核拒绝和例外建档都会写入 `AuditLog`。
 - 不把文件二进制或 base64 存入 PostgreSQL。
-- 未配置阿里云 OSS / 对象存储前，不做真实文件上传。
 - 不使用 ECS 本地磁盘作为长期正式附件存储。
 
 ## 地理数据来源

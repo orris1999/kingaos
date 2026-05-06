@@ -10,9 +10,19 @@ DIRECT_URL="postgresql://kingaos_app:YOUR_PASSWORD@YOUR_RDS_INTERNAL_ENDPOINT:54
 SESSION_SECRET="replace-with-a-long-random-secret"
 SESSION_COOKIE_SECURE="true"
 NODE_ENV="production"
+ALIYUN_OSS_REGION="oss-cn-guangzhou"
+ALIYUN_OSS_BUCKET="kinga"
+ALIYUN_OSS_ENDPOINT="https://oss-cn-guangzhou.aliyuncs.com"
+ALIYUN_OSS_ACCESS_KEY_ID="replace-with-access-key-id"
+ALIYUN_OSS_ACCESS_KEY_SECRET="replace-with-access-key-secret"
+ALIYUN_OSS_UPLOAD_PREFIX="customers"
+ALIYUN_OSS_SIGNED_URL_EXPIRES_SECONDS="600"
+ALIYUN_OSS_MAX_FILE_SIZE_MB="20"
 ```
 
 `.env` 不能提交到 git。`.env.example` 只能放占位值，不能放真实密码。
+
+OSS 变量只允许服务端使用，不能加 `NEXT_PUBLIC_`。生产建议使用 prod bucket，本地和测试环境建议使用独立 dev bucket。OSS Bucket 必须私有，浏览器只拿短时上传 / 下载预签名 URL。
 
 ## 部署命令
 

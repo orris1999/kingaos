@@ -14,6 +14,7 @@ import type { AuthUser } from "./auth";
 import { hasAnyServerPermission, hasServerPermission, requireCurrentUser, requireServerPermission } from "./auth";
 import { prisma } from "./db";
 import { resolveCustomerGeoInput } from "./geo";
+import { assertCustomerOssObjectKey, generateGetSignedUrl, validateOssUploadRequest } from "./oss";
 
 export function canViewCustomerServer(actor: AuthUser, customer: { ownerUserId: string; department: string }) {
   if (customer.department !== "export") return false;
@@ -897,7 +898,7 @@ export async function createCustomerAttachmentAction(customerId: string, formDat
     }
   });
   await prisma.auditLog.create({
-    data: { actorUserId: actor.id, action: "customer_attachment.create", entityType: "CustomerAttachment", entityId: created.id, metadata: { customerId, attachmentId: created.id, attachmentName: created.attachmentName } }
+    data: { actorUserId: actor.id, action: "customer_attachment.create", entityType: "CustomerAttachment", entityId: created.id, metadata: { customerId, attachmentId: created.id, attachmentName: created.attachmentName, storageProvider: "external_url" } }
   });
   revalidatePath(`/export/customers/${customerId}`);
   revalidatePath(`/export/customers/${customerId}/edit`);
@@ -910,6 +911,8 @@ export async function updateCustomerAttachmentAction(customerId: string, attachm
   const actor = await requireCurrentUser();
   const customer = await prisma.customer.findUnique({ where: { id: customerId } });
   if (!customer || !canEditCustomerServer(actor, customer)) throw new Error("当前账号不能维护该客户附件。");
+  const existing = await prisma.customerAttachment.findFirst({ where: { id: attachmentId, customerId, deletedAt: null } });
+  if (!existing) throw new Error("附件不存在。");
   const input = normalizeCustomerAttachment({
     attachmentName: String(formData.get("attachmentName") || ""),
     attachmentType: String(formData.get("attachmentType") || "其他"),
@@ -917,19 +920,19 @@ export async function updateCustomerAttachmentAction(customerId: string, attachm
     description: String(formData.get("description") || "")
   });
   if (!input.attachmentName) throw new Error("请填写附件名称。");
-  if (!input.fileUrl) throw new Error("请填写附件链接。");
+  if (existing.storageProvider !== "aliyun_oss" && !input.fileUrl) throw new Error("请填写附件链接。");
   if (!CUSTOMER_ATTACHMENT_TYPES.includes(input.attachmentType)) throw new Error("附件类型无效。");
   const updated = await prisma.customerAttachment.update({
     where: { id: attachmentId },
     data: {
       attachmentName: input.attachmentName,
       attachmentType: input.attachmentType,
-      fileUrl: input.fileUrl,
+      fileUrl: existing.storageProvider === "aliyun_oss" ? existing.fileUrl : input.fileUrl,
       description: input.description
     }
   });
   await prisma.auditLog.create({
-    data: { actorUserId: actor.id, action: "customer_attachment.update", entityType: "CustomerAttachment", entityId: attachmentId, metadata: { customerId, attachmentId, attachmentName: updated.attachmentName } }
+    data: { actorUserId: actor.id, action: "customer_attachment.update", entityType: "CustomerAttachment", entityId: attachmentId, metadata: { customerId, attachmentId, attachmentName: updated.attachmentName, storageProvider: updated.storageProvider, storageKey: updated.storageKey, fileSize: updated.fileSize, mimeType: updated.mimeType } }
   });
   revalidatePath(`/export/customers/${customerId}`);
   revalidatePath(`/export/customers/${customerId}/edit`);
@@ -949,11 +952,102 @@ export async function deleteCustomerAttachmentAction(customerId: string, attachm
     data: { deletedAt: new Date() }
   });
   await prisma.auditLog.create({
-    data: { actorUserId: actor.id, action: "customer_attachment.delete", entityType: "CustomerAttachment", entityId: attachmentId, metadata: { customerId, attachmentId, attachmentName: deleted.attachmentName } }
+    data: { actorUserId: actor.id, action: "customer_attachment.delete", entityType: "CustomerAttachment", entityId: attachmentId, metadata: { customerId, attachmentId, attachmentName: deleted.attachmentName, storageProvider: deleted.storageProvider, storageKey: deleted.storageKey, fileSize: deleted.fileSize, mimeType: deleted.mimeType } }
   });
   revalidatePath(`/export/customers/${customerId}`);
   revalidatePath(`/export/customers/${customerId}/edit`);
   redirect(`/export/customers/${customerId}/edit`);
+}
+
+export type OssAttachmentInput = {
+  attachmentName: string;
+  attachmentType?: string;
+  objectKey: string;
+  mimeType: string;
+  fileSize: number;
+  description?: string;
+};
+
+export async function createCustomerAttachmentFromOss(actor: AuthUser, customerId: string, input: OssAttachmentInput) {
+  const customer = await prisma.customer.findUnique({ where: { id: customerId } });
+  if (!customer || !canEditCustomerServer(actor, customer)) throw new Error("当前账号不能维护该客户附件。");
+  const attachmentName = String(input.attachmentName || "").trim();
+  const attachmentType = String(input.attachmentType || "其他").trim() || "其他";
+  const description = String(input.description || "").trim();
+  const storageKey = assertCustomerOssObjectKey(customerId, input.objectKey);
+  const validated = validateOssUploadRequest({
+    fileName: attachmentName || storageKey.split("/").pop() || "file",
+    fileSize: input.fileSize,
+    mimeType: input.mimeType
+  });
+  if (!attachmentName) throw new Error("请填写附件名称。");
+  if (!CUSTOMER_ATTACHMENT_TYPES.includes(attachmentType)) throw new Error("附件类型无效。");
+  const created = await prisma.customerAttachment.create({
+    data: {
+      customerId,
+      attachmentName,
+      attachmentType,
+      fileUrl: null,
+      description,
+      storageProvider: "aliyun_oss",
+      storageKey,
+      mimeType: validated.mimeType,
+      fileSize: validated.fileSize,
+      uploadedByUserId: actor.id,
+      uploadedByName: actor.name
+    }
+  });
+  await prisma.auditLog.create({
+    data: {
+      actorUserId: actor.id,
+      action: "customer_attachment.oss_create",
+      entityType: "CustomerAttachment",
+      entityId: created.id,
+      metadata: {
+        customerId,
+        attachmentId: created.id,
+        attachmentName: created.attachmentName,
+        storageProvider: created.storageProvider,
+        storageKey: created.storageKey,
+        fileSize: created.fileSize,
+        mimeType: created.mimeType
+      }
+    }
+  });
+  revalidatePath(`/export/customers/${customerId}`);
+  revalidatePath(`/export/customers/${customerId}/edit`);
+  return created;
+}
+
+export async function getCustomerAttachmentDownloadUrl(actor: AuthUser, customerId: string, attachmentId: string) {
+  const customer = await prisma.customer.findUnique({ where: { id: customerId } });
+  if (!customer || !canViewCustomerServer(actor, customer)) throw new Error("当前账号不能查看该客户附件。");
+  const attachment = await prisma.customerAttachment.findFirst({ where: { id: attachmentId, customerId, deletedAt: null } });
+  if (!attachment) throw new Error("附件不存在。");
+  if (attachment.storageProvider === "external_url") {
+    return { downloadUrl: attachment.fileUrl || "", expiresAt: null, storageProvider: "external_url" };
+  }
+  if (attachment.storageProvider !== "aliyun_oss" || !attachment.storageKey) throw new Error("附件存储信息无效。");
+  assertCustomerOssObjectKey(customerId, attachment.storageKey);
+  const signed = generateGetSignedUrl(attachment.storageKey);
+  await prisma.auditLog.create({
+    data: {
+      actorUserId: actor.id,
+      action: "customer_attachment.download_url.generate",
+      entityType: "CustomerAttachment",
+      entityId: attachment.id,
+      metadata: {
+        customerId,
+        attachmentId,
+        attachmentName: attachment.attachmentName,
+        storageProvider: attachment.storageProvider,
+        storageKey: attachment.storageKey,
+        fileSize: attachment.fileSize,
+        mimeType: attachment.mimeType
+      }
+    }
+  });
+  return { ...signed, storageProvider: "aliyun_oss" };
 }
 
 async function nextCustomerCode(offset = 0) {
