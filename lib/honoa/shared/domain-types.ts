@@ -19,6 +19,9 @@ export type PermissionKey =
   | "export.customers.fields.manage"
   | "export.customers.duplicate_review.view"
   | "export.customers.duplicate_review.manage"
+  | "export.customers.receipt_account.select"
+  | "finance.receipt_accounts.view"
+  | "finance.receipt_accounts.manage"
   | "domestic.dashboard.view"
   | "technical.dashboard.view"
   | "finance.dashboard.view";
@@ -74,6 +77,11 @@ export type ExportCustomer = {
   duplicateApprovedByName?: string | null;
   duplicateApprovedAt?: string | null;
   duplicateApprovalReason?: string | null;
+  defaultReceiptAccountId?: string | null;
+  defaultReceiptAccountSelectedAt?: string | null;
+  defaultReceiptAccountSelectedByUserId?: string | null;
+  defaultReceiptAccountSelectedByName?: string | null;
+  defaultReceiptAccountNote?: string | null;
   customerType: string;
   country: string;
   countryCode: string | null;

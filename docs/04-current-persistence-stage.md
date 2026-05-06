@@ -3,7 +3,7 @@
 确认日期：2026-05-05  
 状态：POSTGRESQL_PRODUCTION_LITE_BASELINE
 
-当前多人版本默认使用 PostgreSQL + Prisma。用户、权限、session、客户、客户联系人、客户附件元数据、字段配置和审计日志都保存到 PostgreSQL。真实附件文件保存到私有阿里云 OSS Bucket。
+当前多人版本默认使用 PostgreSQL + Prisma。用户、权限、session、客户、客户联系人、客户附件元数据、字段配置、财务官方收款账号和审计日志都保存到 PostgreSQL。真实附件文件保存到私有阿里云 OSS Bucket。
 客户名称判重使用 `CustomerIdentity` 和 `CustomerDuplicateReviewRequest` 持久化，不能只靠前端校验或简单 `Customer.name unique`。
 
 ## 生产路径
@@ -28,6 +28,11 @@
 - 修改自定义字段类型不会清空客户 `customFields` 历史值。
 - 客户档案支持多个联系人，联系人数据保存到 `CustomerContact`。
 - 客户档案支持附件记录，附件元数据保存到 `CustomerAttachment`。
+- 财务官方收款账号保存到 `CompanyReceiptAccount`，属于财务维护的主数据。
+- 客户默认收款方案只保存 `defaultReceiptAccountId` 引用及选择人、选择时间、备注，不把银行账号全文复制进 `Customer`。
+- 业务员只能在客户档案中选择有效官方收款方案，不能手填银行账号；停用账号不能作为新的默认方案。
+- 已引用停用账号的客户继续保留历史引用，并在详情页提示“当前默认收款账号已停用，请重新选择有效账号”。
+- 未来合同可以从客户档案带出官方收款账号，但合同模块必须保存账号快照；当前阶段不做合同生成。
 - 客户附件支持 `storageProvider=aliyun_oss` 的真实文件上传；PostgreSQL 只保存 `storageKey`、MIME、大小、上传人等元数据。
 - OSS Bucket 必须私有；上传使用服务端生成的短时 PUT 预签名 URL，下载 / 预览使用服务端生成的短时 GET 预签名 URL。
 - 阿里云 AccessKey 只能在服务端 `.env` 使用，不能暴露到浏览器，不能使用 `NEXT_PUBLIC_*`。

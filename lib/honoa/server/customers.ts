@@ -15,6 +15,7 @@ import { prisma } from "./db";
 import { getCustomerAttachmentTypes } from "./field-config";
 import { resolveCustomerGeoInput } from "./geo";
 import { assertCustomerOssObjectKey, generateGetSignedUrl, validateOssUploadRequest } from "./oss";
+import { receiptAccountSelectionForCustomer, receiptAccountSelectionForNewCustomer } from "./receipt-accounts";
 
 export function canViewCustomerServer(actor: AuthUser, customer: { ownerUserId: string; department: string }) {
   if (customer.department !== "export") return false;
@@ -77,6 +78,7 @@ export async function getExportCustomerForActor(actor: AuthUser, customerId: str
   const customer = await prisma.customer.findUnique({
     where: { id: customerId },
     include: {
+      defaultReceiptAccount: true,
       contacts: { orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }, { createdAt: "asc" }] },
       attachments: { where: { deletedAt: null }, orderBy: { createdAt: "desc" } }
     }
@@ -297,6 +299,11 @@ export async function createExportCustomerAction(formData: FormData) {
     city: String(payload.city || "")
   }));
   const contacts = parseCustomerContacts(formData);
+  const receiptSelection = await receiptAccountSelectionForNewCustomer(
+    actor,
+    String(formData.get("defaultReceiptAccountId") || "").trim() || null,
+    String(formData.get("defaultReceiptAccountNote") || "").trim() || null
+  );
   const draft: CustomerDraftPayload = {
     operation: "create",
     payload,
@@ -370,6 +377,11 @@ export async function createExportCustomerAction(formData: FormData) {
     duplicateApprovedByName,
     duplicateApprovedAt,
     duplicateApprovalReason,
+    defaultReceiptAccountId: receiptSelection.accountId,
+    defaultReceiptAccountSelectedAt: receiptSelection.accountId ? new Date() : null,
+    defaultReceiptAccountSelectedByUserId: receiptSelection.accountId ? actor.id : null,
+    defaultReceiptAccountSelectedByName: receiptSelection.accountId ? actor.name : null,
+    defaultReceiptAccountNote: receiptSelection.note,
     customerType: String(payload.customerType || CUSTOMER_TYPES[0]),
     country: geo.country,
     countryCode: geo.countryCode,
@@ -418,6 +430,22 @@ export async function createExportCustomerAction(formData: FormData) {
         }
       });
     }
+    if (receiptSelection.accountId) {
+      await tx.auditLog.create({
+        data: {
+          actorUserId: actor.id,
+          action: "customer.receipt_account.select",
+          entityType: "Customer",
+          entityId: customer.id,
+          metadata: {
+            customerId: customer.id,
+            oldReceiptAccountId: null,
+            newReceiptAccountId: receiptSelection.accountId,
+            actorUserId: actor.id
+          }
+        }
+      });
+    }
   });
   revalidatePath("/export/customers");
   redirect(`/export/customers/${customer.id}`);
@@ -452,6 +480,16 @@ export async function updateExportCustomerAction(customerId: string, formData: F
   if (!existing || !canEditCustomerServer(actor, existing)) throw new Error("当前账号不能编辑该客户。");
   const { payload, customFields } = customerPayloadFromForm(formData);
   const contacts = parseCustomerContacts(formData);
+  const canSelectReceiptAccount = hasServerPermission(actor, "export.customers.receipt_account.select");
+  const receiptSelection = canSelectReceiptAccount
+    ? await receiptAccountSelectionForCustomer(
+        actor,
+        customerId,
+        String(formData.get("defaultReceiptAccountId") || "").trim() || null,
+        String(formData.get("defaultReceiptAccountNote") || "").trim() || null,
+        existing.defaultReceiptAccountId
+      )
+    : { accountId: existing.defaultReceiptAccountId, note: existing.defaultReceiptAccountNote };
   const ownerUserId = canAssignOwnerServer(actor) ? String(payload.ownerUserId || existing.ownerUserId) : existing.ownerUserId;
   const owner = await prisma.user.findFirst({ where: { id: ownerUserId, department: "export", isActive: true } });
   if (!owner) throw new Error("负责业务员无效或已停用。");
@@ -531,7 +569,12 @@ export async function updateExportCustomerAction(customerId: string, formData: F
         customerNotes: String(payload.customerNotes || ""),
         internalNotes: String(payload.internalNotes || ""),
         specialReminder: String(payload.specialReminder || ""),
-        customFields
+        customFields,
+        defaultReceiptAccountId: receiptSelection.accountId,
+        defaultReceiptAccountSelectedAt: receiptSelection.accountId !== existing.defaultReceiptAccountId ? new Date() : existing.defaultReceiptAccountSelectedAt,
+        defaultReceiptAccountSelectedByUserId: receiptSelection.accountId !== existing.defaultReceiptAccountId ? actor.id : existing.defaultReceiptAccountSelectedByUserId,
+        defaultReceiptAccountSelectedByName: receiptSelection.accountId !== existing.defaultReceiptAccountId ? actor.name : existing.defaultReceiptAccountSelectedByName,
+        defaultReceiptAccountNote: receiptSelection.note
       }
     });
     await syncCustomerContacts(tx, actor, customerId, contacts);
@@ -541,6 +584,23 @@ export async function updateExportCustomerAction(customerId: string, formData: F
     if (normalizedCustomerName !== previousNormalizedName) {
       await tx.auditLog.create({
         data: { actorUserId: actor.id, action: "customer_identity.change", entityType: "Customer", entityId: customerId, metadata: { customerId, customerIdentityId: identity.id, normalizedName: normalizedCustomerName } }
+      });
+    }
+    if (receiptSelection.accountId !== existing.defaultReceiptAccountId) {
+      const action = receiptSelection.accountId ? (existing.defaultReceiptAccountId ? "customer.receipt_account.change" : "customer.receipt_account.select") : "customer.receipt_account.clear";
+      await tx.auditLog.create({
+        data: {
+          actorUserId: actor.id,
+          action,
+          entityType: "Customer",
+          entityId: customerId,
+          metadata: {
+            customerId,
+            oldReceiptAccountId: existing.defaultReceiptAccountId,
+            newReceiptAccountId: receiptSelection.accountId,
+            actorUserId: actor.id
+          }
+        }
       });
     }
   });
@@ -641,6 +701,11 @@ async function approveDuplicateCustomerCreate(actor: AuthUser, request: { id: st
     country: String(payload.country || ""),
     city: String(payload.city || "")
   }));
+  const receiptSelection = await receiptAccountSelectionForNewCustomer(
+    actor,
+    String(payload.defaultReceiptAccountId || "").trim() || null,
+    String(payload.defaultReceiptAccountNote || "").trim() || null
+  );
   const customer = await createCustomerWithRetry({
     name,
     customerIdentityId: identity.id,
@@ -651,6 +716,11 @@ async function approveDuplicateCustomerCreate(actor: AuthUser, request: { id: st
     duplicateApprovedByName: actor.name,
     duplicateApprovedAt: new Date(),
     duplicateApprovalReason: decisionNote,
+    defaultReceiptAccountId: receiptSelection.accountId,
+    defaultReceiptAccountSelectedAt: receiptSelection.accountId ? new Date() : null,
+    defaultReceiptAccountSelectedByUserId: receiptSelection.accountId ? actor.id : null,
+    defaultReceiptAccountSelectedByName: receiptSelection.accountId ? actor.name : null,
+    defaultReceiptAccountNote: receiptSelection.note,
     customerType: String(payload.customerType || CUSTOMER_TYPES[0]),
     country: geo.country,
     countryCode: geo.countryCode,
@@ -697,6 +767,22 @@ async function approveDuplicateCustomerCreate(actor: AuthUser, request: { id: st
         metadata: { customerId: customer.id, customerIdentityId: identity.id, duplicateReviewRequestId: request.id, proposedCustomerName: name, normalizedName: normalizedCustomerName, requestedByUserId: request.requestedByUserId, decidedByUserId: actor.id, decisionNote }
       }
     });
+    if (receiptSelection.accountId) {
+      await tx.auditLog.create({
+        data: {
+          actorUserId: actor.id,
+          action: "customer.receipt_account.select",
+          entityType: "Customer",
+          entityId: customer.id,
+          metadata: {
+            customerId: customer.id,
+            oldReceiptAccountId: null,
+            newReceiptAccountId: receiptSelection.accountId,
+            actorUserId: actor.id
+          }
+        }
+      });
+    }
   });
   return customer;
 }

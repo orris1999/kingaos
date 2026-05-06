@@ -1,11 +1,12 @@
-import type { Customer, CustomerContact, CustomerFieldConfig as DbFieldConfig, User } from "@prisma/client";
+import type { CompanyReceiptAccount, Customer, CustomerContact, CustomerFieldConfig as DbFieldConfig, User } from "@prisma/client";
 import type { ReactNode } from "react";
 import { CustomerFormWizard } from "@/components/customer-form-wizard";
 import { CustomerGeoSelector } from "@/components/customer-geo-selector";
 import { CustomerContactEditor } from "@/components/customer-contact-editor";
+import { CustomerReceiptAccountSelector, type ReceiptAccountOption } from "@/components/customer-receipt-account-selector";
 import { createExportCustomerAction, updateExportCustomerAction, canAssignOwnerServer, canManageDuplicateReviewServer } from "@/lib/honoa/server/customers";
 import { mapFieldConfig } from "@/lib/honoa/server/field-config";
-import type { AuthUser } from "@/lib/honoa/server/auth";
+import { hasServerPermission, type AuthUser } from "@/lib/honoa/server/auth";
 import {
   CUSTOMER_FIELD_GROUPS,
   CUSTOMER_GEO_FIELD_KEYS,
@@ -21,12 +22,14 @@ export function ServerCustomerForm({
   actor,
   customer,
   fields,
-  owners
+  owners,
+  receiptAccounts
 }: {
   actor: AuthUser;
-  customer?: Customer & { contacts?: CustomerContact[] };
+  customer?: Customer & { contacts?: CustomerContact[]; defaultReceiptAccount?: CompanyReceiptAccount | null };
   fields: DbFieldConfig[];
   owners: User[];
+  receiptAccounts: CompanyReceiptAccount[];
 }) {
   const activeFields = fields
     .map(mapFieldConfig)
@@ -69,7 +72,14 @@ export function ServerCustomerForm({
           <CustomerStep group="联系人信息" fields={activeFields} customer={customer} actor={actor} owners={owners} canChooseOwner={canChooseOwner} hideEmpty />
         </section>
         <CustomerStep group="公司信息" fields={activeFields} customer={customer} actor={actor} owners={owners} canChooseOwner={canChooseOwner} />
-        <CustomerStep group="合作信息" fields={activeFields} customer={customer} actor={actor} owners={owners} canChooseOwner={canChooseOwner} />
+        <CustomerStep group="合作信息" fields={activeFields} customer={customer} actor={actor} owners={owners} canChooseOwner={canChooseOwner}>
+          <CustomerReceiptAccountSelector
+            accounts={receiptAccounts.map(toReceiptAccountOption)}
+            selectedAccountId={customer?.defaultReceiptAccountId}
+            selectedNote={customer?.defaultReceiptAccountNote}
+            canSelect={hasServerPermission(actor, "export.customers.receipt_account.select")}
+          />
+        </CustomerStep>
         <CustomerStep group="备注 / 特殊提醒" fields={activeFields} customer={customer} actor={actor} owners={owners} canChooseOwner={canChooseOwner} title="附件与备注" />
         <section className="panel stack">
           <h2>确认并保存</h2>
@@ -90,6 +100,25 @@ export function ServerCustomerForm({
       <a className="button ghost" href={customer ? `/export/customers/${customer.id}` : "/export/customers"}>返回</a>
     </form>
   );
+}
+
+function toReceiptAccountOption(account: CompanyReceiptAccount): ReceiptAccountOption {
+  return {
+    id: account.id,
+    displayName: account.displayName,
+    scenarioName: account.scenarioName,
+    paymentMethod: account.paymentMethod,
+    currency: account.currency,
+    companyName: account.companyName,
+    accountNo: account.accountNo,
+    bankName: account.bankName,
+    swiftCode: account.swiftCode,
+    bankAddress: account.bankAddress,
+    usageNotes: account.usageNotes,
+    riskNotes: account.riskNotes,
+    isActive: account.isActive,
+    updatedAt: account.updatedAt.toISOString()
+  };
 }
 
 function CustomerStep({

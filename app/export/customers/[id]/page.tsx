@@ -9,7 +9,7 @@ import { CUSTOMER_GEO_FIELD_KEYS, CUSTOMER_LEGACY_CONTACT_FIELD_KEYS, CUSTOMER_S
 import type { CustomerFieldConfig } from "@/lib/honoa/shared/domain-types";
 import { displayFieldValue, fieldValueCompatibilityMessage } from "@/lib/honoa/shared/field-values";
 import { customerGeoDisplay } from "@/lib/honoa/shared/geo";
-import type { Customer, CustomerAttachment } from "@prisma/client";
+import type { CompanyReceiptAccount, Customer, CustomerAttachment } from "@prisma/client";
 
 function formatDate(value: Date) {
   return value.toLocaleString("zh-CN", { hour12: false });
@@ -28,6 +28,25 @@ function rawFieldValue(customer: Customer, field: CustomerFieldConfig) {
   }
   const customFields = customer.customFields as Record<string, string | number | boolean>;
   return customFields[field.fieldKey];
+}
+
+function ReceiptAccountDetail({ account }: { account?: CompanyReceiptAccount | null }) {
+  if (!account) return <p className="muted">暂无默认收款方案</p>;
+  return (
+    <div className="detail-grid">
+      {!account.isActive ? (
+        <div className="kv" style={{ gridColumn: "1 / -1" }}>
+          <b>状态提醒</b><span className="warn-text">当前默认收款账号已停用，请重新选择有效账号。</span>
+        </div>
+      ) : null}
+      <div className="kv"><b>方案名称</b><span>{account.displayName}</span></div>
+      <div className="kv"><b>币种</b><span>{account.currency}</span></div>
+      <div className="kv"><b>开户行</b><span>{account.bankName}</span></div>
+      <div className="kv"><b>账号</b><span>{account.accountNo}</span></div>
+      <div className="kv"><b>SWIFT CODE</b><span>{account.swiftCode || "-"}</span></div>
+      <div className="kv"><b>状态</b><span>{account.isActive ? "有效" : "已停用"}</span></div>
+    </div>
+  );
 }
 
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -120,6 +139,10 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
             <section className="panel stack">
               <h2>合作信息</h2>
               {renderFields("合作信息")}
+              <section className="subpanel stack">
+                <h3>默认收款方案</h3>
+                <ReceiptAccountDetail account={customer.defaultReceiptAccount} />
+              </section>
             </section>
             <section className="stack">
               <section className="panel stack">

@@ -4,6 +4,7 @@ import { Forbidden, KingaShell } from "@/components/kinga-shell";
 import { requireCurrentUser } from "@/lib/honoa/server/auth";
 import { canEditCustomerServer, getExportCustomerForActor, getExportOwners } from "@/lib/honoa/server/customers";
 import { prisma } from "@/lib/honoa/server/db";
+import { listSelectableReceiptAccounts } from "@/lib/honoa/server/receipt-accounts";
 
 export default async function EditCustomerPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireCurrentUser();
@@ -11,14 +12,15 @@ export default async function EditCustomerPage({ params }: { params: Promise<{ i
   try {
     const customer = await getExportCustomerForActor(user, id);
     if (!canEditCustomerServer(user, customer)) throw new Error("当前账号不能编辑该客户。");
-    const [fields, owners] = await Promise.all([
+    const [fields, owners, receiptAccounts] = await Promise.all([
       prisma.customerFieldConfig.findMany({ where: { moduleKey: "export_customer", isActive: true }, orderBy: { sortOrder: "asc" } }),
-      getExportOwners()
+      getExportOwners(),
+      listSelectableReceiptAccounts(customer.defaultReceiptAccountId)
     ]);
     return (
       <KingaShell user={user}>
         <div className="stack">
-          <ServerCustomerForm actor={user} customer={customer} fields={fields} owners={owners} />
+          <ServerCustomerForm actor={user} customer={customer} fields={fields} owners={owners} receiptAccounts={receiptAccounts} />
           <CustomerAttachmentsPanel customerId={customer.id} attachments={customer.attachments || []} editable />
         </div>
       </KingaShell>

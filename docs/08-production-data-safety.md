@@ -10,7 +10,9 @@
 - `Customer`
 - `CustomerContact`
 - `CustomerAttachment`
+- `CompanyReceiptAccount`
 - 由客户档案产生的客户资料、联系人、附件、客户身份、重复客户审核记录
+- 财务维护的官方收款账号、客户默认收款方案引用和相关审计记录
 
 客户附件真实文件保存在私有阿里云 OSS Bucket。PostgreSQL 只保存附件元数据，例如 `storageProvider`、`storageKey`、MIME、文件大小、上传人和软删除时间。
 
@@ -37,6 +39,7 @@
 
 - 创建、更新、删除用户
 - 创建、更新、删除客户
+- 创建、更新、删除财务官方收款账号
 - 删除正式业务数据
 - `deleteMany`
 - `truncate`
@@ -135,3 +138,5 @@ pm2 restart kingaos
 ```
 
 `npm run db:seed` 不属于每次部署的自动步骤。如确需补系统权限或系统字段配置，应单独执行，并确认该命令不触碰正式业务数据。
+
+财务官方收款账号只能通过应用内权限页面维护，不允许通过 seed、bootstrap、backfill 或部署脚本自动创建示例账号。停用账号只做状态变更，不物理删除历史引用；已引用客户需要在页面提示重新选择有效账号。

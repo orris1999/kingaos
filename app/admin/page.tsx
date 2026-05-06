@@ -12,6 +12,7 @@ export default async function AdminPage() {
     );
   }
   const canExport = hasAnyServerPermission(user, ["export.dashboard.view", "export.customers.view_all", "export.customers.view_own"]);
+  const canFinance = hasAnyServerPermission(user, ["finance.dashboard.view", "finance.receipt_accounts.view", "finance.receipt_accounts.manage"]);
   return (
     <KingaShell user={user}>
       <div className="stack">
@@ -44,7 +45,13 @@ export default async function AdminPage() {
           ) : <DisabledCard title="出口部" description="需要出口部权限" />}
           <DisabledCard title="国内部" description="功能暂未开放" />
           <DisabledCard title="技术部" description="功能暂未开放" />
-          <DisabledCard title="财务部" description="价格管理功能暂未开放" />
+          {canFinance ? (
+            <Link className="card open" href="/finance">
+              <h2>财务部</h2>
+              <p className="muted">收款账号管理已开放；价格管理功能暂未开放。</p>
+              <span className="tag ok">部分开放</span>
+            </Link>
+          ) : <DisabledCard title="财务部" description="需要财务部入口或收款账号权限" />}
         </section>
       </div>
     </KingaShell>

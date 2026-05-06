@@ -7,7 +7,8 @@ export const ADMIN_DEFAULT_PERMISSIONS = [
   "export.customers.edit_all",
   "export.customers.fields.manage",
   "export.customers.duplicate_review.view",
-  "export.customers.duplicate_review.manage"
+  "export.customers.duplicate_review.manage",
+  "export.customers.receipt_account.select"
 ];
 
 export const EXPORT_MANAGER_DEFAULT_PERMISSIONS = [
@@ -16,14 +17,16 @@ export const EXPORT_MANAGER_DEFAULT_PERMISSIONS = [
   "export.customers.create",
   "export.customers.edit_all",
   "export.customers.duplicate_review.view",
-  "export.customers.duplicate_review.manage"
+  "export.customers.duplicate_review.manage",
+  "export.customers.receipt_account.select"
 ];
 
 export const EXPORT_STAFF_DEFAULT_PERMISSIONS = [
   "export.dashboard.view",
   "export.customers.view_own",
   "export.customers.create",
-  "export.customers.edit_own"
+  "export.customers.edit_own",
+  "export.customers.receipt_account.select"
 ];
 
 export const CUSTOMER_TYPES = ["工厂", "贸易商", "终端客户", "代理商", "其他"];
@@ -98,12 +101,21 @@ export const permissionGroups = [
       ["export.customers.edit_all", "编辑出口部全部客户"],
       ["export.customers.fields.manage", "管理出口部客户档案字段"],
       ["export.customers.duplicate_review.view", "查看重复客户审核"],
-      ["export.customers.duplicate_review.manage", "审核重复客户例外"]
+      ["export.customers.duplicate_review.manage", "审核重复客户例外"],
+      ["export.customers.receipt_account.select", "选择客户默认收款方案"]
     ]
   },
   { group: "国内部", reserved: true, items: [["domestic.dashboard.view", "查看国内部入口，暂未开放"]] },
   { group: "技术部", reserved: true, items: [["technical.dashboard.view", "查看技术部入口，暂未开放"]] },
-  { group: "财务部", reserved: true, items: [["finance.dashboard.view", "查看财务部入口，暂未开放"]] }
+  {
+    group: "财务部",
+    reserved: false,
+    items: [
+      ["finance.dashboard.view", "查看财务部入口"],
+      ["finance.receipt_accounts.view", "查看官方收款账号"],
+      ["finance.receipt_accounts.manage", "管理官方收款账号"]
+    ]
+  }
 ];
 
 export function defaultCustomerFields() {
