@@ -30,7 +30,7 @@ export default async function FieldSettingsPage() {
         <div>
           <div className="breadcrumbs">KingaOS / 出口部 / 客户档案 / 字段配置</div>
           <h1>客户档案字段配置</h1>
-          <p className="muted">系统字段不允许删除；新增字段会保存到客户 customFields。业务员只能填写字段值，不能修改字段结构。</p>
+          <p className="muted">系统字段不允许删除；新增字段会保存到客户 customFields。客户来源按自定义字段配置管理，但旧数据仍保留兼容。业务员只能填写字段值，不能修改字段结构。</p>
         </div>
         <section className="panel stack">
           <h2>添加字段</h2>
@@ -47,7 +47,7 @@ export default async function FieldSettingsPage() {
         </section>
         <section className="panel stack">
           <h2>自定义字段</h2>
-          <p className="muted">自定义字段可以修改字段类型。修改类型前系统会提示确认，不会清空历史客户数据。</p>
+          <p className="muted">自定义字段可以修改字段类型。客户来源也在这里配置。修改类型前系统会提示确认，不会清空历史客户数据。</p>
           <FieldConfigTable fields={customFields} />
         </section>
         <section className="panel stack">

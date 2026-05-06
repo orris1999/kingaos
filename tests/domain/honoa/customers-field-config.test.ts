@@ -116,6 +116,24 @@ describe("KingaOS export customer and field-config domain actions", () => {
     expect(updated.fieldType).toBe("boolean");
   });
 
+  it("客户来源按自定义字段配置管理并可修改类型", () => {
+    const store = freshStore();
+    const admin = loginUser(store, "admin@kingaos.local", "Kingaos@123456");
+    const sourceField = listCustomerFieldConfigs(store, admin, true).find((field) => field.fieldKey === "source")!;
+
+    expect(sourceField.fieldLabel).toBe("客户来源");
+    expect(sourceField.isSystemField).toBe(false);
+
+    const updated = updateCustomerFieldConfig(store, admin, sourceField.id, {
+      ...sourceField,
+      fieldType: "select",
+      options: ["展会", "老客户介绍", "网络询盘"]
+    });
+
+    expect(updated.fieldType).toBe("select");
+    expect(updated.options).toEqual(["展会", "老客户介绍", "网络询盘"]);
+  });
+
   it("系统字段默认不能修改 fieldType", () => {
     const store = freshStore();
     const admin = loginUser(store, "admin@kingaos.local", "Kingaos@123456");

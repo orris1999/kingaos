@@ -5,6 +5,7 @@ import { hashPassword, verifyPassword } from "@/lib/honoa/shared/password";
 
 const schema = readFileSync(join(process.cwd(), "prisma/schema.prisma"), "utf8");
 const migration = readFileSync(join(process.cwd(), "prisma/migrations/20260505000000_init/migration.sql"), "utf8");
+const sourceConfigMigration = readFileSync(join(process.cwd(), "prisma/migrations/20260506090000_make_customer_source_configurable/migration.sql"), "utf8");
 const customerServerActions = readFileSync(join(process.cwd(), "lib/honoa/server/customers.ts"), "utf8");
 const authServerActions = readFileSync(join(process.cwd(), "lib/honoa/server/auth.ts"), "utf8");
 const fieldConfigServerActions = readFileSync(join(process.cwd(), "lib/honoa/server/field-config.ts"), "utf8");
@@ -69,5 +70,13 @@ describe("KingaOS PostgreSQL production-lite baseline", () => {
     expect(fieldConfigServerActions).toContain('"update_customer_field_type"');
     expect(fieldConfigServerActions).toContain("oldFieldType");
     expect(fieldConfigServerActions).toContain("newFieldType");
+  });
+
+  it("客户来源字段配置迁移只更新字段配置，不触碰客户数据", () => {
+    expect(sourceConfigMigration).toContain('UPDATE "CustomerFieldConfig"');
+    expect(sourceConfigMigration).toContain('"fieldKey" = \'source\'');
+    expect(sourceConfigMigration).toContain('"isSystemField" = false');
+    expect(sourceConfigMigration).not.toMatch(/UPDATE\s+"Customer"/);
+    expect(sourceConfigMigration).not.toMatch(/DELETE|TRUNCATE|DROP/i);
   });
 });

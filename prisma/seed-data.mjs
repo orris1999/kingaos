@@ -113,7 +113,7 @@ export function defaultCustomerFields() {
     ["customerType", "客户类型", "select", "基础信息", true, 30, CUSTOMER_TYPES],
     ["country", "国家 / 地区", "text", "基础信息", false, 40],
     ["city", "城市", "text", "基础信息", false, 50],
-    ["source", "客户来源", "text", "基础信息", false, 60],
+    ["source", "客户来源", "text", "基础信息", false, 60, [], false],
     ["ownerUserId", "负责业务员", "text", "基础信息", true, 70],
     ["status", "客户状态", "select", "基础信息", true, 80, CUSTOMER_STATUSES],
     ["createdAt", "创建时间", "date", "基础信息", false, 90],
@@ -133,7 +133,7 @@ export function defaultCustomerFields() {
     ["customerNotes", "客户备注", "textarea", "备注 / 特殊提醒", false, 230],
     ["internalNotes", "内部备注", "textarea", "备注 / 特殊提醒", false, 240],
     ["specialReminder", "特殊提醒", "textarea", "备注 / 特殊提醒", false, 250]
-  ].map(([fieldKey, fieldLabel, fieldType, fieldGroup, required, sortOrder, options = []]) => ({
+  ].map(([fieldKey, fieldLabel, fieldType, fieldGroup, required, sortOrder, options = [], isSystemField = true]) => ({
     moduleKey: "export_customer",
     fieldKey,
     fieldLabel,
@@ -143,6 +143,6 @@ export function defaultCustomerFields() {
     options,
     sortOrder,
     isActive: true,
-    isSystemField: true
+    isSystemField
   }));
 }

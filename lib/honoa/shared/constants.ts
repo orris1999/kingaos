@@ -141,13 +141,13 @@ export const CUSTOMER_SYSTEM_FIELD_KEYS = new Set([
 export const CUSTOMER_READONLY_FORM_FIELDS = new Set(["customerCode", "createdAt", "updatedAt"]);
 
 export function defaultCustomerFields(now: string): CustomerFieldConfig[] {
-  const rows: Array<[string, string, CustomerFieldType, CustomerFieldGroup, boolean, number, string[]?]> = [
+  const rows: Array<[string, string, CustomerFieldType, CustomerFieldGroup, boolean, number, string[]?, boolean?]> = [
     ["name", "客户名称", "text", "基础信息", true, 10],
     ["customerCode", "客户编号", "text", "基础信息", false, 20],
     ["customerType", "客户类型", "select", "基础信息", true, 30, CUSTOMER_TYPES],
     ["country", "国家 / 地区", "text", "基础信息", false, 40],
     ["city", "城市", "text", "基础信息", false, 50],
-    ["source", "客户来源", "text", "基础信息", false, 60],
+    ["source", "客户来源", "text", "基础信息", false, 60, [], false],
     ["ownerUserId", "负责业务员", "text", "基础信息", true, 70],
     ["status", "客户状态", "select", "基础信息", true, 80, CUSTOMER_STATUSES],
     ["createdAt", "创建时间", "date", "基础信息", false, 90],
@@ -169,7 +169,7 @@ export function defaultCustomerFields(now: string): CustomerFieldConfig[] {
     ["specialReminder", "特殊提醒", "textarea", "备注 / 特殊提醒", false, 250]
   ];
 
-  return rows.map(([fieldKey, fieldLabel, fieldType, fieldGroup, required, sortOrder, options = []]) => ({
+  return rows.map(([fieldKey, fieldLabel, fieldType, fieldGroup, required, sortOrder, options = [], isSystemField = true]) => ({
     id: `fld_${fieldKey}`,
     moduleKey: "export_customer",
     fieldKey,
@@ -180,7 +180,7 @@ export function defaultCustomerFields(now: string): CustomerFieldConfig[] {
     options,
     sortOrder,
     isActive: true,
-    isSystemField: true,
+    isSystemField,
     createdAt: now,
     updatedAt: now
   }));
