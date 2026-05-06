@@ -121,8 +121,9 @@ model Customer {
   updatedAt                             DateTime               @updatedAt
   archivedAt                            DateTime?
 
-  contacts    CustomerContact[]
-  attachments CustomerAttachment[]
+  contacts             CustomerContact[]
+  attachments          CustomerAttachment[]
+  fieldChangeHistories CustomerFieldChangeHistory[]
 
   @@index([customerIdentityId])
   @@index([defaultReceiptAccountId])
@@ -269,6 +270,33 @@ model CustomerFieldConfig {
   @@index([moduleKey])
   @@index([fieldGroup])
   @@index([sortOrder])
+}
+
+model CustomerFieldChangeHistory {
+  id              String   @id @default(cuid())
+  customerId      String
+  customer        Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  fieldKey        String
+  fieldLabel      String
+  fieldGroup      String?
+  fieldKind       String   @default("system")
+  fieldType       String?
+  oldValue        Json?
+  newValue        Json?
+  oldDisplayValue String?
+  newDisplayValue String?
+  changeType      String   @default("update")
+  source          String   @default("customer_edit")
+  changedByUserId String?
+  changedByName   String?
+  changedAt       DateTime @default(now())
+  metadata        Json?
+  createdAt       DateTime @default(now())
+
+  @@index([customerId])
+  @@index([fieldKey])
+  @@index([changedAt])
+  @@index([changedByUserId])
 }
 
 model AuditLog {

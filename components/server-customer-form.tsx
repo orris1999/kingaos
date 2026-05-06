@@ -57,7 +57,12 @@ export function ServerCustomerForm({
       <div>
         <div className="breadcrumbs">KingaOS / 出口部 / 客户档案 / {customer ? "编辑客户" : "新建客户"}</div>
         <h1>{customer ? `编辑客户：${customer.name}` : "新建客户"}</h1>
-        {customer ? <p><span className="tag">客户编号：{customer.customerCode}</span></p> : null}
+        {customer ? (
+          <p className="actions">
+            <span className="tag">客户编号：{customer.customerCode}</span>
+            <a href={`/export/customers/${customer.id}?tab=history`}>查看修改历史</a>
+          </p>
+        ) : null}
       </div>
       <CustomerFormWizard isEdit={Boolean(customer)}>
         <CustomerStep group="基础信息" fields={activeFields} customer={customer} actor={actor} owners={owners} canChooseOwner={canChooseOwner}>

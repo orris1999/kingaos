@@ -3,13 +3,13 @@ import { CustomerDetailTabs } from "@/components/customer-detail-tabs";
 import { CustomerAttachmentsPanel } from "@/components/customer-attachments-panel";
 import { Forbidden, KingaShell } from "@/components/kinga-shell";
 import { requireCurrentUser } from "@/lib/honoa/server/auth";
-import { canEditCustomerServer, contactsForDisplay, getExportCustomerForActor } from "@/lib/honoa/server/customers";
+import { canEditCustomerServer, contactsForDisplay, getExportCustomerForActor, listCustomerFieldChangeHistoryForActor } from "@/lib/honoa/server/customers";
 import { listCustomerFieldConfigsForActor } from "@/lib/honoa/server/field-config";
 import { CUSTOMER_GEO_FIELD_KEYS, CUSTOMER_LEGACY_CONTACT_FIELD_KEYS, CUSTOMER_SYSTEM_FIELD_KEYS } from "@/lib/honoa/shared/constants";
 import type { CustomerFieldConfig } from "@/lib/honoa/shared/domain-types";
 import { displayFieldValue, fieldValueCompatibilityMessage } from "@/lib/honoa/shared/field-values";
 import { customerGeoDisplay } from "@/lib/honoa/shared/geo";
-import type { CompanyReceiptAccount, Customer, CustomerAttachment } from "@prisma/client";
+import type { CompanyReceiptAccount, Customer, CustomerAttachment, CustomerFieldChangeHistory } from "@prisma/client";
 
 function formatDate(value: Date) {
   return value.toLocaleString("zh-CN", { hour12: false });
@@ -49,12 +49,48 @@ function ReceiptAccountDetail({ account }: { account?: CompanyReceiptAccount | n
   );
 }
 
-export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
+function ChangeHistoryList({ histories }: { histories: CustomerFieldChangeHistory[] }) {
+  if (histories.length === 0) return <p className="muted">暂无修改历史</p>;
+  return (
+    <div className="table-wrap">
+      <table>
+        <thead>
+          <tr><th>修改时间</th><th>修改人</th><th>字段</th><th>原值</th><th>新值</th><th>来源</th></tr>
+        </thead>
+        <tbody>
+          {histories.map((history) => (
+            <tr key={history.id}>
+              <td>{formatDate(history.changedAt)}</td>
+              <td>{history.changedByName || "-"}</td>
+              <td>{history.fieldLabel}</td>
+              <td>{history.oldDisplayValue || "未填写"}</td>
+              <td>{history.newDisplayValue || "未填写"}</td>
+              <td>{history.source === "receipt_account_select" ? "默认收款方案" : "客户编辑"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export default async function CustomerDetailPage({
+  params,
+  searchParams
+}: {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{ tab?: string }>;
+}) {
   const user = await requireCurrentUser();
   const { id } = await params;
   try {
     const customer = await getExportCustomerForActor(user, id);
-    const fields = await listCustomerFieldConfigsForActor(undefined, false);
+    const [fields, histories] = await Promise.all([
+      listCustomerFieldConfigsForActor(undefined, false),
+      listCustomerFieldChangeHistoryForActor(user, id)
+    ]);
+    const tabParams = await searchParams;
+    const initialTabIndex = tabParams?.tab === "history" ? 5 : 0;
     const contacts = contactsForDisplay(customer);
     const canEdit = canEditCustomerServer(user, customer);
     const geo = customerGeoDisplay(customer);
@@ -106,7 +142,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
               </>
             ) : null}
           </section>
-          <CustomerDetailTabs>
+          <CustomerDetailTabs initialTabIndex={initialTabIndex}>
             <section className="panel stack">
               <h2>基础信息</h2>
               <div className="detail-grid">
@@ -154,6 +190,11 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
                 attachments={(customer.attachments || []) as CustomerAttachment[]}
                 editable={canEdit}
               />
+            </section>
+            <section className="panel stack" id="history">
+              <h2>修改历史</h2>
+              <p className="muted">仅内部可见，按客户查看权限控制。记录客户关键字段、自定义字段和默认收款方案的变化。</p>
+              <ChangeHistoryList histories={histories} />
             </section>
             <section className="panel stack">
               <h2>操作记录</h2>

@@ -2,10 +2,10 @@
 
 import * as React from "react";
 
-const DETAIL_TABS = ["基础信息", "联系人", "公司信息", "合作信息", "附件与备注", "操作记录"];
+const DETAIL_TABS = ["基础信息", "联系人", "公司信息", "合作信息", "附件与备注", "修改历史", "操作记录"];
 
-export function CustomerDetailTabs({ children }: { children: React.ReactNode }) {
-  const [active, setActive] = React.useState(0);
+export function CustomerDetailTabs({ children, initialTabIndex = 0 }: { children: React.ReactNode; initialTabIndex?: number }) {
+  const [active, setActive] = React.useState(initialTabIndex);
   const panes = React.Children.toArray(children);
   return (
     <div className="stack">

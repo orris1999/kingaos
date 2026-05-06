@@ -7,12 +7,13 @@ import {
   CUSTOMER_TYPES
 } from "../shared/constants";
 import { normalizeCustomerName } from "../shared/customer-name-normalizer";
+import { buildCustomerFieldChangeHistoryDrafts } from "../shared/customer-field-history";
 import { normalizeCustomerAttachment, normalizeCustomerContacts, type CustomerContactDraft } from "../shared/customer-relations";
 import { customerGeoDisplay, normalizeCustomerGeo } from "../shared/geo";
 import type { AuthUser } from "./auth";
 import { hasAnyServerPermission, hasServerPermission, requireCurrentUser, requireServerPermission } from "./auth";
 import { prisma } from "./db";
-import { getCustomerAttachmentTypes } from "./field-config";
+import { getCustomerAttachmentTypes, mapFieldConfig } from "./field-config";
 import { resolveCustomerGeoInput } from "./geo";
 import { assertCustomerOssObjectKey, generateGetSignedUrl, validateOssUploadRequest } from "./oss";
 import { receiptAccountSelectionForCustomer, receiptAccountSelectionForNewCustomer } from "./receipt-accounts";
@@ -85,6 +86,16 @@ export async function getExportCustomerForActor(actor: AuthUser, customerId: str
   });
   if (!customer || !canViewCustomerServer(actor, customer)) throw new Error("当前账号不能查看该客户。");
   return customer;
+}
+
+export async function listCustomerFieldChangeHistoryForActor(actor: AuthUser, customerId: string) {
+  const customer = await prisma.customer.findUnique({ where: { id: customerId } });
+  if (!customer || !canViewCustomerServer(actor, customer)) throw new Error("当前账号不能查看该客户修改历史。");
+  return prisma.customerFieldChangeHistory.findMany({
+    where: { customerId },
+    orderBy: { changedAt: "desc" },
+    take: 100
+  });
 }
 
 export async function getExportOwners() {
@@ -472,6 +483,18 @@ function isUniqueConstraintError(error: unknown) {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
 }
 
+function recordFromJson(value: Prisma.JsonValue | null): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+}
+
+function historyJsonValue(value: string | number | boolean | null) {
+  return value === null ? Prisma.JsonNull : value;
+}
+
+function receiptAccountSummary(account?: { id: string; displayName: string; accountCode: string } | null) {
+  return account ? { id: account.id, displayName: account.displayName, accountCode: account.accountCode } : null;
+}
+
 export async function updateExportCustomerAction(customerId: string, formData: FormData) {
   "use server";
 
@@ -535,6 +558,38 @@ export async function updateExportCustomerAction(customerId: string, formData: F
     country: String(payload.country || existing.country),
     city: String(payload.city || existing.city)
   }));
+  const [fieldConfigs, receiptAccounts] = await Promise.all([
+    prisma.customerFieldConfig.findMany({ where: { moduleKey: "export_customer" }, orderBy: { sortOrder: "asc" } }),
+    prisma.companyReceiptAccount.findMany({
+      where: {
+        id: {
+          in: Array.from(new Set([existing.defaultReceiptAccountId, receiptSelection.accountId].filter(Boolean) as string[]))
+        }
+      }
+    })
+  ]);
+  const receiptAccountById = new Map(receiptAccounts.map((account) => [account.id, account]));
+  const nextCustomerForHistory = {
+    ...existing,
+    status: String(payload.status || CUSTOMER_STATUSES[0]),
+    mainProducts: String(payload.mainProducts || ""),
+    purchaseNeed: String(payload.purchaseNeed || ""),
+    expectedPurchaseNeed: String(payload.expectedPurchaseNeed || ""),
+    sourceNote: String(payload.sourceNote || ""),
+    customerNotes: String(payload.customerNotes || ""),
+    internalNotes: String(payload.internalNotes || ""),
+    specialReminder: String(payload.specialReminder || ""),
+    defaultReceiptAccountId: receiptSelection.accountId
+  };
+  const fieldHistoryDrafts = buildCustomerFieldChangeHistoryDrafts({
+    oldCustomer: existing as unknown as Record<string, unknown>,
+    newCustomer: nextCustomerForHistory as unknown as Record<string, unknown>,
+    oldCustomFields: recordFromJson(existing.customFields),
+    newCustomFields: customFields,
+    fieldConfigs: fieldConfigs.map(mapFieldConfig),
+    oldReceiptAccount: receiptAccountSummary(existing.defaultReceiptAccountId ? receiptAccountById.get(existing.defaultReceiptAccountId) : null),
+    newReceiptAccount: receiptAccountSummary(receiptSelection.accountId ? receiptAccountById.get(receiptSelection.accountId) : null)
+  });
   await prisma.$transaction(async (tx) => {
     await tx.customer.update({
       where: { id: customerId },
@@ -600,6 +655,27 @@ export async function updateExportCustomerAction(customerId: string, formData: F
             newReceiptAccountId: receiptSelection.accountId,
             actorUserId: actor.id
           }
+        }
+      });
+    }
+    for (const history of fieldHistoryDrafts) {
+      await tx.customerFieldChangeHistory.create({
+        data: {
+          customerId,
+          fieldKey: history.fieldKey,
+          fieldLabel: history.fieldLabel,
+          fieldGroup: history.fieldGroup || null,
+          fieldKind: history.fieldKind,
+          fieldType: history.fieldType || null,
+          oldValue: historyJsonValue(history.oldValue),
+          newValue: historyJsonValue(history.newValue),
+          oldDisplayValue: history.oldDisplayValue,
+          newDisplayValue: history.newDisplayValue,
+          changeType: history.changeType,
+          source: history.source,
+          changedByUserId: actor.id,
+          changedByName: actor.name,
+          metadata: history.metadata || Prisma.JsonNull
         }
       });
     }
