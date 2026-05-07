@@ -236,14 +236,16 @@ function CustomerInput({
   }
   if (field.fieldType === "select") {
     const stringValue = String(value || "");
-    const hasLegacyOption = Boolean(stringValue && !field.options.includes(stringValue));
+    const selectValue = field.fieldKey === "status" ? customerStatusLabel(stringValue) : stringValue;
+    const renderedOptions = selectOptionsForField(field);
+    const hasLegacyOption = Boolean(selectValue && !renderedOptions.some((option) => option.value === selectValue));
     return (
       <label className={fieldLabelClass(field.required)}>
         <FieldLabel label={label} required={field.required} />
-        <select className={fieldControlClass(field.required)} name={field.fieldKey} defaultValue={stringValue} required={field.required}>
+        <select className={fieldControlClass(field.required)} name={field.fieldKey} defaultValue={selectValue} required={field.required}>
           <option value="">请选择</option>
-          {hasLegacyOption ? <option value={stringValue}>历史值：{field.fieldKey === "status" ? customerStatusLabel(stringValue) : stringValue}</option> : null}
-          {field.options.map((option) => <option key={option} value={option}>{field.fieldKey === "status" ? customerStatusLabel(option) : option}</option>)}
+          {hasLegacyOption ? <option value={selectValue}>历史值：{selectValue}</option> : null}
+          {renderedOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
         </select>
         {compatibilityMessage ? <span className="tiny warn-text">{compatibilityMessage}</span> : null}
       </label>
@@ -310,6 +312,14 @@ function fieldPlaceholder(field: CustomerFieldConfig) {
   if (field.fieldKey === "name") return "请填写公司名称";
   if (field.fieldKey === "customerType") return "请选择客户类型";
   return `请填写${field.fieldLabel}`;
+}
+
+function selectOptionsForField(field: CustomerFieldConfig) {
+  const options = field.options.map((option) => {
+    const value = field.fieldKey === "status" ? customerStatusLabel(option) : option;
+    return { value, label: value };
+  });
+  return Array.from(new Map(options.map((option) => [option.value, option])).values());
 }
 
 function booleanSelectValue(value: unknown) {
