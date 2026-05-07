@@ -50,7 +50,7 @@ describe("KingaOS export customer and field-config domain actions", () => {
     const store = freshStore();
     const admin = loginUser(store, "admin@kingaos.local", "Kingaos@123456");
     const fields = listCustomerFieldConfigs(store, admin, true);
-    expect(fields.some((field) => field.fieldLabel === "客户名称")).toBe(true);
+    expect(fields.some((field) => field.fieldKey === "name" && field.fieldLabel === "公司名称")).toBe(true);
   });
 
   it("客户编号不重复", () => {

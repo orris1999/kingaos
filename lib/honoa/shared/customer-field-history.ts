@@ -1,4 +1,5 @@
 import { booleanFieldValueLabel } from "./field-types";
+import { customerStatusLabel } from "./constants";
 
 export type FieldHistoryConfig = {
   fieldKey: string;
@@ -171,12 +172,19 @@ function appendFieldHistoryDraft(
   draft: Omit<CustomerFieldHistoryDraft, "oldDisplayValue" | "newDisplayValue" | "changeType">
 ) {
   if (!hasMeaningfulFieldChange(draft.oldValue, draft.newValue, draft.fieldType)) return;
+  const oldDisplayValue = draft.fieldKey === "status" ? displayStatusHistoryValue(draft.oldValue) : displayHistoryValue(draft.oldValue, draft.fieldType);
+  const newDisplayValue = draft.fieldKey === "status" ? displayStatusHistoryValue(draft.newValue) : displayHistoryValue(draft.newValue, draft.fieldType);
   drafts.push({
     ...draft,
-    oldDisplayValue: displayHistoryValue(draft.oldValue, draft.fieldType),
-    newDisplayValue: displayHistoryValue(draft.newValue, draft.fieldType),
+    oldDisplayValue,
+    newDisplayValue,
     changeType: historyChangeType(draft.oldValue, draft.newValue)
   });
+}
+
+function displayStatusHistoryValue(value: unknown) {
+  const displayValue = displayHistoryValue(value, "select");
+  return displayValue === "未填写" ? displayValue : customerStatusLabel(displayValue);
 }
 
 function appendReceiptAccountHistoryDraft(

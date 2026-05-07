@@ -106,7 +106,7 @@ Backfill 必须：
 - 不删除客户
 - 不清空字段
 - 不修改客户负责人
-- 不修改客户名称
+- 不修改真实客户的公司名称 / 内部 `Customer.name`
 
 ## Production Migration
 

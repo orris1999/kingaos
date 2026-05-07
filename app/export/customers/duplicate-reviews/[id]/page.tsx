@@ -6,6 +6,7 @@ import {
   getCustomerDuplicateReviewRequestForActor,
   rejectCustomerDuplicateReviewRequestAction
 } from "@/lib/honoa/server/customers";
+import { customerCompanyDisplay, customerStatusLabel } from "@/lib/honoa/shared/constants";
 import { customerGeoDisplay } from "@/lib/honoa/shared/geo";
 
 function formatDate(value: Date) {
@@ -40,7 +41,7 @@ export default async function DuplicateReviewDetailPage({
           <div className="split">
             <div>
               <div className="breadcrumbs">KingaOS / 出口部 / 客户档案 / 重复客户审核 / 详情</div>
-              <h1>客户名称已存在</h1>
+              <h1>公司名称已存在</h1>
               <p className="muted">系统检测到该客户可能已经建档。为避免多个业务员重复跟进同一客户，不能直接重复创建。</p>
             </div>
             <div className="actions">
@@ -52,7 +53,7 @@ export default async function DuplicateReviewDetailPage({
           <section className="panel detail-grid">
             <div className="kv"><b>申请人</b><span>{request.requestedByName || "-"}</span></div>
             <div className="kv"><b>申请时间</b><span>{formatDate(request.createdAt)}</span></div>
-            <div className="kv"><b>拟建客户名称</b><span>{request.proposedCustomerName}</span></div>
+            <div className="kv"><b>拟建公司名称</b><span>{request.proposedCustomerName}</span></div>
             <div className="kv"><b>系统识别的规范化名称</b><span>{request.normalizedName}</span></div>
             <div className="kv"><b>申请原因</b><span>{request.requestReason || "-"}</span></div>
             <div className="kv"><b>状态</b><span className={request.status === "pending" ? "tag warn" : request.status === "approved" ? "tag ok" : "tag danger"}>{statusLabel(request.status)}</span></div>
@@ -65,16 +66,16 @@ export default async function DuplicateReviewDetailPage({
             {canSeeExistingCustomers ? (
             <div className="table-wrap">
               <table>
-                <thead><tr><th>客户编号</th><th>客户名称</th><th>负责人</th><th>状态</th><th>地址</th><th>创建时间</th><th>更新时间</th></tr></thead>
+                <thead><tr><th>客户编号</th><th>公司名称</th><th>负责人</th><th>状态</th><th>地址</th><th>创建时间</th><th>更新时间</th></tr></thead>
                 <tbody>
                   {existingCustomers.length === 0 ? <tr><td colSpan={7}>暂无可展示的疑似客户</td></tr> : existingCustomers.map((customer) => {
                     const geo = customerGeoDisplay(customer);
                     return (
                       <tr key={customer.id}>
                         <td>{customer.customerCode}</td>
-                        <td>{customer.name}</td>
+                        <td>{customerCompanyDisplay(customer)}</td>
                         <td>{customer.ownerName}</td>
-                        <td>{customer.status}</td>
+                        <td>{customerStatusLabel(customer.status)}</td>
                         <td>{geo.full}</td>
                         <td>{formatDate(customer.createdAt)}</td>
                         <td>{formatDate(customer.updatedAt)}</td>
@@ -88,7 +89,7 @@ export default async function DuplicateReviewDetailPage({
           </section>
           <section className="panel detail-grid">
             <h2 style={{ gridColumn: "1 / -1" }}>拟建客户摘要</h2>
-            <div className="kv"><b>客户名称</b><span>{String(requestedPayload.payload.name || request.proposedCustomerName)}</span></div>
+            <div className="kv"><b>公司名称</b><span>{String(requestedPayload.payload.name || request.proposedCustomerName)}</span></div>
             <div className="kv"><b>客户类型</b><span>{String(requestedPayload.payload.customerType || "-")}</span></div>
             <div className="kv"><b>联系人数量</b><span>{requestedPayload.contacts.length}</span></div>
             <div className="kv"><b>主要产品需求</b><span>{String(requestedPayload.payload.purchaseNeed || "-")}</span></div>

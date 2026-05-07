@@ -61,7 +61,10 @@ export function CustomerReceiptAccountSelector({
       </label>
       {!selected ? <p className="muted">未设置默认收款方案，未来合同可能需要重新选择。</p> : null}
       {selected ? (
-        <div className="detail-grid">
+        <div className="detail-grid readonly-panel">
+          <div className="kv" style={{ gridColumn: "1 / -1" }}>
+            <b>只读说明</b><span className="muted">财务维护，业务只读。</span>
+          </div>
           {!selected.isActive ? (
             <div className="kv" style={{ gridColumn: "1 / -1" }}>
               <b>状态提醒</b><span className="warn-text">该收款账号已停用，请重新选择有效账号。</span>

@@ -100,14 +100,14 @@ function createExportCustomerInternal(
   }
   const owner = store.getUsers().find((user) => user.id === ownerUserId && user.department === "export" && user.isActive);
   if (!owner) throw new Error("负责业务员无效或已停用。");
-  if (!input.name.trim()) throw new Error("请填写客户名称。");
+  if (!input.name.trim()) throw new Error("请填写公司名称。");
   const normalizedCustomerName = normalizeCustomerName(input.name);
-  if (!normalizedCustomerName) throw new Error("请填写有效客户名称。");
+  if (!normalizedCustomerName) throw new Error("请填写有效公司名称。");
   const duplicate = checkCustomerDuplicateName(store, input.name);
   const mayApproveDuplicate = canManageDuplicateReview(store, actor) && input.allowDuplicateWithApproval && input.duplicateApprovalReason?.trim();
   if (duplicate.isDuplicate && !approvedDuplicate.reviewRequestId && !mayApproveDuplicate) {
     const request = createCustomerDuplicateReviewRequest(store, actor, { ...input, ownerUserId }, input.duplicateApprovalReason || "");
-    throw new DuplicateCustomerNameError("客户名称已存在，已提交重复客户审核申请。", request.id);
+    throw new DuplicateCustomerNameError("公司名称已存在，已提交重复客户审核申请。", request.id);
   }
   const identity = duplicate.identity || ensureCustomerIdentity(store, input.name, normalizedCustomerName);
 
@@ -170,14 +170,14 @@ export function updateExportCustomer(store: KingaStore, actor: User, customerId:
   const ownerUserId = canAssignCustomerOwner(store, actor) ? input.ownerUserId || existing.ownerUserId : existing.ownerUserId;
   const owner = store.getUsers().find((user) => user.id === ownerUserId && user.department === "export" && user.isActive);
   if (!owner) throw new Error("负责业务员无效或已停用。");
-  if (!input.name.trim()) throw new Error("请填写客户名称。");
+  if (!input.name.trim()) throw new Error("请填写公司名称。");
   const normalizedCustomerName = normalizeCustomerName(input.name);
-  if (!normalizedCustomerName) throw new Error("请填写有效客户名称。");
+  if (!normalizedCustomerName) throw new Error("请填写有效公司名称。");
   const currentNormalized = existing.normalizedCustomerName || normalizeCustomerName(existing.name);
   const duplicate = checkCustomerDuplicateName(store, input.name, customerId);
   if (normalizedCustomerName !== currentNormalized && duplicate.isDuplicate) {
     const request = createCustomerDuplicateReviewRequest(store, actor, { ...input, ownerUserId }, input.duplicateApprovalReason || "");
-    throw new DuplicateCustomerNameError("客户名称已存在，已提交重复客户审核申请。", request.id);
+    throw new DuplicateCustomerNameError("公司名称已存在，已提交重复客户审核申请。", request.id);
   }
   const identity =
     normalizedCustomerName === currentNormalized && existing.customerIdentityId

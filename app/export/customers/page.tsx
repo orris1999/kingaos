@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Forbidden, KingaShell } from "@/components/kinga-shell";
 import { hasAnyServerPermission, hasServerPermission, requireCurrentUser } from "@/lib/honoa/server/auth";
 import { canEditCustomerServer, listExportCustomersForActor, primaryContactSummary } from "@/lib/honoa/server/customers";
+import { customerCompanyDisplay, customerStatusLabel } from "@/lib/honoa/shared/constants";
 import { customerGeoDisplay } from "@/lib/honoa/shared/geo";
 
 function formatDate(value: Date) {
@@ -34,12 +35,12 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
           </div>
         </div>
         <form className="panel" action="/export/customers">
-          <label>搜索客户<input name="q" defaultValue={q} placeholder="客户编号、名称、地址、状态、负责人" /></label>
+          <label>搜索客户<input name="q" defaultValue={q} placeholder="搜索公司名称 / 客户编号 / 国家 / 负责人" /></label>
         </form>
         <div className="table-wrap">
           <table>
             <thead>
-              <tr><th>客户编号</th><th>客户名称</th><th>客户类型</th><th>地址</th><th>客户状态</th><th>重复标记</th><th>负责业务员</th><th>主要联系人</th><th>联系电话</th><th>邮箱</th><th>最近更新时间</th><th>操作</th></tr>
+              <tr><th>客户编号</th><th>公司名称</th><th>客户类型</th><th>地址</th><th>客户状态</th><th>重复标记</th><th>负责业务员</th><th>主要联系人</th><th>联系电话</th><th>邮箱</th><th>最近更新时间</th><th>操作</th></tr>
             </thead>
             <tbody>
               {customers.length === 0 ? <tr><td colSpan={12}>暂无客户</td></tr> : customers.map((customer) => {
@@ -48,10 +49,10 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
                 return (
                   <tr key={customer.id}>
                     <td>{customer.customerCode}</td>
-                    <td>{customer.name}</td>
+                    <td>{customerCompanyDisplay(customer)}</td>
                     <td>{customer.customerType}</td>
                     <td>{geo.full}</td>
-                    <td>{customer.status}</td>
+                    <td>{customerStatusLabel(customer.status)}</td>
                     <td>{customer.duplicateApprovalStatus === "approved_duplicate" ? <span className="tag warn">重复客户例外</span> : "-"}</td>
                     <td>{customer.ownerName}</td>
                     <td>{contact?.name || "-"}</td>

@@ -5,7 +5,8 @@ import {
   CUSTOMER_ATTACHMENT_TYPE_FIELD_KEY,
   DEFAULT_CUSTOMER_ATTACHMENT_TYPES,
   CUSTOMER_FIELD_GROUPS,
-  CUSTOMER_FIELD_TYPES
+  CUSTOMER_FIELD_TYPES,
+  customerFieldLabel
 } from "../shared/constants";
 import type { CustomerFieldConfig, CustomerFieldGroup, CustomerFieldType } from "../shared/domain-types";
 import type { AuthUser } from "./auth";
@@ -17,7 +18,7 @@ export function mapFieldConfig(field: Awaited<ReturnType<typeof prisma.customerF
     id: field.id,
     moduleKey: "export_customer",
     fieldKey: field.fieldKey,
-    fieldLabel: field.fieldLabel,
+    fieldLabel: customerFieldLabel(field.fieldKey, field.fieldLabel),
     fieldType: field.fieldType as CustomerFieldType,
     fieldGroup: field.fieldGroup as CustomerFieldGroup,
     required: field.required,

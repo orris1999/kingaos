@@ -5,7 +5,7 @@ import { Forbidden, KingaShell } from "@/components/kinga-shell";
 import { requireCurrentUser } from "@/lib/honoa/server/auth";
 import { canEditCustomerServer, contactsForDisplay, getExportCustomerForActor, listCustomerFieldChangeHistoryForActor } from "@/lib/honoa/server/customers";
 import { listCustomerFieldConfigsForActor } from "@/lib/honoa/server/field-config";
-import { CUSTOMER_GEO_FIELD_KEYS, CUSTOMER_LEGACY_CONTACT_FIELD_KEYS, CUSTOMER_SYSTEM_FIELD_KEYS } from "@/lib/honoa/shared/constants";
+import { CUSTOMER_COMPANY_DUPLICATE_FIELD_KEYS, CUSTOMER_GEO_FIELD_KEYS, CUSTOMER_LEGACY_CONTACT_FIELD_KEYS, CUSTOMER_SYSTEM_FIELD_KEYS, customerCompanyDisplay, customerStatusCompatibilityOptions, customerStatusLabel } from "@/lib/honoa/shared/constants";
 import type { CustomerFieldConfig } from "@/lib/honoa/shared/domain-types";
 import { displayFieldValue, fieldValueCompatibilityMessage } from "@/lib/honoa/shared/field-values";
 import { customerGeoDisplay } from "@/lib/honoa/shared/geo";
@@ -16,6 +16,7 @@ function formatDate(value: Date) {
 }
 
 function fieldValue(customer: Customer, field: CustomerFieldConfig) {
+  if (field.fieldKey === "status") return customerStatusLabel(rawFieldValue(customer, field) as string | null);
   return displayFieldValue(rawFieldValue(customer, field), field.fieldType);
 }
 
@@ -33,7 +34,10 @@ function rawFieldValue(customer: Customer, field: CustomerFieldConfig) {
 function ReceiptAccountDetail({ account }: { account?: CompanyReceiptAccount | null }) {
   if (!account) return <p className="muted">暂无默认收款方案</p>;
   return (
-    <div className="detail-grid">
+    <div className="detail-grid readonly-panel">
+      <div className="kv" style={{ gridColumn: "1 / -1" }}>
+        <b>只读说明</b><span className="muted">财务维护，业务只读。</span>
+      </div>
       {!account.isActive ? (
         <div className="kv" style={{ gridColumn: "1 / -1" }}>
           <b>状态提醒</b><span className="warn-text">当前默认收款账号已停用，请重新选择有效账号。</span>
@@ -95,7 +99,12 @@ export default async function CustomerDetailPage({
     const canEdit = canEditCustomerServer(user, customer);
     const geo = customerGeoDisplay(customer);
     const fieldsForGroup = (group: CustomerFieldConfig["fieldGroup"]) =>
-      fields.filter((field) => field.fieldGroup === group && !CUSTOMER_LEGACY_CONTACT_FIELD_KEYS.has(field.fieldKey) && !CUSTOMER_GEO_FIELD_KEYS.has(field.fieldKey));
+      fields.filter((field) =>
+        field.fieldGroup === group &&
+        !CUSTOMER_LEGACY_CONTACT_FIELD_KEYS.has(field.fieldKey) &&
+        !CUSTOMER_GEO_FIELD_KEYS.has(field.fieldKey) &&
+        !CUSTOMER_COMPANY_DUPLICATE_FIELD_KEYS.has(field.fieldKey)
+      );
     const renderFields = (group: CustomerFieldConfig["fieldGroup"]) => {
       const groupFields = fieldsForGroup(group);
       if (groupFields.length === 0) return <p className="muted">暂无信息</p>;
@@ -105,8 +114,8 @@ export default async function CustomerDetailPage({
             <div className="kv" key={field.id}>
               <b>{field.fieldLabel}</b>
               <span>{fieldValue(customer, field)}</span>
-              {fieldValueCompatibilityMessage(rawFieldValue(customer, field), field.fieldType, field.options) ? (
-                <span className="tiny warn-text">{fieldValueCompatibilityMessage(rawFieldValue(customer, field), field.fieldType, field.options)}</span>
+              {fieldValueCompatibilityMessage(rawFieldValue(customer, field), field.fieldType, field.fieldKey === "status" ? customerStatusCompatibilityOptions(field.options) : field.options) ? (
+                <span className="tiny warn-text">{fieldValueCompatibilityMessage(rawFieldValue(customer, field), field.fieldType, field.fieldKey === "status" ? customerStatusCompatibilityOptions(field.options) : field.options)}</span>
               ) : null}
             </div>
           ))}
@@ -119,7 +128,7 @@ export default async function CustomerDetailPage({
           <div className="split">
             <div>
               <div className="breadcrumbs">KingaOS / 出口部 / 客户档案 / 客户详情</div>
-              <h1>{customer.name}</h1>
+              <h1>{customerCompanyDisplay(customer)}</h1>
               <p className="actions">
                 <span className="tag">客户编号：{customer.customerCode}</span>
                 {customer.duplicateApprovalStatus === "approved_duplicate" ? <span className="tag warn">重复客户例外</span> : null}

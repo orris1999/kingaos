@@ -297,9 +297,9 @@ export async function createExportCustomerAction(formData: FormData) {
   const owner = await prisma.user.findFirst({ where: { id: ownerUserId, department: "export", isActive: true } });
   if (!owner) throw new Error("负责业务员无效或已停用。");
   const name = String(payload.name || "").trim();
-  if (!name) throw new Error("请填写客户名称。");
+  if (!name) throw new Error("请填写公司名称。");
   const normalizedCustomerName = normalizeCustomerName(name);
-  if (!normalizedCustomerName) throw new Error("请填写有效客户名称。");
+  if (!normalizedCustomerName) throw new Error("请填写有效公司名称。");
   const geo = await resolveCustomerGeoInput(normalizeCustomerGeo({
     countryCode: String(payload.countryCode || ""),
     countryName: String(payload.countryName || ""),
@@ -518,9 +518,9 @@ export async function updateExportCustomerAction(customerId: string, formData: F
   const owner = await prisma.user.findFirst({ where: { id: ownerUserId, department: "export", isActive: true } });
   if (!owner) throw new Error("负责业务员无效或已停用。");
   const name = String(payload.name || "").trim();
-  if (!name) throw new Error("请填写客户名称。");
+  if (!name) throw new Error("请填写公司名称。");
   const normalizedCustomerName = normalizeCustomerName(name);
-  if (!normalizedCustomerName) throw new Error("请填写有效客户名称。");
+  if (!normalizedCustomerName) throw new Error("请填写有效公司名称。");
   const previousNormalizedName = existing.normalizedCustomerName || normalizeCustomerName(existing.name);
   const duplicate = await checkCustomerDuplicateName(name, customerId);
   if (normalizedCustomerName !== previousNormalizedName && duplicate.isDuplicate) {
@@ -615,7 +615,7 @@ export async function updateExportCustomerAction(customerId: string, formData: F
         phone: String(payload.phone ?? existing.phone),
         email: String(payload.email ?? existing.email),
         wechatOrWhatsapp: String(payload.wechatOrWhatsapp ?? existing.wechatOrWhatsapp),
-        companyName: String(payload.companyName || ""),
+        companyName: Object.hasOwn(payload, "companyName") ? String(payload.companyName || "") : existing.companyName,
         companyWebsite: String(payload.companyWebsite || ""),
         companyAddress: String(payload.companyAddress || ""),
         mainProducts: String(payload.mainProducts || ""),

@@ -32,14 +32,14 @@ export default async function DuplicateReviewsPage() {
           <div>
             <div className="breadcrumbs">KingaOS / 出口部 / 客户档案 / 重复客户审核</div>
             <h1>重复客户审核</h1>
-            <p className="muted">客户名称加点、加空格、大小写或全角半角变化都不能绕过判重。重复客户必须审核通过后才允许例外建档。</p>
+            <p className="muted">公司名称加点、加空格、大小写或全角半角变化都不能绕过判重。重复客户必须审核通过后才允许例外建档。</p>
           </div>
           <Link className="button ghost" href="/export/customers">返回客户列表</Link>
         </div>
         <div className="table-wrap">
           <table>
             <thead>
-              <tr><th>申请时间</th><th>申请人</th><th>拟建客户名称</th><th>规范化名称</th><th>疑似已有客户数量</th><th>状态</th><th>操作</th></tr>
+              <tr><th>申请时间</th><th>申请人</th><th>拟建公司名称</th><th>规范化名称</th><th>疑似已有客户数量</th><th>状态</th><th>操作</th></tr>
             </thead>
             <tbody>
               {requests.length === 0 ? <tr><td colSpan={7}>暂无重复客户审核申请</td></tr> : requests.map((request) => (

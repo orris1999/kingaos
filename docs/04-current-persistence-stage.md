@@ -4,7 +4,7 @@
 状态：POSTGRESQL_PRODUCTION_LITE_BASELINE
 
 当前多人版本默认使用 PostgreSQL + Prisma。用户、权限、session、客户、客户联系人、客户附件元数据、字段配置、客户字段修改历史、财务官方收款账号和审计日志都保存到 PostgreSQL。真实附件文件保存到私有阿里云 OSS Bucket。
-客户名称判重使用 `CustomerIdentity` 和 `CustomerDuplicateReviewRequest` 持久化，不能只靠前端校验或简单 `Customer.name unique`。
+页面上统一显示“公司名称”，内部仍使用 `Customer.name`；公司名称判重使用 `CustomerIdentity` 和 `CustomerDuplicateReviewRequest` 持久化，不能只靠前端校验或简单 `Customer.name unique`。
 
 ## 生产路径
 
@@ -24,6 +24,10 @@
 - 旧 `country` / `city` 字段继续保留兼容，详情和列表优先显示新字段，缺失时 fallback 到旧字段。
 - 管理员可以修改自定义字段类型；系统字段类型默认锁定。
 - 客户来源按自定义字段配置管理，可调整类型、分组、必填和选项；旧 `Customer.source` 字段继续保留兼容历史客户数据。
+- 公司名称统一在基础信息维护；旧 `Customer.companyName` 字段保留兼容，UI 不再让业务员重复填写两次公司名称。
+- `已归档` 在 UI 中显示为 `资料已完善`，表示客户档案资料已基本完善，不代表客户停止合作；`暂停合作` 仍表示合作暂停。
+- 必填字段使用红色 `*`、浅色底和“必填”标识；只读 / 系统生成字段使用灰底和“只读”或“系统生成”提示。
+- 新建客户时附件需要保存客户后上传，不能把文件暂存在 localStorage、PostgreSQL 或 ECS 本地磁盘。
 - 字段类型 UI 显示中文，内部值仍为 `text` / `textarea` / `number` / `date` / `select` / `boolean`。
 - 修改自定义字段类型不会清空客户 `customFields` 历史值。
 - 客户档案支持多个联系人，联系人数据保存到 `CustomerContact`。
@@ -42,8 +46,8 @@
 - 阿里云 AccessKey 只能在服务端 `.env` 使用，不能暴露到浏览器，不能使用 `NEXT_PUBLIC_*`。
 - 新增附件不再使用旧“附件链接”提交入口；历史 `storageProvider=external_url` 附件仅保留兼容展示和下载。
 - 附件类型配置保存在 `CustomerFieldConfig(moduleKey=export_customer_attachment, fieldKey=attachmentType)`，由拥有字段配置权限的管理员 / 超级管理员维护。
-- 客户名称默认不允许重复。
-- 系统会对客户名称执行规范化：trim、Unicode NFKC、转小写、删除空白、删除常见标点和符号。
+- 公司名称默认不允许重复。
+- 系统会对内部 `Customer.name` 执行规范化：trim、Unicode NFKC、转小写、删除空白、删除常见标点和符号。
 - 加点、加空格、大小写变化、全角半角变化不能绕过重复客户检测。
 - 重复客户必须提交业务经理 / 管理员审核；审核通过后才允许例外建档。
 - 重复客户检测、提交审核、审核通过、审核拒绝和例外建档都会写入 `AuditLog`。

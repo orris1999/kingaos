@@ -14,7 +14,7 @@ export class PermissionDeniedError extends DomainError {
 
 export class DuplicateCustomerNameError extends DomainError {
   constructor(
-    message = "客户名称已存在，不能直接重复建档。",
+    message = "公司名称已存在，不能直接重复建档。",
     public readonly duplicateReviewRequestId?: string
   ) {
     super(message);

@@ -9,10 +9,14 @@ import { mapFieldConfig } from "@/lib/honoa/server/field-config";
 import { hasServerPermission, type AuthUser } from "@/lib/honoa/server/auth";
 import {
   CUSTOMER_FIELD_GROUPS,
+  CUSTOMER_COMPANY_DUPLICATE_FIELD_KEYS,
   CUSTOMER_GEO_FIELD_KEYS,
   CUSTOMER_LEGACY_CONTACT_FIELD_KEYS,
   CUSTOMER_READONLY_FORM_FIELDS,
-  CUSTOMER_SYSTEM_FIELD_KEYS
+  CUSTOMER_SYSTEM_FIELD_KEYS,
+  customerCompanyDisplay,
+  customerStatusCompatibilityOptions,
+  customerStatusLabel
 } from "@/lib/honoa/shared/constants";
 import type { CustomerFieldConfig } from "@/lib/honoa/shared/domain-types";
 import { booleanFieldValueLabel } from "@/lib/honoa/shared/field-types";
@@ -33,7 +37,13 @@ export function ServerCustomerForm({
 }) {
   const activeFields = fields
     .map(mapFieldConfig)
-    .filter((field) => field.isActive && !CUSTOMER_READONLY_FORM_FIELDS.has(field.fieldKey) && !CUSTOMER_LEGACY_CONTACT_FIELD_KEYS.has(field.fieldKey) && !CUSTOMER_GEO_FIELD_KEYS.has(field.fieldKey));
+    .filter((field) =>
+      field.isActive &&
+      !CUSTOMER_READONLY_FORM_FIELDS.has(field.fieldKey) &&
+      !CUSTOMER_LEGACY_CONTACT_FIELD_KEYS.has(field.fieldKey) &&
+      !CUSTOMER_GEO_FIELD_KEYS.has(field.fieldKey) &&
+      !CUSTOMER_COMPANY_DUPLICATE_FIELD_KEYS.has(field.fieldKey)
+    );
   const action = customer ? updateExportCustomerAction.bind(null, customer.id) : createExportCustomerAction;
   const canChooseOwner = canAssignOwnerServer(actor);
   const canApproveDuplicate = canManageDuplicateReviewServer(actor);
@@ -56,7 +66,7 @@ export function ServerCustomerForm({
     <form className="stack" action={action}>
       <div>
         <div className="breadcrumbs">KingaOS / 出口部 / 客户档案 / {customer ? "编辑客户" : "新建客户"}</div>
-        <h1>{customer ? `编辑客户：${customer.name}` : "新建客户"}</h1>
+        <h1>{customer ? `编辑客户：${customerCompanyDisplay(customer)}` : "新建客户"}</h1>
         {customer ? (
           <p className="actions">
             <span className="tag">客户编号：{customer.customerCode}</span>
@@ -68,7 +78,7 @@ export function ServerCustomerForm({
         <CustomerStep group="基础信息" fields={activeFields} customer={customer} actor={actor} owners={owners} canChooseOwner={canChooseOwner}>
           <label>
             客户编号
-            <div className="readonly">{customer?.customerCode || "保存后系统自动生成"}</div>
+            <div className="readonly"><span>{customer?.customerCode || "保存后系统自动生成"}</span><span className="readonly-badge">系统生成</span></div>
           </label>
           <CustomerGeoSelector initialValue={customer} />
         </CustomerStep>
@@ -88,10 +98,10 @@ export function ServerCustomerForm({
         <CustomerStep group="备注 / 特殊提醒" fields={activeFields} customer={customer} actor={actor} owners={owners} canChooseOwner={canChooseOwner} title="附件与备注" />
         <section className="panel stack">
           <h2>确认并保存</h2>
-          <p className="muted">请确认客户名称、客户类型、国家 / 州省 / 城市、主要联系人、公司名称、主要产品需求、附件数量和备注信息。确认无误后点击“保存客户”。</p>
+          <p className="muted">请确认公司名称、客户类型、国家 / 州省 / 城市、主要联系人、主要产品需求、附件数量和备注信息。确认无误后点击“保存客户”。</p>
           <label>
             重复客户审核申请原因
-            <textarea name="duplicateReviewReason" placeholder="如果系统检测到客户名称已存在，请填写为什么仍需建档或改名。业务员提交后由业务经理审核；经理 / 管理员直接确认例外时也必须填写。" />
+            <textarea name="duplicateReviewReason" placeholder="如果系统检测到公司名称已存在，请填写为什么仍需建档或改名。业务员提交后由业务经理审核；经理 / 管理员直接确认例外时也必须填写。" />
           </label>
           {canApproveDuplicate ? (
             <label className="checkrow">
@@ -99,7 +109,14 @@ export function ServerCustomerForm({
               <span>如果系统检测到重名客户，我确认按“重复客户例外”建档，并记录审核人、审核时间和审核原因。</span>
             </label>
           ) : null}
-          {customer ? <p className="muted">附件可在保存客户后，通过编辑页下方的附件区域继续上传或删除。</p> : <p className="muted">新建客户保存后，可在客户编辑页上传附件文件。</p>}
+          {customer ? (
+            <p className="muted">附件可在保存客户后，通过编辑页下方的附件区域继续上传或删除。</p>
+          ) : (
+            <div className="notice">
+              <strong>附件请在客户保存后上传。</strong>
+              <p>保存客户后，可在客户详情 / 编辑页面添加名片、营业执照、聊天记录、报价资料等附件。</p>
+            </div>
+          )}
         </section>
       </CustomerFormWizard>
       <a className="button ghost" href={customer ? `/export/customers/${customer.id}` : "/export/customers"}>返回</a>
@@ -183,23 +200,24 @@ function CustomerInput({
   canChooseOwner: boolean;
 }) {
   const value = fieldValue(customer, field);
-  const label = `${field.fieldLabel}${field.required ? " *" : ""}`;
-  const compatibilityMessage = fieldValueCompatibilityMessage(value, field.fieldType, field.options);
+  const label = field.fieldLabel;
+  const compatibilityOptions = field.fieldKey === "status" ? customerStatusCompatibilityOptions(field.options) : field.options;
+  const compatibilityMessage = fieldValueCompatibilityMessage(value, field.fieldType, compatibilityOptions);
   if (field.fieldKey === "ownerUserId") {
     const selectedOwner = customer?.ownerUserId || actor.id;
     if (!canChooseOwner) {
       return (
-        <label>
-          {label}
-          <div className="readonly">{actor.name}</div>
+        <label className={fieldLabelClass(field.required)}>
+          <FieldLabel label={label} required={field.required} />
+          <div className="readonly"><span>{actor.name}</span><span className="readonly-badge">只读</span></div>
           <input type="hidden" name="ownerUserId" value={actor.id} />
         </label>
       );
     }
     return (
-      <label>
-        {label}
-        <select name="ownerUserId" defaultValue={selectedOwner} required={field.required}>
+      <label className={fieldLabelClass(field.required)}>
+        <FieldLabel label={label} required={field.required} />
+        <select className={fieldControlClass(field.required)} name="ownerUserId" defaultValue={selectedOwner} required={field.required}>
           {owners.map((owner) => (
             <option key={owner.id} value={owner.id}>{owner.name} ({owner.email})</option>
           ))}
@@ -209,9 +227,9 @@ function CustomerInput({
   }
   if (field.fieldType === "textarea") {
     return (
-      <label>
-        {label}
-        <textarea name={field.fieldKey} defaultValue={String(value || "")} required={field.required} />
+      <label className={fieldLabelClass(field.required)}>
+        <FieldLabel label={label} required={field.required} />
+        <textarea className={fieldControlClass(field.required)} name={field.fieldKey} defaultValue={String(value || "")} required={field.required} placeholder={fieldPlaceholder(field)} />
         {compatibilityMessage ? <span className="tiny warn-text">{compatibilityMessage}</span> : null}
       </label>
     );
@@ -220,12 +238,12 @@ function CustomerInput({
     const stringValue = String(value || "");
     const hasLegacyOption = Boolean(stringValue && !field.options.includes(stringValue));
     return (
-      <label>
-        {label}
-        <select name={field.fieldKey} defaultValue={stringValue} required={field.required}>
+      <label className={fieldLabelClass(field.required)}>
+        <FieldLabel label={label} required={field.required} />
+        <select className={fieldControlClass(field.required)} name={field.fieldKey} defaultValue={stringValue} required={field.required}>
           <option value="">请选择</option>
-          {hasLegacyOption ? <option value={stringValue}>历史值：{stringValue}</option> : null}
-          {field.options.map((option) => <option key={option} value={option}>{option}</option>)}
+          {hasLegacyOption ? <option value={stringValue}>历史值：{field.fieldKey === "status" ? customerStatusLabel(stringValue) : stringValue}</option> : null}
+          {field.options.map((option) => <option key={option} value={option}>{field.fieldKey === "status" ? customerStatusLabel(option) : option}</option>)}
         </select>
         {compatibilityMessage ? <span className="tiny warn-text">{compatibilityMessage}</span> : null}
       </label>
@@ -234,17 +252,17 @@ function CustomerInput({
   if (field.fieldType === "boolean") {
     if (compatibilityMessage) {
       return (
-        <label>
-          {label}
-          <input name={field.fieldKey} defaultValue={String(value || "")} />
+        <label className={fieldLabelClass(field.required)}>
+          <FieldLabel label={label} required={field.required} />
+          <input className={fieldControlClass(field.required)} name={field.fieldKey} defaultValue={String(value || "")} placeholder={fieldPlaceholder(field)} />
           <span className="tiny warn-text">{compatibilityMessage}</span>
         </label>
       );
     }
     return (
-      <label>
-        {label}
-        <select name={field.fieldKey} defaultValue={booleanSelectValue(value)}>
+      <label className={fieldLabelClass(field.required)}>
+        <FieldLabel label={label} required={field.required} />
+        <select className={fieldControlClass(field.required)} name={field.fieldKey} defaultValue={booleanSelectValue(value)}>
           <option value="">未填写</option>
           <option value="1">{booleanFieldValueLabel(true)}</option>
           <option value="0">{booleanFieldValueLabel(false)}</option>
@@ -254,17 +272,44 @@ function CustomerInput({
   }
   const inputType = field.fieldType === "number" && !compatibilityMessage ? "number" : field.fieldType === "date" && !compatibilityMessage ? "date" : "text";
   return (
-    <label>
-      {label}
+    <label className={fieldLabelClass(field.required)}>
+      <FieldLabel label={label} required={field.required} />
       <input
+        className={fieldControlClass(field.required)}
         name={field.fieldKey}
         type={inputType}
         defaultValue={String(value || "")}
         required={field.required}
+        placeholder={fieldPlaceholder(field)}
       />
       {compatibilityMessage ? <span className="tiny warn-text">{compatibilityMessage}</span> : null}
     </label>
   );
+}
+
+function FieldLabel({ label, required }: { label: string; required: boolean }) {
+  return (
+    <span className="field-label-text">
+      {label}
+      {required ? <span className="required-mark" aria-label="必填">*</span> : null}
+      {required ? <span className="required-badge">必填</span> : null}
+    </span>
+  );
+}
+
+function fieldLabelClass(required: boolean) {
+  return required ? "required-field" : undefined;
+}
+
+function fieldControlClass(required: boolean) {
+  return required ? "required-control" : undefined;
+}
+
+function fieldPlaceholder(field: CustomerFieldConfig) {
+  if (!field.required) return undefined;
+  if (field.fieldKey === "name") return "请填写公司名称";
+  if (field.fieldKey === "customerType") return "请选择客户类型";
+  return `请填写${field.fieldLabel}`;
 }
 
 function booleanSelectValue(value: unknown) {

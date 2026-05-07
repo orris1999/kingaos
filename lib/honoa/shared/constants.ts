@@ -103,7 +103,29 @@ export const CUSTOMER_FIELD_TYPES: CustomerFieldType[] = ["text", "textarea", "n
 
 export const CUSTOMER_TYPES = ["工厂", "贸易商", "终端客户", "代理商", "其他"];
 
-export const CUSTOMER_STATUSES = ["新客户", "跟进中", "已报价", "已成交", "暂停合作", "已归档"];
+export const CUSTOMER_PROFILE_COMPLETE_STATUS = "资料已完善";
+export const CUSTOMER_LEGACY_ARCHIVED_STATUS = "已归档";
+
+export const CUSTOMER_STATUSES = ["新客户", "跟进中", "已报价", "已成交", "暂停合作", CUSTOMER_PROFILE_COMPLETE_STATUS];
+
+export function customerStatusLabel(value?: string | null) {
+  if (!value) return "-";
+  if (value === CUSTOMER_LEGACY_ARCHIVED_STATUS) return CUSTOMER_PROFILE_COMPLETE_STATUS;
+  return value;
+}
+
+export function customerStatusCompatibilityOptions(options: string[] = []) {
+  return options.includes(CUSTOMER_LEGACY_ARCHIVED_STATUS) ? options : [...options, CUSTOMER_LEGACY_ARCHIVED_STATUS];
+}
+
+export function customerFieldLabel(fieldKey: string, fallbackLabel: string) {
+  if (fieldKey === "name") return "公司名称";
+  return fallbackLabel;
+}
+
+export function customerCompanyDisplay(customer: { name?: string | null; companyName?: string | null }) {
+  return customer.name?.trim() || customer.companyName?.trim() || "-";
+}
 
 export const RECEIPT_ACCOUNT_PAYMENT_METHODS = [
   ["bank_transfer", "银行转账"],
@@ -136,6 +158,8 @@ export const CUSTOMER_LEGACY_CONTACT_FIELD_KEYS = new Set([
 ]);
 
 export const CUSTOMER_GEO_FIELD_KEYS = new Set(["country", "countryCode", "countryName", "stateCode", "stateName", "city", "cityName"]);
+
+export const CUSTOMER_COMPANY_DUPLICATE_FIELD_KEYS = new Set(["companyName"]);
 
 export const CUSTOMER_SYSTEM_FIELD_KEYS = new Set([
   "name",
@@ -176,7 +200,7 @@ export const CUSTOMER_READONLY_FORM_FIELDS = new Set(["customerCode", "createdAt
 
 export function defaultCustomerFields(now: string): CustomerFieldConfig[] {
   const rows: Array<[string, string, CustomerFieldType, CustomerFieldGroup, boolean, number, string[]?, boolean?]> = [
-    ["name", "客户名称", "text", "基础信息", true, 10],
+    ["name", "公司名称", "text", "基础信息", true, 10],
     ["customerCode", "客户编号", "text", "基础信息", false, 20],
     ["customerType", "客户类型", "select", "基础信息", true, 30, CUSTOMER_TYPES],
     ["country", "国家 / 地区", "text", "基础信息", false, 40],
