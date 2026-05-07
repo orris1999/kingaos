@@ -88,6 +88,7 @@ model Customer {
   defaultReceiptAccountSelectedByName   String?
   defaultReceiptAccountNote             String?
   customerType                          String
+  customerTypes                         Json                   @default("[]")
   country                               String                 @default("")
   countryCode                           String?
   countryName                           String?
@@ -234,6 +235,8 @@ model CustomerAttachment {
   customer         Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
   attachmentName   String
   attachmentType   String?
+  fieldKey         String?
+  fieldLabel       String?
   fileUrl          String?
   storageProvider  String    @default("external_url")
   storageKey       String?
@@ -247,6 +250,7 @@ model CustomerAttachment {
   deletedAt        DateTime?
 
   @@index([customerId])
+  @@index([customerId, fieldKey])
   @@index([attachmentType])
   @@index([deletedAt])
 }

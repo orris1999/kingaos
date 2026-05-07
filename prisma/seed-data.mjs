@@ -29,7 +29,7 @@ export const EXPORT_STAFF_DEFAULT_PERMISSIONS = [
   "export.customers.receipt_account.select"
 ];
 
-export const CUSTOMER_TYPES = ["工厂", "贸易商", "终端客户", "代理商", "其他"];
+export const CUSTOMER_TYPES = ["工厂", "贸易商", "终端客户", "代理商", "品牌商", "成品", "零部件", "其他"];
 export const CUSTOMER_STATUSES = ["新客户", "跟进中", "已报价", "已成交", "暂停合作", "已归档"];
 
 export const seedUsers = [
@@ -120,9 +120,9 @@ export const permissionGroups = [
 
 export function defaultCustomerFields() {
   return [
-    ["name", "客户名称", "text", "基础信息", true, 10],
+    ["name", "公司名称", "text", "基础信息", true, 10],
     ["customerCode", "客户编号", "text", "基础信息", false, 20],
-    ["customerType", "客户类型", "select", "基础信息", true, 30, CUSTOMER_TYPES],
+    ["customerType", "客户类型", "multiselect", "基础信息", true, 30, CUSTOMER_TYPES],
     ["country", "国家 / 地区", "text", "基础信息", false, 40],
     ["city", "城市", "text", "基础信息", false, 50],
     ["source", "客户来源", "text", "基础信息", false, 60, [], false],

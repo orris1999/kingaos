@@ -15,11 +15,15 @@ type UploadResponse = {
 export function CustomerOssUpload({
   customerId,
   attachmentTypes,
-  ossConfigured
+  ossConfigured,
+  fieldKey,
+  fieldLabel
 }: {
   customerId: string;
   attachmentTypes: string[];
   ossConfigured: boolean;
+  fieldKey?: string;
+  fieldLabel?: string;
 }) {
   const router = useRouter();
   const [file, setFile] = React.useState<File | null>(null);
@@ -45,7 +49,9 @@ export function CustomerOssUpload({
           fileSize: file.size,
           mimeType: file.type,
           attachmentType,
-          description
+          description,
+          fieldKey,
+          fieldLabel
         })
       });
       const uploadPayload = (await uploadRes.json()) as UploadResponse;
@@ -67,7 +73,9 @@ export function CustomerOssUpload({
           objectKey: uploadPayload.objectKey,
           mimeType: uploadPayload.mimeType || file.type,
           fileSize: uploadPayload.fileSize || file.size,
-          description
+          description,
+          fieldKey,
+          fieldLabel
         })
       });
       const savePayload = await saveRes.json().catch(() => ({}));
@@ -86,7 +94,7 @@ export function CustomerOssUpload({
 
   return (
     <div className="subpanel stack">
-      <h3>上传文件</h3>
+      <h3>{fieldLabel ? `上传${fieldLabel}` : "上传文件"}</h3>
       {!ossConfigured ? <p className="muted">OSS 尚未配置，暂时不能上传文件。请联系管理员配置阿里云 OSS。</p> : null}
       <div className="form-grid">
         <label>

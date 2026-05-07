@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Forbidden, KingaShell } from "@/components/kinga-shell";
 import { hasAnyServerPermission, hasServerPermission, requireCurrentUser } from "@/lib/honoa/server/auth";
 import { canEditCustomerServer, listExportCustomersForActor, primaryContactSummary } from "@/lib/honoa/server/customers";
-import { customerCompanyDisplay, customerStatusLabel } from "@/lib/honoa/shared/constants";
+import { customerCompanyDisplay, customerStatusLabel, customerTypeDisplay } from "@/lib/honoa/shared/constants";
 import { customerGeoDisplay } from "@/lib/honoa/shared/geo";
 
 function formatDate(value: Date) {
@@ -50,7 +50,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
                   <tr key={customer.id}>
                     <td>{customer.customerCode}</td>
                     <td>{customerCompanyDisplay(customer)}</td>
-                    <td>{customer.customerType}</td>
+                    <td>{customerTypeDisplay(customer)}</td>
                     <td>{geo.full}</td>
                     <td>{customerStatusLabel(customer.status)}</td>
                     <td>{customer.duplicateApprovalStatus === "approved_duplicate" ? <span className="tag warn">重复客户例外</span> : "-"}</td>

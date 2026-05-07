@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { CustomerDetailTabs } from "@/components/customer-detail-tabs";
 import { CustomerAttachmentsPanel } from "@/components/customer-attachments-panel";
+import { CustomerAttachmentDownloadButton } from "@/components/customer-oss-upload";
 import { Forbidden, KingaShell } from "@/components/kinga-shell";
 import { requireCurrentUser } from "@/lib/honoa/server/auth";
 import { canEditCustomerServer, contactsForDisplay, getExportCustomerForActor, listCustomerFieldChangeHistoryForActor } from "@/lib/honoa/server/customers";
 import { listCustomerFieldConfigsForActor } from "@/lib/honoa/server/field-config";
-import { CUSTOMER_COMPANY_DUPLICATE_FIELD_KEYS, CUSTOMER_GEO_FIELD_KEYS, CUSTOMER_LEGACY_CONTACT_FIELD_KEYS, CUSTOMER_SYSTEM_FIELD_KEYS, customerCompanyDisplay, customerStatusCompatibilityOptions, customerStatusLabel } from "@/lib/honoa/shared/constants";
+import { CUSTOMER_COMPANY_DUPLICATE_FIELD_KEYS, CUSTOMER_GEO_FIELD_KEYS, CUSTOMER_LEGACY_CONTACT_FIELD_KEYS, CUSTOMER_SYSTEM_FIELD_KEYS, customerCompanyDisplay, customerStatusCompatibilityOptions, customerStatusLabel, customerTypeValues } from "@/lib/honoa/shared/constants";
 import type { CustomerFieldConfig } from "@/lib/honoa/shared/domain-types";
-import { displayFieldValue, fieldValueCompatibilityMessage } from "@/lib/honoa/shared/field-values";
+import { fieldOptionLabel } from "@/lib/honoa/shared/field-options";
+import { displayFieldValue, fieldValueCompatibilityMessage, isSafeUrl, normalizeMultiValue, normalizeUrlFieldValue } from "@/lib/honoa/shared/field-values";
 import { customerGeoDisplay } from "@/lib/honoa/shared/geo";
 import type { CompanyReceiptAccount, Customer, CustomerAttachment, CustomerFieldChangeHistory } from "@prisma/client";
 
@@ -15,9 +17,39 @@ function formatDate(value: Date) {
   return value.toLocaleString("zh-CN", { hour12: false });
 }
 
-function fieldValue(customer: Customer, field: CustomerFieldConfig) {
+function fieldValue(customer: Customer & { attachments?: CustomerAttachment[] }, field: CustomerFieldConfig) {
   if (field.fieldKey === "status") return customerStatusLabel(rawFieldValue(customer, field) as string | null);
-  return displayFieldValue(rawFieldValue(customer, field), field.fieldType);
+  if (field.fieldKey === "customerType") return <TagList values={customerTypeValues(customer)} />;
+  const value = rawFieldValue(customer, field);
+  if (field.fieldType === "multiselect") {
+    return <TagList values={normalizeMultiValue(value).map((item) => fieldOptionLabel(field.options, item) || item)} />;
+  }
+  if (field.fieldType === "url") {
+    const link = normalizeUrlFieldValue(value);
+    if (!link) return "-";
+    if (!isSafeUrl(link.url)) return <span className="warn-text">链接地址无效或不安全</span>;
+    const external = /^https?:\/\//i.test(link.url);
+    return <a href={link.url} target={external ? "_blank" : undefined} rel={external ? "noopener noreferrer" : undefined}>{link.label || link.url}</a>;
+  }
+  if (field.fieldType === "attachment") {
+    const attachmentIds = normalizeMultiValue(value);
+    const attachments = (customer.attachments || []).filter((attachment) =>
+      !attachment.deletedAt &&
+      (attachment.fieldKey === field.fieldKey || attachmentIds.includes(attachment.id))
+    );
+    if (attachments.length === 0) return "-";
+    return (
+      <div className="inline-stack">
+        {attachments.map((attachment) => (
+          <span className="tag" key={attachment.id}>
+            {attachment.attachmentName}
+            <CustomerAttachmentDownloadButton customerId={customer.id} attachmentId={attachment.id} />
+          </span>
+        ))}
+      </div>
+    );
+  }
+  return displayFieldValue(value, field.fieldType, field.options);
 }
 
 function rawFieldValue(customer: Customer, field: CustomerFieldConfig) {
@@ -27,8 +59,13 @@ function rawFieldValue(customer: Customer, field: CustomerFieldConfig) {
   if (CUSTOMER_SYSTEM_FIELD_KEYS.has(field.fieldKey)) {
     return (customer as unknown as Record<string, unknown>)[field.fieldKey];
   }
-  const customFields = customer.customFields as Record<string, string | number | boolean>;
+  const customFields = customer.customFields as Record<string, unknown>;
   return customFields[field.fieldKey];
+}
+
+function TagList({ values }: { values: string[] }) {
+  if (values.length === 0) return "-";
+  return <span className="inline-stack">{values.map((value) => <span className="tag" key={value}>{value}</span>)}</span>;
 }
 
 function ReceiptAccountDetail({ account }: { account?: CompanyReceiptAccount | null }) {

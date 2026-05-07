@@ -28,7 +28,12 @@
 - `已归档` 在 UI 中显示为 `资料已完善`，表示客户档案资料已基本完善，不代表客户停止合作；`暂停合作` 仍表示合作暂停。
 - 必填字段使用红色 `*`、浅色底和“必填”标识；只读 / 系统生成字段使用灰底和“只读”或“系统生成”提示。
 - 新建客户时附件需要保存客户后上传，不能把文件暂存在 localStorage、PostgreSQL 或 ECS 本地磁盘。
-- 字段类型 UI 显示中文，内部值仍为 `text` / `textarea` / `number` / `date` / `select` / `boolean`。
+- 字段类型 UI 显示中文，内部值仍为 `text` / `textarea` / `number` / `date` / `select` / `multiselect` / `boolean` / `url` / `attachment`。
+- 字段配置支持多选、超链接和附件字段。
+- 客户类型支持多选，新字段 `Customer.customerTypes` 保存多个业务属性；旧 `Customer.customerType` 保留兼容。
+- 下拉 / 多选字段选项支持内部说明，内部说明只在新建 / 编辑客户页面显示，不进入详情页或未来对外客户信息卡。
+- 附件字段复用 `CustomerAttachment` 与 OSS 上传能力，`CustomerAttachment.fieldKey` / `fieldLabel` 记录字段归属，`customFields[fieldKey]` 只保存附件 ID 数组。
+- 附件字段不得保存文件二进制、base64 或 OSS 临时 uploadUrl。
 - 修改自定义字段类型不会清空客户 `customFields` 历史值。
 - 客户档案支持多个联系人，联系人数据保存到 `CustomerContact`。
 - 客户档案支持附件记录，附件元数据保存到 `CustomerAttachment`。
@@ -39,12 +44,12 @@
 - 未来合同可以从客户档案带出官方收款账号，但合同模块必须保存账号快照；当前阶段不做合同生成。
 - 客户字段修改历史保存到 `CustomerFieldChangeHistory`，记录关键字段、自定义字段和默认收款方案的原值、新值、修改人和修改时间。
 - 修改历史跟随客户查看权限：当前负责人可看自己客户历史，客户转给新负责人后新负责人可看过去历史，出口部经理 / 有全部客户查看权限的管理员可看出口部客户历史。
-- 历史记录只用于内部追溯，不对外展示；本阶段不做字段回滚、版本恢复、联系人字段级历史或附件字段级历史。
+- 历史记录只用于内部追溯，不对外展示；本阶段不做字段回滚、版本恢复或联系人字段级历史。附件字段只记录附件数量 / 引用变化，不记录文件内容或临时 URL。
 - 默认收款方案历史只保存方案名称、账号编号和收款账号 ID，不保存完整银行账号全文。
 - 客户附件支持 `storageProvider=aliyun_oss` 的真实文件上传；PostgreSQL 只保存 `storageKey`、MIME、大小、上传人等元数据。
 - OSS Bucket 必须私有；上传使用服务端生成的短时 PUT 预签名 URL，下载 / 预览使用服务端生成的短时 GET 预签名 URL。
 - 阿里云 AccessKey 只能在服务端 `.env` 使用，不能暴露到浏览器，不能使用 `NEXT_PUBLIC_*`。
-- 新增附件不再使用旧“附件链接”提交入口；历史 `storageProvider=external_url` 附件仅保留兼容展示和下载。
+- 客户附件优先使用 OSS 上传；附件字段也支持添加外部附件链接，历史 `storageProvider=external_url` 附件继续兼容展示和下载。
 - 附件类型配置保存在 `CustomerFieldConfig(moduleKey=export_customer_attachment, fieldKey=attachmentType)`，由拥有字段配置权限的管理员 / 超级管理员维护。
 - 公司名称默认不允许重复。
 - 系统会对内部 `Customer.name` 执行规范化：trim、Unicode NFKC、转小写、删除空白、删除常见标点和符号。

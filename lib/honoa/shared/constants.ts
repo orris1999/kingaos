@@ -1,4 +1,6 @@
 import type { CustomerFieldConfig, CustomerFieldGroup, CustomerFieldType, PermissionKey } from "./domain-types";
+import { fieldOptionValues } from "./field-options";
+import { normalizeMultiValue } from "./field-values";
 
 export const APP_NAME = "KingaOS";
 
@@ -99,9 +101,9 @@ export const CUSTOMER_FIELD_GROUPS: CustomerFieldGroup[] = [
   "备注 / 特殊提醒"
 ];
 
-export const CUSTOMER_FIELD_TYPES: CustomerFieldType[] = ["text", "textarea", "number", "date", "select", "boolean"];
+export const CUSTOMER_FIELD_TYPES: CustomerFieldType[] = ["text", "textarea", "number", "date", "select", "multiselect", "boolean", "url", "attachment"];
 
-export const CUSTOMER_TYPES = ["工厂", "贸易商", "终端客户", "代理商", "其他"];
+export const CUSTOMER_TYPES = ["工厂", "贸易商", "终端客户", "代理商", "品牌商", "成品", "零部件", "其他"];
 
 export const CUSTOMER_PROFILE_COMPLETE_STATUS = "资料已完善";
 export const CUSTOMER_LEGACY_ARCHIVED_STATUS = "已归档";
@@ -114,8 +116,9 @@ export function customerStatusLabel(value?: string | null) {
   return value;
 }
 
-export function customerStatusCompatibilityOptions(options: string[] = []) {
-  return options.includes(CUSTOMER_LEGACY_ARCHIVED_STATUS) ? options : [...options, CUSTOMER_LEGACY_ARCHIVED_STATUS];
+export function customerStatusCompatibilityOptions(options: unknown = []) {
+  const values = fieldOptionValues(options);
+  return values.includes(CUSTOMER_LEGACY_ARCHIVED_STATUS) ? values : [...values, CUSTOMER_LEGACY_ARCHIVED_STATUS];
 }
 
 export function customerFieldLabel(fieldKey: string, fallbackLabel: string) {
@@ -125,6 +128,17 @@ export function customerFieldLabel(fieldKey: string, fallbackLabel: string) {
 
 export function customerCompanyDisplay(customer: { name?: string | null; companyName?: string | null }) {
   return customer.name?.trim() || customer.companyName?.trim() || "-";
+}
+
+export function customerTypeValues(customer: { customerType?: string | null; customerTypes?: unknown }) {
+  const values = normalizeMultiValue(customer.customerTypes);
+  if (values.length) return values;
+  return normalizeMultiValue(customer.customerType || "");
+}
+
+export function customerTypeDisplay(customer: { customerType?: string | null; customerTypes?: unknown }) {
+  const values = customerTypeValues(customer);
+  return values.length ? values.join("、") : "-";
 }
 
 export const RECEIPT_ACCOUNT_PAYMENT_METHODS = [
@@ -165,6 +179,7 @@ export const CUSTOMER_SYSTEM_FIELD_KEYS = new Set([
   "name",
   "customerCode",
   "customerType",
+  "customerTypes",
   "country",
   "countryCode",
   "countryName",
@@ -202,7 +217,7 @@ export function defaultCustomerFields(now: string): CustomerFieldConfig[] {
   const rows: Array<[string, string, CustomerFieldType, CustomerFieldGroup, boolean, number, string[]?, boolean?]> = [
     ["name", "公司名称", "text", "基础信息", true, 10],
     ["customerCode", "客户编号", "text", "基础信息", false, 20],
-    ["customerType", "客户类型", "select", "基础信息", true, 30, CUSTOMER_TYPES],
+    ["customerType", "客户类型", "multiselect", "基础信息", true, 30, CUSTOMER_TYPES],
     ["country", "国家 / 地区", "text", "基础信息", false, 40],
     ["city", "城市", "text", "基础信息", false, 50],
     ["source", "客户来源", "text", "基础信息", false, 60, [], false],

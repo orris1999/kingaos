@@ -14,6 +14,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const attachment = await createCustomerAttachmentFromOss(actor, customerId, {
       attachmentName: String(body.attachmentName || ""),
       attachmentType: String(body.attachmentType || "其他"),
+      fieldKey: String(body.fieldKey || ""),
+      fieldLabel: String(body.fieldLabel || ""),
       objectKey: String(body.objectKey || ""),
       mimeType: String(body.mimeType || ""),
       fileSize: Number(body.fileSize || 0),

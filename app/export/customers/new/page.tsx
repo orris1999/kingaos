@@ -3,6 +3,8 @@ import { Forbidden, KingaShell } from "@/components/kinga-shell";
 import { hasServerPermission, requireCurrentUser } from "@/lib/honoa/server/auth";
 import { getExportOwners } from "@/lib/honoa/server/customers";
 import { prisma } from "@/lib/honoa/server/db";
+import { getCustomerAttachmentTypes } from "@/lib/honoa/server/field-config";
+import { isOssConfigured } from "@/lib/honoa/server/oss";
 import { listSelectableReceiptAccounts } from "@/lib/honoa/server/receipt-accounts";
 
 export default async function NewCustomerPage() {
@@ -14,14 +16,15 @@ export default async function NewCustomerPage() {
       </KingaShell>
     );
   }
-  const [fields, owners, receiptAccounts] = await Promise.all([
+  const [fields, owners, receiptAccounts, attachmentTypes] = await Promise.all([
     prisma.customerFieldConfig.findMany({ where: { moduleKey: "export_customer", isActive: true }, orderBy: { sortOrder: "asc" } }),
     getExportOwners(),
-    listSelectableReceiptAccounts()
+    listSelectableReceiptAccounts(),
+    getCustomerAttachmentTypes()
   ]);
   return (
     <KingaShell user={user}>
-      <ServerCustomerForm actor={user} fields={fields} owners={owners} receiptAccounts={receiptAccounts} />
+      <ServerCustomerForm actor={user} fields={fields} owners={owners} receiptAccounts={receiptAccounts} attachmentTypes={attachmentTypes} ossConfigured={isOssConfigured()} />
     </KingaShell>
   );
 }

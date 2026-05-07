@@ -7,8 +7,10 @@ import {
   CUSTOMER_TYPES
 } from "../shared/constants";
 import { normalizeCustomerName } from "../shared/customer-name-normalizer";
-import { buildCustomerFieldChangeHistoryDrafts, isMeaningfulHistoryRecord } from "../shared/customer-field-history";
+import { buildCustomerFieldChangeHistoryDrafts, displayHistoryValue, hasMeaningfulFieldChange, historyChangeType, isMeaningfulHistoryRecord } from "../shared/customer-field-history";
 import { normalizeCustomerAttachment, normalizeCustomerContacts, type CustomerContactDraft } from "../shared/customer-relations";
+import type { CustomerFieldConfig } from "../shared/domain-types";
+import { isSafeUrl, normalizeMultiValue, normalizeUrlFieldValue } from "../shared/field-values";
 import { customerGeoDisplay, normalizeCustomerGeo } from "../shared/geo";
 import type { AuthUser } from "./auth";
 import { hasAnyServerPermission, hasServerPermission, requireCurrentUser, requireServerPermission } from "./auth";
@@ -61,6 +63,7 @@ export async function listExportCustomersForActor(actor: AuthUser, query = "") {
       customer.customerCode,
       customer.name,
       customer.customerType,
+      normalizeMultiValue((customer as unknown as { customerTypes?: unknown }).customerTypes).join(" "),
       customerGeoDisplay(customer).full,
       customer.source,
       customer.status,
@@ -102,13 +105,46 @@ export async function getExportOwners() {
   return prisma.user.findMany({ where: { department: "export", isActive: true }, orderBy: { name: "asc" } });
 }
 
-function customerPayloadFromForm(formData: FormData) {
-  const payload: Record<string, string | boolean> = {};
-  const customFields: Record<string, string | boolean> = {};
+function customerPayloadFromForm(formData: FormData, fieldConfigs: CustomerFieldConfig[] = []) {
+  const payload: Record<string, unknown> = {};
+  const customFields: Record<string, unknown> = {};
   for (const [key, value] of formData.entries()) {
     const normalized = typeof value === "string" ? value.trim() : "";
-    if (CUSTOMER_SYSTEM_FIELD_KEYS.has(key)) payload[key] = normalized;
-    else if (key.startsWith("custom_")) customFields[key] = normalized;
+    if (CUSTOMER_SYSTEM_FIELD_KEYS.has(key) && key !== "customerTypes") payload[key] = normalized;
+    else if (key.startsWith("custom_") && !fieldConfigs.some((field) => field.fieldKey === key)) customFields[key] = normalized;
+  }
+  const customerTypes = normalizeMultiValue(formData.getAll("customerTypes"));
+  if (customerTypes.length) {
+    payload.customerTypes = customerTypes;
+    payload.customerType = customerTypes[0];
+  }
+  for (const field of fieldConfigs) {
+    if (CUSTOMER_SYSTEM_FIELD_KEYS.has(field.fieldKey)) continue;
+    if (field.fieldType === "multiselect") {
+      customFields[field.fieldKey] = normalizeMultiValue(formData.getAll(field.fieldKey));
+      continue;
+    }
+    if (field.fieldType === "url") {
+      const url = String(formData.get(`${field.fieldKey}__url`) || "").trim();
+      const label = String(formData.get(`${field.fieldKey}__label`) || "").trim();
+      if (url) {
+        if (!isSafeUrl(url)) throw new Error(`${field.fieldLabel} 链接地址无效或不安全。`);
+        customFields[field.fieldKey] = label ? { label, url } : { url };
+      } else {
+        customFields[field.fieldKey] = null;
+      }
+      continue;
+    }
+    if (field.fieldType === "attachment") {
+      customFields[field.fieldKey] = normalizeMultiValue(formData.getAll(`${field.fieldKey}__attachmentId`));
+      continue;
+    }
+    if (field.fieldType === "boolean") {
+      const value = String(formData.get(field.fieldKey) || "").trim();
+      customFields[field.fieldKey] = value;
+      continue;
+    }
+    customFields[field.fieldKey] = String(formData.get(field.fieldKey) || "").trim();
   }
   return { payload, customFields };
 }
@@ -130,6 +166,13 @@ function parseCustomerContacts(formData: FormData): CustomerContactDraft[] {
     });
   }
   return normalizeCustomerContacts(contacts);
+}
+
+function customerTypesFromPayload(payload: Record<string, unknown>, fallback?: string | null) {
+  const values = normalizeMultiValue(payload.customerTypes);
+  if (values.length) return values;
+  const legacy = normalizeMultiValue(payload.customerType || fallback || "");
+  return legacy.length ? legacy : [CUSTOMER_TYPES[0]];
 }
 
 type CustomerWithContactFallback = {
@@ -183,8 +226,8 @@ export function primaryContactSummary(customer: CustomerWithContactFallback) {
 type CustomerDraftPayload = {
   operation?: "create" | "update";
   customerId?: string;
-  payload: Record<string, string | boolean>;
-  customFields: Record<string, string | boolean>;
+  payload: Record<string, unknown>;
+  customFields: Record<string, unknown>;
   contacts: CustomerContactDraft[];
   ownerUserId: string;
   requestReason?: string;
@@ -205,8 +248,8 @@ function duplicateReviewPayload(draft: CustomerDraftPayload): Prisma.InputJsonOb
 function parseDuplicateReviewPayload(value: Prisma.JsonValue | null): CustomerDraftPayload {
   const data = (value && typeof value === "object" && !Array.isArray(value) ? value : {}) as Record<string, unknown>;
   return {
-    payload: (data.payload && typeof data.payload === "object" && !Array.isArray(data.payload) ? data.payload : {}) as Record<string, string | boolean>,
-    customFields: (data.customFields && typeof data.customFields === "object" && !Array.isArray(data.customFields) ? data.customFields : {}) as Record<string, string | boolean>,
+    payload: (data.payload && typeof data.payload === "object" && !Array.isArray(data.payload) ? data.payload : {}) as Record<string, unknown>,
+    customFields: (data.customFields && typeof data.customFields === "object" && !Array.isArray(data.customFields) ? data.customFields : {}) as Record<string, unknown>,
     contacts: Array.isArray(data.contacts) ? normalizeCustomerContacts(data.contacts as CustomerContactDraft[]) : [],
     ownerUserId: String(data.ownerUserId || ""),
     operation: data.operation === "update" ? "update" : "create",
@@ -292,7 +335,9 @@ export async function createExportCustomerAction(formData: FormData) {
 
   const actor = await requireCurrentUser();
   requireServerPermission(actor, "export.customers.create");
-  const { payload, customFields } = customerPayloadFromForm(formData);
+  const fieldConfigs = (await prisma.customerFieldConfig.findMany({ where: { moduleKey: "export_customer", isActive: true }, orderBy: { sortOrder: "asc" } })).map(mapFieldConfig);
+  const { payload, customFields } = customerPayloadFromForm(formData, fieldConfigs);
+  const customerTypes = customerTypesFromPayload(payload);
   const ownerUserId = canAssignOwnerServer(actor) ? String(payload.ownerUserId || actor.id) : actor.id;
   const owner = await prisma.user.findFirst({ where: { id: ownerUserId, department: "export", isActive: true } });
   if (!owner) throw new Error("负责业务员无效或已停用。");
@@ -318,7 +363,7 @@ export async function createExportCustomerAction(formData: FormData) {
   const draft: CustomerDraftPayload = {
     operation: "create",
     payload,
-    customFields,
+    customFields: customFields as Prisma.InputJsonObject,
     contacts,
     ownerUserId,
     requestReason: String(formData.get("duplicateReviewReason") || "").trim()
@@ -393,7 +438,8 @@ export async function createExportCustomerAction(formData: FormData) {
     defaultReceiptAccountSelectedByUserId: receiptSelection.accountId ? actor.id : null,
     defaultReceiptAccountSelectedByName: receiptSelection.accountId ? actor.name : null,
     defaultReceiptAccountNote: receiptSelection.note,
-    customerType: String(payload.customerType || CUSTOMER_TYPES[0]),
+    customerType: customerTypes[0],
+    customerTypes,
     country: geo.country,
     countryCode: geo.countryCode,
     countryName: geo.countryName,
@@ -421,7 +467,7 @@ export async function createExportCustomerAction(formData: FormData) {
     customerNotes: String(payload.customerNotes || ""),
     internalNotes: String(payload.internalNotes || ""),
     specialReminder: String(payload.specialReminder || ""),
-    customFields,
+    customFields: customFields as Prisma.InputJsonObject,
     createdByUserId: actor.id
   });
   await prisma.$transaction(async (tx) => {
@@ -492,6 +538,36 @@ function historyJsonValue(value: unknown) {
   return value as Prisma.InputJsonValue;
 }
 
+async function createAttachmentFieldHistoryIfNeeded(
+  tx: Prisma.TransactionClient,
+  actor: AuthUser,
+  customerId: string,
+  fieldKey: string | null,
+  fieldLabel: string | null,
+  oldIds: string[],
+  newIds: string[]
+) {
+  if (!fieldKey || !hasMeaningfulFieldChange(oldIds, newIds, "attachment")) return;
+  await tx.customerFieldChangeHistory.create({
+    data: {
+      customerId,
+      fieldKey,
+      fieldLabel: fieldLabel || fieldKey,
+      fieldKind: "custom",
+      fieldType: "attachment",
+      oldValue: historyJsonValue(oldIds),
+      newValue: historyJsonValue(newIds),
+      oldDisplayValue: displayHistoryValue(oldIds, "attachment"),
+      newDisplayValue: displayHistoryValue(newIds, "attachment"),
+      changeType: historyChangeType(oldIds, newIds),
+      source: "customer_edit",
+      changedByUserId: actor.id,
+      changedByName: actor.name,
+      metadata: { fieldKey }
+    }
+  });
+}
+
 function receiptAccountSummary(account?: { id: string; displayName: string; accountCode: string } | null) {
   return account ? { id: account.id, displayName: account.displayName, accountCode: account.accountCode } : null;
 }
@@ -502,7 +578,11 @@ export async function updateExportCustomerAction(customerId: string, formData: F
   const actor = await requireCurrentUser();
   const existing = await prisma.customer.findUnique({ where: { id: customerId } });
   if (!existing || !canEditCustomerServer(actor, existing)) throw new Error("当前账号不能编辑该客户。");
-  const { payload, customFields } = customerPayloadFromForm(formData);
+  const fieldConfigs = (await prisma.customerFieldConfig.findMany({ where: { moduleKey: "export_customer", isActive: true }, orderBy: { sortOrder: "asc" } })).map(mapFieldConfig);
+  const parsedForm = customerPayloadFromForm(formData, fieldConfigs);
+  const payload = parsedForm.payload;
+  const customFields = { ...recordFromJson(existing.customFields), ...parsedForm.customFields };
+  const customerTypes = customerTypesFromPayload(payload, existing.customerType);
   const contacts = parseCustomerContacts(formData);
   const canSelectReceiptAccount = hasServerPermission(actor, "export.customers.receipt_account.select");
   const receiptSelection = canSelectReceiptAccount
@@ -559,8 +639,7 @@ export async function updateExportCustomerAction(customerId: string, formData: F
     country: String(payload.country || existing.country),
     city: String(payload.city || existing.city)
   }));
-  const [fieldConfigs, receiptAccounts] = await Promise.all([
-    prisma.customerFieldConfig.findMany({ where: { moduleKey: "export_customer" }, orderBy: { sortOrder: "asc" } }),
+  const [receiptAccounts] = await Promise.all([
     prisma.companyReceiptAccount.findMany({
       where: {
         id: {
@@ -587,7 +666,7 @@ export async function updateExportCustomerAction(customerId: string, formData: F
     newCustomer: nextCustomerForHistory as unknown as Record<string, unknown>,
     oldCustomFields: recordFromJson(existing.customFields),
     newCustomFields: customFields,
-    fieldConfigs: fieldConfigs.map(mapFieldConfig),
+    fieldConfigs,
     oldReceiptAccount: receiptAccountSummary(existing.defaultReceiptAccountId ? receiptAccountById.get(existing.defaultReceiptAccountId) : null),
     newReceiptAccount: receiptAccountSummary(receiptSelection.accountId ? receiptAccountById.get(receiptSelection.accountId) : null)
   });
@@ -598,7 +677,8 @@ export async function updateExportCustomerAction(customerId: string, formData: F
         name,
         customerIdentityId: identity.id,
         normalizedCustomerName,
-        customerType: String(payload.customerType || CUSTOMER_TYPES[0]),
+        customerType: customerTypes[0],
+        customerTypes,
         country: geo.country,
         countryCode: geo.countryCode,
         countryName: geo.countryName,
@@ -625,7 +705,7 @@ export async function updateExportCustomerAction(customerId: string, formData: F
         customerNotes: String(payload.customerNotes || ""),
         internalNotes: String(payload.internalNotes || ""),
         specialReminder: String(payload.specialReminder || ""),
-        customFields,
+        customFields: customFields as Prisma.InputJsonObject,
         defaultReceiptAccountId: receiptSelection.accountId,
         defaultReceiptAccountSelectedAt: receiptSelection.accountId !== existing.defaultReceiptAccountId ? new Date() : existing.defaultReceiptAccountSelectedAt,
         defaultReceiptAccountSelectedByUserId: receiptSelection.accountId !== existing.defaultReceiptAccountId ? actor.id : existing.defaultReceiptAccountSelectedByUserId,
@@ -783,6 +863,7 @@ async function approveDuplicateCustomerCreate(actor: AuthUser, request: { id: st
     String(payload.defaultReceiptAccountId || "").trim() || null,
     String(payload.defaultReceiptAccountNote || "").trim() || null
   );
+  const customerTypes = customerTypesFromPayload(payload);
   const customer = await createCustomerWithRetry({
     name,
     customerIdentityId: identity.id,
@@ -798,7 +879,8 @@ async function approveDuplicateCustomerCreate(actor: AuthUser, request: { id: st
     defaultReceiptAccountSelectedByUserId: receiptSelection.accountId ? actor.id : null,
     defaultReceiptAccountSelectedByName: receiptSelection.accountId ? actor.name : null,
     defaultReceiptAccountNote: receiptSelection.note,
-    customerType: String(payload.customerType || CUSTOMER_TYPES[0]),
+    customerType: customerTypes[0],
+    customerTypes,
     country: geo.country,
     countryCode: geo.countryCode,
     countryName: geo.countryName,
@@ -826,7 +908,7 @@ async function approveDuplicateCustomerCreate(actor: AuthUser, request: { id: st
     customerNotes: String(payload.customerNotes || ""),
     internalNotes: String(payload.internalNotes || ""),
     specialReminder: String(payload.specialReminder || ""),
-    customFields: draft.customFields,
+    customFields: draft.customFields as Prisma.InputJsonObject,
     createdByUserId: request.requestedByUserId
   });
   await prisma.$transaction(async (tx) => {
@@ -1036,6 +1118,16 @@ export async function listCustomerAttachments(actor: AuthUser, customerId: strin
 export async function createCustomerAttachmentAction(customerId: string, formData: FormData) {
   "use server";
 
+  return createCustomerAttachmentFromForm(customerId, null, null, formData);
+}
+
+export async function createCustomerFieldAttachmentAction(customerId: string, fieldKey: string, fieldLabel: string, formData: FormData) {
+  "use server";
+
+  return createCustomerAttachmentFromForm(customerId, fieldKey, fieldLabel, formData);
+}
+
+async function createCustomerAttachmentFromForm(customerId: string, forcedFieldKey: string | null, forcedFieldLabel: string | null, formData: FormData) {
   const actor = await requireCurrentUser();
   const customer = await prisma.customer.findUnique({ where: { id: customerId } });
   if (!customer || !canEditCustomerServer(actor, customer)) throw new Error("当前账号不能维护该客户附件。");
@@ -1045,23 +1137,40 @@ export async function createCustomerAttachmentAction(customerId: string, formDat
     fileUrl: String(formData.get("fileUrl") || ""),
     description: String(formData.get("description") || "")
   });
+  const fieldKey = forcedFieldKey || String(formData.get("fieldKey") || "").trim() || null;
+  const fieldLabel = forcedFieldLabel || String(formData.get("fieldLabel") || "").trim() || null;
   if (!input.attachmentName) throw new Error("请填写附件名称。");
   if (!input.fileUrl) throw new Error("请填写附件链接。");
   if (!(await getCustomerAttachmentTypes()).includes(input.attachmentType)) throw new Error("附件类型无效。");
-  const created = await prisma.customerAttachment.create({
-    data: {
-      customerId,
-      attachmentName: input.attachmentName,
-      attachmentType: input.attachmentType,
-      fileUrl: input.fileUrl,
-      description: input.description,
-      storageProvider: "external_url",
-      uploadedByUserId: actor.id,
-      uploadedByName: actor.name
+  const created = await prisma.$transaction(async (tx) => {
+    const attachment = await tx.customerAttachment.create({
+      data: {
+        customerId,
+        attachmentName: input.attachmentName,
+        attachmentType: input.attachmentType,
+        fieldKey,
+        fieldLabel,
+        fileUrl: input.fileUrl,
+        description: input.description,
+        storageProvider: "external_url",
+        uploadedByUserId: actor.id,
+        uploadedByName: actor.name
+      }
+    });
+    if (fieldKey) {
+      const customFields = recordFromJson(customer.customFields);
+      const currentIds = Array.isArray(customFields[fieldKey]) ? customFields[fieldKey].map(String) : [];
+      const nextIds = Array.from(new Set([...currentIds, attachment.id]));
+      await tx.customer.update({
+        where: { id: customerId },
+        data: { customFields: { ...customFields, [fieldKey]: nextIds } as Prisma.InputJsonObject }
+      });
+      await createAttachmentFieldHistoryIfNeeded(tx, actor, customerId, fieldKey, fieldLabel, currentIds, nextIds);
     }
-  });
-  await prisma.auditLog.create({
-    data: { actorUserId: actor.id, action: "customer_attachment.create", entityType: "CustomerAttachment", entityId: created.id, metadata: { customerId, attachmentId: created.id, attachmentName: created.attachmentName, storageProvider: "external_url" } }
+    await tx.auditLog.create({
+      data: { actorUserId: actor.id, action: "customer_attachment.create", entityType: "CustomerAttachment", entityId: attachment.id, metadata: { customerId, attachmentId: attachment.id, attachmentName: attachment.attachmentName, storageProvider: "external_url", fieldKey, fieldLabel } }
+    });
+    return attachment;
   });
   revalidatePath(`/export/customers/${customerId}`);
   revalidatePath(`/export/customers/${customerId}/edit`);
@@ -1110,12 +1219,26 @@ export async function deleteCustomerAttachmentAction(customerId: string, attachm
   if (!customer || !canEditCustomerServer(actor, customer)) throw new Error("当前账号不能维护该客户附件。");
   const existing = await prisma.customerAttachment.findFirst({ where: { id: attachmentId, customerId, deletedAt: null } });
   if (!existing) throw new Error("附件不存在。");
-  const deleted = await prisma.customerAttachment.update({
-    where: { id: attachmentId },
-    data: { deletedAt: new Date() }
-  });
-  await prisma.auditLog.create({
-    data: { actorUserId: actor.id, action: "customer_attachment.delete", entityType: "CustomerAttachment", entityId: attachmentId, metadata: { customerId, attachmentId, attachmentName: deleted.attachmentName, storageProvider: deleted.storageProvider, storageKey: deleted.storageKey, fileSize: deleted.fileSize, mimeType: deleted.mimeType } }
+  const deleted = await prisma.$transaction(async (tx) => {
+    const item = await tx.customerAttachment.update({
+      where: { id: attachmentId },
+      data: { deletedAt: new Date() }
+    });
+    if (item.fieldKey) {
+      const fieldKey = item.fieldKey;
+      const customFields = recordFromJson(customer.customFields);
+      const currentIds = Array.isArray(customFields[fieldKey]) ? (customFields[fieldKey] as unknown[]).map(String) : [];
+      const nextIds = currentIds.filter((id) => id !== attachmentId);
+      await tx.customer.update({
+        where: { id: customerId },
+        data: { customFields: { ...customFields, [fieldKey]: nextIds } as Prisma.InputJsonObject }
+      });
+      await createAttachmentFieldHistoryIfNeeded(tx, actor, customerId, fieldKey, item.fieldLabel, currentIds, nextIds);
+    }
+    await tx.auditLog.create({
+      data: { actorUserId: actor.id, action: "customer_attachment.delete", entityType: "CustomerAttachment", entityId: attachmentId, metadata: { customerId, attachmentId, attachmentName: item.attachmentName, storageProvider: item.storageProvider, storageKey: item.storageKey, fileSize: item.fileSize, mimeType: item.mimeType, fieldKey: item.fieldKey, fieldLabel: item.fieldLabel } }
+    });
+    return item;
   });
   revalidatePath(`/export/customers/${customerId}`);
   revalidatePath(`/export/customers/${customerId}/edit`);
@@ -1125,6 +1248,8 @@ export async function deleteCustomerAttachmentAction(customerId: string, attachm
 export type OssAttachmentInput = {
   attachmentName: string;
   attachmentType?: string;
+  fieldKey?: string;
+  fieldLabel?: string;
   objectKey: string;
   mimeType: string;
   fileSize: number;
@@ -1136,6 +1261,8 @@ export async function createCustomerAttachmentFromOss(actor: AuthUser, customerI
   if (!customer || !canEditCustomerServer(actor, customer)) throw new Error("当前账号不能维护该客户附件。");
   const attachmentName = String(input.attachmentName || "").trim();
   const attachmentType = String(input.attachmentType || "其他").trim() || "其他";
+  const fieldKey = String(input.fieldKey || "").trim() || null;
+  const fieldLabel = String(input.fieldLabel || "").trim() || null;
   const description = String(input.description || "").trim();
   const storageKey = assertCustomerOssObjectKey(customerId, input.objectKey);
   const validated = validateOssUploadRequest({
@@ -1145,37 +1272,54 @@ export async function createCustomerAttachmentFromOss(actor: AuthUser, customerI
   });
   if (!attachmentName) throw new Error("请填写附件名称。");
   if (!(await getCustomerAttachmentTypes()).includes(attachmentType)) throw new Error("附件类型无效。");
-  const created = await prisma.customerAttachment.create({
-    data: {
-      customerId,
-      attachmentName,
-      attachmentType,
-      fileUrl: null,
-      description,
-      storageProvider: "aliyun_oss",
-      storageKey,
-      mimeType: validated.mimeType,
-      fileSize: validated.fileSize,
-      uploadedByUserId: actor.id,
-      uploadedByName: actor.name
-    }
-  });
-  await prisma.auditLog.create({
-    data: {
-      actorUserId: actor.id,
-      action: "customer_attachment.oss_create",
-      entityType: "CustomerAttachment",
-      entityId: created.id,
-      metadata: {
+  const created = await prisma.$transaction(async (tx) => {
+    const attachment = await tx.customerAttachment.create({
+      data: {
         customerId,
-        attachmentId: created.id,
-        attachmentName: created.attachmentName,
-        storageProvider: created.storageProvider,
-        storageKey: created.storageKey,
-        fileSize: created.fileSize,
-        mimeType: created.mimeType
+        attachmentName,
+        attachmentType,
+        fieldKey,
+        fieldLabel,
+        fileUrl: null,
+        description,
+        storageProvider: "aliyun_oss",
+        storageKey,
+        mimeType: validated.mimeType,
+        fileSize: validated.fileSize,
+        uploadedByUserId: actor.id,
+        uploadedByName: actor.name
       }
+    });
+    if (fieldKey) {
+      const customFields = recordFromJson(customer.customFields);
+      const currentIds = Array.isArray(customFields[fieldKey]) ? customFields[fieldKey].map(String) : [];
+      const nextIds = Array.from(new Set([...currentIds, attachment.id]));
+      await tx.customer.update({
+        where: { id: customerId },
+        data: { customFields: { ...customFields, [fieldKey]: nextIds } as Prisma.InputJsonObject }
+      });
+      await createAttachmentFieldHistoryIfNeeded(tx, actor, customerId, fieldKey, fieldLabel, currentIds, nextIds);
     }
+    await tx.auditLog.create({
+      data: {
+        actorUserId: actor.id,
+        action: "customer_attachment.oss_create",
+        entityType: "CustomerAttachment",
+        entityId: attachment.id,
+        metadata: {
+          customerId,
+          attachmentId: attachment.id,
+          attachmentName: attachment.attachmentName,
+          storageProvider: attachment.storageProvider,
+          storageKey: attachment.storageKey,
+          fileSize: attachment.fileSize,
+          mimeType: attachment.mimeType,
+          fieldKey,
+          fieldLabel
+        }
+      }
+    });
+    return attachment;
   });
   revalidatePath(`/export/customers/${customerId}`);
   revalidatePath(`/export/customers/${customerId}/edit`);

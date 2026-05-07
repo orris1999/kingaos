@@ -9,20 +9,22 @@ import {
   customerFieldLabel
 } from "../shared/constants";
 import type { CustomerFieldConfig, CustomerFieldGroup, CustomerFieldType } from "../shared/domain-types";
+import { normalizeFieldOptions, parseFieldOptionsText } from "../shared/field-options";
 import type { AuthUser } from "./auth";
 import { requireCurrentUser, requireServerPermission } from "./auth";
 import { prisma } from "./db";
 
 export function mapFieldConfig(field: Awaited<ReturnType<typeof prisma.customerFieldConfig.findMany>>[number]): CustomerFieldConfig {
+  const fieldType = field.fieldKey === "customerType" ? "multiselect" : field.fieldType;
   return {
     id: field.id,
     moduleKey: "export_customer",
     fieldKey: field.fieldKey,
     fieldLabel: customerFieldLabel(field.fieldKey, field.fieldLabel),
-    fieldType: field.fieldType as CustomerFieldType,
+    fieldType: fieldType as CustomerFieldType,
     fieldGroup: field.fieldGroup as CustomerFieldGroup,
     required: field.required,
-    options: Array.isArray(field.options) ? (field.options as string[]) : [],
+    options: Array.isArray(field.options) ? field.options as CustomerFieldConfig["options"] : [],
     sortOrder: field.sortOrder,
     isActive: field.isActive,
     isSystemField: field.isSystemField,
@@ -75,7 +77,7 @@ export async function getCustomerAttachmentTypes() {
     },
     update: {}
   });
-  const options = Array.isArray(config.options) ? (config.options as string[]) : DEFAULT_CUSTOMER_ATTACHMENT_TYPES;
+  const options = Array.isArray(config.options) ? normalizeFieldOptions(config.options).map((option) => option.label) : DEFAULT_CUSTOMER_ATTACHMENT_TYPES;
   return normalizeAttachmentTypeOptions(options);
 }
 
@@ -215,10 +217,7 @@ function fieldInputFromForm(formData: FormData) {
     required: formData.get("required") === "1",
     isActive: formData.get("isActive") === "1",
     sortOrder: Number(formData.get("sortOrder") || 300),
-    options: String(formData.get("options") || "")
-      .split(/\r?\n|,/)
-      .map((item) => item.trim())
-      .filter(Boolean)
+    options: ["select", "multiselect"].includes(fieldType) ? parseFieldOptionsText(String(formData.get("options") || "")) : []
   };
 }
 

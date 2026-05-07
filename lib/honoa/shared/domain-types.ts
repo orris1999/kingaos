@@ -45,9 +45,19 @@ export type UserPermission = {
   permissionKey: PermissionKey;
 };
 
-export type CustomerFieldType = "text" | "textarea" | "number" | "date" | "select" | "boolean";
+export type CustomerFieldType = "text" | "textarea" | "number" | "date" | "select" | "multiselect" | "boolean" | "url" | "attachment";
 
 export type CustomerFieldGroup = "基础信息" | "联系人信息" | "公司信息" | "合作信息" | "备注 / 特殊提醒";
+
+export type CustomerFieldOption =
+  | string
+  | {
+      value: string;
+      label: string;
+      internalNote?: string;
+      isActive?: boolean;
+      sortOrder?: number;
+    };
 
 export type CustomerFieldConfig = {
   id: string;
@@ -57,7 +67,7 @@ export type CustomerFieldConfig = {
   fieldType: CustomerFieldType;
   fieldGroup: CustomerFieldGroup;
   required: boolean;
-  options: string[];
+  options: CustomerFieldOption[];
   sortOrder: number;
   isActive: boolean;
   isSystemField: boolean;
@@ -83,6 +93,7 @@ export type ExportCustomer = {
   defaultReceiptAccountSelectedByName?: string | null;
   defaultReceiptAccountNote?: string | null;
   customerType: string;
+  customerTypes?: string[] | null;
   country: string;
   countryCode: string | null;
   countryName: string | null;
@@ -110,7 +121,7 @@ export type ExportCustomer = {
   customerNotes: string;
   internalNotes: string;
   specialReminder: string;
-  customFields: Record<string, string | boolean | number>;
+  customFields: Record<string, unknown>;
   createdByUserId: string;
   createdAt: string;
   updatedAt: string;
@@ -151,7 +162,7 @@ export type CustomerDuplicateReviewRequest = {
 export type ExportCustomerInput = Partial<Omit<ExportCustomer, "id" | "customerCode" | "department" | "ownerName" | "createdByUserId" | "createdAt" | "updatedAt" | "archivedAt">> & {
   name: string;
   ownerUserId?: string;
-  customFields?: Record<string, string | boolean | number>;
+  customFields?: Record<string, unknown>;
   duplicateApprovalReason?: string;
   allowDuplicateWithApproval?: boolean;
 };

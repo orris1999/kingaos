@@ -1,12 +1,14 @@
 import { booleanFieldValueLabel } from "./field-types";
 import { customerStatusLabel } from "./constants";
+import { displayFieldValue } from "./field-values";
+import type { CustomerFieldOption } from "./domain-types";
 
 export type FieldHistoryConfig = {
   fieldKey: string;
   fieldLabel: string;
   fieldGroup?: string | null;
   fieldType?: string | null;
-  options?: string[];
+  options?: CustomerFieldOption[];
   isActive?: boolean;
 };
 
@@ -74,10 +76,10 @@ export function hasMeaningfulFieldChange(oldValue: unknown, newValue: unknown, f
   return normalizeHistoryComparableValue(oldValue, fieldType) !== normalizeHistoryComparableValue(newValue, fieldType);
 }
 
-export function displayHistoryValue(value: unknown, fieldType?: string | null) {
+export function displayHistoryValue(value: unknown, fieldType?: string | null, options: unknown = []) {
   const normalized = normalizeHistoryStoredValue(value, fieldType);
   if (normalized === null) return "未填写";
-  if (fieldType === "boolean") return booleanFieldValueLabel(normalized);
+  if (["boolean", "select", "multiselect", "url", "attachment"].includes(String(fieldType || ""))) return displayFieldValue(normalized, String(fieldType || ""), options);
   if (fieldType === "number" && typeof normalized === "number") return String(normalized);
   if (typeof normalized === "object") {
     try {
@@ -134,6 +136,7 @@ export function buildCustomerFieldChangeHistoryDrafts({
       fieldLabel: config.fieldLabel,
       fieldGroup: config.fieldGroup,
       fieldType: config.fieldType,
+      options: config.options,
       fieldKind: "system",
       oldValue: normalizeHistoryStoredValue(oldCustomer[fieldKey], config.fieldType),
       newValue: normalizeHistoryStoredValue(newCustomer[fieldKey], config.fieldType),
@@ -156,6 +159,7 @@ export function buildCustomerFieldChangeHistoryDrafts({
       fieldLabel: config?.fieldLabel || `未知字段：${fieldKey}`,
       fieldGroup: config?.fieldGroup,
       fieldType: config?.fieldType,
+      options: config?.options,
       fieldKind: "custom",
       oldValue: normalizeHistoryStoredValue(oldCustomFields[fieldKey], config?.fieldType),
       newValue: normalizeHistoryStoredValue(newCustomFields[fieldKey], config?.fieldType),
@@ -169,13 +173,14 @@ export function buildCustomerFieldChangeHistoryDrafts({
 
 function appendFieldHistoryDraft(
   drafts: CustomerFieldHistoryDraft[],
-  draft: Omit<CustomerFieldHistoryDraft, "oldDisplayValue" | "newDisplayValue" | "changeType">
+  draft: Omit<CustomerFieldHistoryDraft, "oldDisplayValue" | "newDisplayValue" | "changeType"> & { options?: unknown }
 ) {
   if (!hasMeaningfulFieldChange(draft.oldValue, draft.newValue, draft.fieldType)) return;
-  const oldDisplayValue = draft.fieldKey === "status" ? displayStatusHistoryValue(draft.oldValue) : displayHistoryValue(draft.oldValue, draft.fieldType);
-  const newDisplayValue = draft.fieldKey === "status" ? displayStatusHistoryValue(draft.newValue) : displayHistoryValue(draft.newValue, draft.fieldType);
+  const oldDisplayValue = draft.fieldKey === "status" ? displayStatusHistoryValue(draft.oldValue) : displayHistoryValue(draft.oldValue, draft.fieldType, draft.options);
+  const newDisplayValue = draft.fieldKey === "status" ? displayStatusHistoryValue(draft.newValue) : displayHistoryValue(draft.newValue, draft.fieldType, draft.options);
+  const { options: _options, ...record } = draft;
   drafts.push({
-    ...draft,
+    ...record,
     oldDisplayValue,
     newDisplayValue,
     changeType: historyChangeType(draft.oldValue, draft.newValue)

@@ -3,7 +3,7 @@ import {
   CUSTOMER_FIELD_TYPES,
   defaultCustomerFields
 } from "../shared/constants";
-import type { CustomerFieldConfig, CustomerFieldGroup, CustomerFieldType, User } from "../shared/domain-types";
+import type { CustomerFieldConfig, CustomerFieldGroup, CustomerFieldOption, CustomerFieldType, User } from "../shared/domain-types";
 import type { KingaStore } from "../shared/mock-store";
 import { newId, nowIso } from "../shared/mock-store";
 import { hasPermission } from "../permissions/actions";
@@ -13,7 +13,7 @@ type FieldConfigInput = {
   fieldType: CustomerFieldType;
   fieldGroup: CustomerFieldGroup;
   required: boolean;
-  options: string[];
+  options: CustomerFieldOption[];
   sortOrder: number;
   isActive: boolean;
 };

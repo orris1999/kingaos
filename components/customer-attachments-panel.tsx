@@ -76,6 +76,7 @@ export async function CustomerAttachmentsPanel({
             <div className="detail-grid">
               <div className="kv"><b>附件名称</b><span>{attachment.attachmentName}</span></div>
               <div className="kv"><b>附件类型</b><span>{attachment.attachmentType || "其他"}</span></div>
+              {attachment.fieldLabel ? <div className="kv"><b>归属字段</b><span>{attachment.fieldLabel}</span></div> : null}
               <div className="kv"><b>存储方式</b><span>{attachment.storageProvider === "aliyun_oss" ? "阿里云 OSS" : "附件链接"}</span></div>
               <div className="kv"><b>文件大小</b><span>{formatFileSize(attachment.fileSize)}</span></div>
               <div className="kv"><b>上传人</b><span>{attachment.uploadedByName || "-"}</span></div>

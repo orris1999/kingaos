@@ -21,6 +21,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const body = await request.json().catch(() => null);
   if (!body || typeof body !== "object") return NextResponse.json({ error: "请求格式无效。" }, { status: 400 });
   const attachmentType = String(body.attachmentType || "其他");
+  const fieldKey = String(body.fieldKey || "").trim() || null;
+  const fieldLabel = String(body.fieldLabel || "").trim() || null;
   if (!(await getCustomerAttachmentTypes()).includes(attachmentType)) {
     return NextResponse.json({ error: "附件类型无效。" }, { status: 400 });
   }
@@ -45,7 +47,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           storageProvider: "aliyun_oss",
           storageKey: signed.objectKey,
           fileSize: signed.fileSize,
-          mimeType: signed.mimeType
+          mimeType: signed.mimeType,
+          fieldKey,
+          fieldLabel
         }
       }
     });

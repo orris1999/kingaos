@@ -10,7 +10,8 @@ import {
 } from "@/lib/honoa/server/field-config";
 import { CUSTOMER_FIELD_GROUPS, CUSTOMER_FIELD_TYPES, CUSTOMER_GEO_FIELD_KEYS } from "@/lib/honoa/shared/constants";
 import type { CustomerFieldGroup, CustomerFieldType } from "@/lib/honoa/shared/domain-types";
-import { fieldTypeLabel } from "@/lib/honoa/shared/field-types";
+import { FIELD_TYPE_DESCRIPTIONS, fieldTypeLabel } from "@/lib/honoa/shared/field-types";
+import { serializeFieldOptions } from "@/lib/honoa/shared/field-options";
 
 export default async function FieldSettingsPage() {
   const user = await requireCurrentUser();
@@ -44,7 +45,11 @@ export default async function FieldSettingsPage() {
             <label>排序<input name="sortOrder" type="number" defaultValue="300" /></label>
             <label className="checkrow"><input name="required" type="checkbox" value="1" /><span>必填</span></label>
             <label className="checkrow"><input name="isActive" type="checkbox" value="1" defaultChecked /><span>启用</span></label>
-            <label style={{ gridColumn: "1 / -1" }}>下拉选项<textarea name="options" placeholder="select 类型使用，一行一个" /></label>
+            <label style={{ gridColumn: "1 / -1" }}>
+              选项配置
+              <textarea name="options" placeholder="下拉选择 / 多选使用。格式：选项值 | 显示名称 | 内部说明 | disabled" />
+              <span className="tiny muted">内部说明只在新建 / 编辑客户页面显示，详情页不显示。</span>
+            </label>
             <div><button type="submit">添加字段</button></div>
           </CustomerFieldConfigForm>
         </section>
@@ -97,7 +102,11 @@ function FieldConfigTable({ fields }: { fields: Awaited<ReturnType<typeof listCu
                       <label>排序<input name="sortOrder" type="number" defaultValue={field.sortOrder} /></label>
                       <label className="checkrow"><input name="required" type="checkbox" value="1" defaultChecked={field.required} /><span>必填</span></label>
                       <label className="checkrow"><input name="isActive" type="checkbox" value="1" defaultChecked={field.isActive} /><span>启用</span></label>
-                      <label>下拉选项<textarea name="options" defaultValue={field.options.join("\n")} /></label>
+                      <label>
+                        选项配置
+                        <textarea name="options" defaultValue={serializeFieldOptions(field.options)} />
+                        <span className="tiny muted">仅下拉选择 / 多选使用。格式：选项值 | 显示名称 | 内部说明 | disabled。</span>
+                      </label>
                       <div><button type="submit">保存</button></div>
                     </CustomerFieldConfigForm>
                   </td>
@@ -122,7 +131,7 @@ function FieldTypeSelect({ defaultValue, disabled }: { defaultValue?: CustomerFi
     <>
       {disabled ? <input type="hidden" name="fieldType" value={defaultValue || "text"} /> : null}
       <select name="fieldType" defaultValue={defaultValue || "text"} disabled={disabled}>
-        {CUSTOMER_FIELD_TYPES.map((type) => <option key={type} value={type}>{fieldTypeLabel(type)}</option>)}
+        {CUSTOMER_FIELD_TYPES.map((type) => <option key={type} value={type}>{fieldTypeLabel(type)} - {FIELD_TYPE_DESCRIPTIONS[type]}</option>)}
       </select>
     </>
   );

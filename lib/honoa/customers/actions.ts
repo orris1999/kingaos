@@ -58,6 +58,7 @@ export function searchExportCustomers(store: KingaStore, actor: User, query: str
       customer.customerCode,
       customer.name,
       customer.customerType,
+      Array.isArray(customer.customerTypes) ? customer.customerTypes.join(" ") : "",
       customerGeoDisplay(customer).full,
       customer.source,
       customer.status,
@@ -113,6 +114,7 @@ function createExportCustomerInternal(
 
   const now = nowIso();
   const geo = normalizeCustomerGeo(input);
+  const customerTypes = Array.isArray(input.customerTypes) && input.customerTypes.length ? input.customerTypes : (input.customerType ? [input.customerType] : [CUSTOMER_TYPES[0]]);
   const customer: ExportCustomer = {
     id: newId("cus"),
     customerCode: nextCustomerCode(store),
@@ -125,7 +127,8 @@ function createExportCustomerInternal(
     duplicateApprovedByName: approvedDuplicate.approvedByName || (mayApproveDuplicate ? actor.name : null),
     duplicateApprovedAt: approvedDuplicate.approvedAt || (mayApproveDuplicate ? now : null),
     duplicateApprovalReason: approvedDuplicate.reason || (mayApproveDuplicate ? input.duplicateApprovalReason!.trim() : null),
-    customerType: input.customerType || CUSTOMER_TYPES[0],
+    customerType: customerTypes[0],
+    customerTypes,
     country: geo.country,
     countryCode: geo.countryCode,
     countryName: geo.countryName,
@@ -209,6 +212,8 @@ export function updateExportCustomer(store: KingaStore, actor: User, customerId:
     ownerUserId,
     ownerName: owner.name,
     customFields: input.customFields || existing.customFields,
+    customerTypes: Array.isArray(input.customerTypes) && input.customerTypes.length ? input.customerTypes : existing.customerTypes,
+    customerType: Array.isArray(input.customerTypes) && input.customerTypes.length ? input.customerTypes[0] : input.customerType || existing.customerType,
     customerCode: existing.customerCode,
     createdByUserId: existing.createdByUserId,
     createdAt: existing.createdAt,
