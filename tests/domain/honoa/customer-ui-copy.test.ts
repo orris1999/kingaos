@@ -165,6 +165,36 @@ describe("客户档案 UI 文案和表单状态", () => {
     expect(detail).toContain("修改历史");
   });
 
+  it("附件字段使用紧凑控件，不在联系人信息步骤默认展开完整上传面板", () => {
+    const form = readRepoFile("components/server-customer-form.tsx");
+    const attachmentField = readRepoFile("components/customer-attachment-field.tsx");
+    const generalPanel = readRepoFile("components/customer-attachments-panel.tsx");
+    const css = readRepoFile("app/globals.css");
+
+    expect(form).toContain("CustomerAttachmentField");
+    expect(form).not.toContain("<CustomerOssUpload");
+    expect(form).not.toContain("添加附件链接");
+    expect(attachmentField).toContain('data-testid="attachment-field-compact"');
+    expect(attachmentField).toContain("暂无附件");
+    expect(attachmentField).toContain("<summary>上传文件</summary>");
+    expect(attachmentField).toContain("<summary>添加链接</summary>");
+    expect(attachmentField).toContain("保存客户后，可在客户详情 / 编辑页面上传联系人名片、照片或其他附件");
+    expect(generalPanel).toContain('data-testid="general-attachments-panel"');
+    expect(generalPanel).toContain("const generalAttachments = attachments.filter");
+    expect(generalPanel).toContain("!attachment.fieldKey");
+    expect(css).toContain(".attachment-field-compact");
+  });
+
+  it("附件详情页只显示字段附件列表，不显示上传表单", () => {
+    const detail = readRepoFile("app/export/customers/[id]/page.tsx");
+    const attachmentField = readRepoFile("components/customer-attachment-field.tsx");
+
+    expect(detail).toContain("CustomerAttachmentFieldValue");
+    expect(attachmentField).toContain("CustomerAttachmentFieldValue");
+    expect(attachmentField).toContain("CustomerAttachmentDownloadButton");
+    expect(attachmentField).not.toContain("uploadUrl");
+  });
+
   it("客户名称防重复仍基于内部公司名称字段 Customer.name", () => {
     expect(normalizeCustomerName("ABC Trading")).toBe(normalizeCustomerName("ＡＢＣ Trading."));
     expect(customerCompanyDisplay({ name: "坤江公司", companyName: "旧公司名" })).toBe("坤江公司");

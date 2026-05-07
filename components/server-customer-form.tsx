@@ -4,9 +4,10 @@ import { CustomerFormWizard } from "@/components/customer-form-wizard";
 import { CustomerGeoSelector } from "@/components/customer-geo-selector";
 import { CustomerContactEditor } from "@/components/customer-contact-editor";
 import { CustomerMultiselectField } from "@/components/customer-multiselect-field";
-import { CustomerAttachmentDownloadButton, CustomerOssUpload } from "@/components/customer-oss-upload";
+import { CustomerAttachmentField } from "@/components/customer-attachment-field";
+import { CustomerAttachmentsPanel } from "@/components/customer-attachments-panel";
 import { CustomerReceiptAccountSelector, type ReceiptAccountOption } from "@/components/customer-receipt-account-selector";
-import { createCustomerFieldAttachmentAction, createExportCustomerAction, updateExportCustomerAction, canAssignOwnerServer, canManageDuplicateReviewServer } from "@/lib/honoa/server/customers";
+import { createExportCustomerAction, updateExportCustomerAction, canAssignOwnerServer, canManageDuplicateReviewServer } from "@/lib/honoa/server/customers";
 import { mapFieldConfig } from "@/lib/honoa/server/field-config";
 import { hasServerPermission, type AuthUser } from "@/lib/honoa/server/auth";
 import {
@@ -103,7 +104,24 @@ export function ServerCustomerForm({
             canSelect={hasServerPermission(actor, "export.customers.receipt_account.select")}
           />
         </CustomerStep>
-        <CustomerStep group="备注 / 特殊提醒" fields={activeFields} customer={customer} actor={actor} owners={owners} canChooseOwner={canChooseOwner} attachmentTypes={attachmentTypes} ossConfigured={ossConfigured} title="附件与备注" />
+        <CustomerStep group="备注 / 特殊提醒" fields={activeFields} customer={customer} actor={actor} owners={owners} canChooseOwner={canChooseOwner} attachmentTypes={attachmentTypes} ossConfigured={ossConfigured} title="附件与备注">
+          {customer ? (
+            <div style={{ gridColumn: "1 / -1" }}>
+              <CustomerAttachmentsPanel
+                customerId={customer.id}
+                attachments={customer.attachments || []}
+                editable
+                attachmentTypes={attachmentTypes}
+                ossConfigured={ossConfigured}
+              />
+            </div>
+          ) : (
+            <div className="notice" style={{ gridColumn: "1 / -1" }}>
+              <strong>通用客户附件请在客户保存后上传。</strong>
+              <p>保存客户后，可在客户详情 / 编辑页面添加名片、营业执照、聊天记录、报价资料等附件。</p>
+            </div>
+          )}
+        </CustomerStep>
         <section className="panel stack">
           <h2>确认并保存</h2>
           <p className="muted">请确认公司名称、客户类型、国家 / 州省 / 城市、主要联系人、主要产品需求、附件数量和备注信息。确认无误后点击“保存客户”。</p>
@@ -447,53 +465,15 @@ function AttachmentFieldInput({
   attachmentTypes: string[];
   ossConfigured: boolean;
 }) {
-  if (!customer) {
-    return (
-      <div className={fieldLabelClass(field.required)}>
-        <FieldLabel label={field.fieldLabel} required={field.required} />
-        <div className="notice">
-          <strong>附件请在客户保存后上传。</strong>
-          <p>保存客户后，可在客户详情 / 编辑页面上传该字段附件。</p>
-        </div>
-      </div>
-    );
-  }
-  const fieldAttachments = (customer.attachments || []).filter((attachment) => attachment.fieldKey === field.fieldKey && !attachment.deletedAt);
   return (
     <div className={fieldLabelClass(field.required)} style={{ gridColumn: "1 / -1" }}>
-      <FieldLabel label={field.fieldLabel} required={field.required} />
-      {fieldAttachments.length === 0 ? <p className="muted">暂无该字段附件</p> : null}
-      {fieldAttachments.map((attachment) => (
-        <div className="subpanel detail-grid" key={attachment.id}>
-          <input type="hidden" name={`${field.fieldKey}__attachmentId`} value={attachment.id} />
-          <div className="kv"><b>附件名称</b><span>{attachment.attachmentName}</span></div>
-          <div className="kv"><b>附件类型</b><span>{attachment.attachmentType || "其他"}</span></div>
-          <div className="kv"><b>下载 / 预览</b><CustomerAttachmentDownloadButton customerId={customer.id} attachmentId={attachment.id} /></div>
-        </div>
-      ))}
-      <CustomerOssUpload
-        customerId={customer.id}
+      <CustomerAttachmentField
+        field={field}
+        customer={customer}
+        label={<FieldLabel label={field.fieldLabel} required={field.required} />}
         attachmentTypes={attachmentTypes}
         ossConfigured={ossConfigured}
-        fieldKey={field.fieldKey}
-        fieldLabel={field.fieldLabel}
       />
-      <div className="subpanel stack">
-        <h3>添加附件链接</h3>
-        <div className="form-grid">
-          <label>附件名称<input name="attachmentName" /></label>
-          <label>
-            附件类型
-            <select name="attachmentType" defaultValue={attachmentTypes[0] || "其他"}>
-              {attachmentTypes.map((type) => <option key={type} value={type}>{type}</option>)}
-            </select>
-          </label>
-          <label>附件链接<input name="fileUrl" type="url" placeholder="https://..." /></label>
-          <label style={{ gridColumn: "1 / -1" }}>附件说明<textarea name="description" /></label>
-          <div><button type="submit" formAction={createCustomerFieldAttachmentAction.bind(null, customer.id, field.fieldKey, field.fieldLabel)}>添加附件链接</button></div>
-        </div>
-      </div>
-      <p className="tiny muted">附件字段复用客户附件与 OSS 上传能力；数据库只保存附件元数据和附件引用。</p>
     </div>
   );
 }

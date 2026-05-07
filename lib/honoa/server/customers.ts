@@ -1148,11 +1148,16 @@ async function createCustomerAttachmentFromForm(customerId: string, forcedFieldK
   const actor = await requireCurrentUser();
   const customer = await prisma.customer.findUnique({ where: { id: customerId } });
   if (!customer || !canEditCustomerServer(actor, customer)) throw new Error("当前账号不能维护该客户附件。");
+  const prefix = forcedFieldKey ? `${forcedFieldKey}__` : "";
+  const readFieldValue = (name: string) => {
+    if (prefix && formData.has(`${prefix}${name}`)) return String(formData.get(`${prefix}${name}`) || "");
+    return String(formData.get(name) || "");
+  };
   const input = normalizeCustomerAttachment({
-    attachmentName: String(formData.get("attachmentName") || ""),
-    attachmentType: String(formData.get("attachmentType") || "其他"),
-    fileUrl: String(formData.get("fileUrl") || ""),
-    description: String(formData.get("description") || "")
+    attachmentName: readFieldValue("attachmentName"),
+    attachmentType: readFieldValue("attachmentType") || "其他",
+    fileUrl: readFieldValue("fileUrl"),
+    description: readFieldValue("description")
   });
   const fieldKey = forcedFieldKey || String(formData.get("fieldKey") || "").trim() || null;
   const fieldLabel = forcedFieldLabel || String(formData.get("fieldLabel") || "").trim() || null;
@@ -1202,11 +1207,16 @@ export async function updateCustomerAttachmentAction(customerId: string, attachm
   if (!customer || !canEditCustomerServer(actor, customer)) throw new Error("当前账号不能维护该客户附件。");
   const existing = await prisma.customerAttachment.findFirst({ where: { id: attachmentId, customerId, deletedAt: null } });
   if (!existing) throw new Error("附件不存在。");
+  const readFieldValue = (name: string) => {
+    const prefixed = `${attachmentId}__${name}`;
+    if (formData.has(prefixed)) return String(formData.get(prefixed) || "");
+    return String(formData.get(name) || "");
+  };
   const input = normalizeCustomerAttachment({
-    attachmentName: String(formData.get("attachmentName") || ""),
-    attachmentType: String(formData.get("attachmentType") || "其他"),
-    fileUrl: String(formData.get("fileUrl") || ""),
-    description: String(formData.get("description") || "")
+    attachmentName: readFieldValue("attachmentName"),
+    attachmentType: readFieldValue("attachmentType") || "其他",
+    fileUrl: readFieldValue("fileUrl"),
+    description: readFieldValue("description")
   });
   if (!input.attachmentName) throw new Error("请填写附件名称。");
   if (existing.storageProvider !== "aliyun_oss" && !input.fileUrl) throw new Error("请填写附件链接。");

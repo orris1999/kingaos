@@ -1,4 +1,3 @@
-import { CustomerAttachmentsPanel } from "@/components/customer-attachments-panel";
 import { ServerCustomerForm } from "@/components/server-customer-form";
 import { Forbidden, KingaShell } from "@/components/kinga-shell";
 import { requireCurrentUser } from "@/lib/honoa/server/auth";
@@ -24,7 +23,6 @@ export default async function EditCustomerPage({ params }: { params: Promise<{ i
       <KingaShell user={user}>
         <div className="stack">
           <ServerCustomerForm actor={user} customer={customer} fields={fields} owners={owners} receiptAccounts={receiptAccounts} attachmentTypes={attachmentTypes} ossConfigured={isOssConfigured()} />
-          <CustomerAttachmentsPanel customerId={customer.id} attachments={customer.attachments || []} editable />
         </div>
       </KingaShell>
     );

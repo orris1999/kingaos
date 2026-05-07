@@ -25,6 +25,23 @@ export const RELEASE_CATEGORY_LABELS: Record<ReleaseNoteCategory, string> = {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-05-07-13-attachment-field-ui-dedup",
+    date: "2026-05-07",
+    version: "2026.05.07-13",
+    title: "附件字段 UI 去重与联系人页简化",
+    category: "fix",
+    summary: [
+      "字段型附件改为紧凑控件，默认只显示附件数量、列表和上传 / 添加链接入口。",
+      "通用客户附件区过滤字段附件，避免联系人信息页重复出现完整上传表单。",
+      "新建客户时附件字段只提示保存后上传，详情页只显示附件列表和下载 / 预览。"
+    ],
+    affectedAreas: ["出口部客户档案", "附件字段", "联系人信息页"],
+    migration: "none",
+    productionDataCommand: "none",
+    productionDataRisk: "none",
+    commitHash: "待填写"
+  },
+  {
     id: "2026-05-07-12-admin-changelog-saas-visual-baseline",
     date: "2026-05-07",
     version: "2026.05.07-12",

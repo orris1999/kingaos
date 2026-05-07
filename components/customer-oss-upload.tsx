@@ -15,12 +15,14 @@ type UploadResponse = {
 export function CustomerOssUpload({
   customerId,
   attachmentTypes,
+  defaultAttachmentType,
   ossConfigured,
   fieldKey,
   fieldLabel
 }: {
   customerId: string;
   attachmentTypes: string[];
+  defaultAttachmentType?: string;
   ossConfigured: boolean;
   fieldKey?: string;
   fieldLabel?: string;
@@ -28,7 +30,7 @@ export function CustomerOssUpload({
   const router = useRouter();
   const [file, setFile] = React.useState<File | null>(null);
   const [attachmentName, setAttachmentName] = React.useState("");
-  const [attachmentType, setAttachmentType] = React.useState(attachmentTypes[0] || "其他");
+  const [attachmentType, setAttachmentType] = React.useState(defaultAttachmentType || attachmentTypes[0] || "其他");
   const [description, setDescription] = React.useState("");
   const [message, setMessage] = React.useState("");
   const [busy, setBusy] = React.useState(false);

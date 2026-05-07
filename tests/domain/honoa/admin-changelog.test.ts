@@ -37,8 +37,10 @@ describe("管理员版本更新日志和 SaaS 视觉基线", () => {
   it("release-notes.ts 至少包含最近一次 UI/UX 更新和本轮更新", () => {
     expect(RELEASE_NOTES.some((note) => note.id === "2026-05-07-11-customer-archive-ui-form-layout")).toBe(true);
     expect(RELEASE_NOTES.some((note) => note.id === "2026-05-07-12-admin-changelog-saas-visual-baseline")).toBe(true);
-    expect(RELEASE_NOTES[0].title).toContain("版本更新日志");
+    expect(RELEASE_NOTES[0].id).toBe("2026-05-07-13-attachment-field-ui-dedup");
+    expect(RELEASE_NOTES[0].title).toContain("附件字段");
     expect(RELEASE_NOTES[0].productionDataCommand).toBe("none");
+    expect(RELEASE_NOTES.some((note) => note.title.includes("版本更新日志"))).toBe(true);
   });
 
   it("docs/CHANGELOG.md 存在并包含 migration / data risk 信息", () => {
@@ -46,6 +48,7 @@ describe("管理员版本更新日志和 SaaS 视觉基线", () => {
     const source = readRepoFile("docs/CHANGELOG.md");
 
     expect(existsSync(filePath)).toBe(true);
+    expect(source).toContain("2026.05.07-13");
     expect(source).toContain("2026.05.07-12");
     expect(source).toContain("Migration：无");
     expect(source).toContain("生产数据命令：未运行");

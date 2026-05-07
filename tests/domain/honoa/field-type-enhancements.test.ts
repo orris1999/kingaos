@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { createCustomerFieldConfig } from "@/lib/honoa/field-config/actions";
 import { bootstrapDemoUsers, loginUser } from "@/lib/honoa/auth/actions";
 import { createExportCustomer } from "@/lib/honoa/customers/actions";
@@ -81,10 +83,15 @@ describe("字段配置增强 MVP", () => {
 
   it("attachment 字段保存 attachmentId 引用，不存文件二进制、base64 或 uploadUrl", () => {
     const value = ["att_001"];
+    const attachmentField = readFileSync(join(process.cwd(), "components/customer-attachment-field.tsx"), "utf8");
+    const serverCustomers = readFileSync(join(process.cwd(), "lib/honoa/server/customers.ts"), "utf8");
 
     expect(displayFieldValue(value, "attachment")).toBe("1 个附件");
     expect(JSON.stringify(value)).not.toContain("uploadUrl");
     expect(JSON.stringify(value)).not.toContain("base64");
+    expect(attachmentField).toContain('name={`${field.fieldKey}__attachmentId`}');
+    expect(serverCustomers).toContain("const currentIds = Array.isArray(customFields[fieldKey])");
+    expect(serverCustomers).toContain("const nextIds = Array.from(new Set([...currentIds, attachment.id]))");
   });
 
   it("内部说明只用于编辑页数据结构，详情显示只返回 label", () => {

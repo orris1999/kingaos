@@ -4,8 +4,6 @@ import {
   deleteCustomerAttachmentAction,
   updateCustomerAttachmentAction
 } from "@/lib/honoa/server/customers";
-import { getCustomerAttachmentTypes } from "@/lib/honoa/server/field-config";
-import { isOssConfigured } from "@/lib/honoa/server/oss";
 
 function formatDate(value: Date) {
   return value.toLocaleString("zh-CN", { hour12: false });
@@ -25,38 +23,41 @@ function attachmentTypeOptions(types: string[], defaultValue?: string | null) {
   return options;
 }
 
-function AttachmentTypeSelect({ types, defaultValue }: { types: string[]; defaultValue?: string | null }) {
+function AttachmentTypeSelect({ types, defaultValue, namePrefix = "" }: { types: string[]; defaultValue?: string | null; namePrefix?: string }) {
   return (
-    <select name="attachmentType" defaultValue={defaultValue || "其他"}>
+    <select name={`${namePrefix}attachmentType`} defaultValue={defaultValue || "其他"}>
       {attachmentTypeOptions(types, defaultValue).map((type) => <option key={type} value={type}>{type}</option>)}
     </select>
   );
 }
 
-export async function CustomerAttachmentsPanel({
+export function CustomerAttachmentsPanel({
   customerId,
   attachments,
-  editable
+  editable,
+  attachmentTypes = [],
+  ossConfigured = false
 }: {
   customerId: string;
   attachments: CustomerAttachment[];
   editable: boolean;
+  attachmentTypes?: string[];
+  ossConfigured?: boolean;
 }) {
-  const ossReady = isOssConfigured();
-  const attachmentTypes = await getCustomerAttachmentTypes();
+  const generalAttachments = attachments.filter((attachment) => !attachment.fieldKey && !attachment.deletedAt);
   return (
-    <section className="panel stack">
+    <section className="subpanel stack general-attachments-panel" data-testid="general-attachments-panel">
       <div>
-        <h2>附件</h2>
+        <h2>通用客户附件</h2>
         <p className="muted">支持上传文件到私有阿里云 OSS。数据库只保存附件元数据，不保存文件二进制。</p>
       </div>
-      {attachments.length === 0 ? <p className="muted">暂无附件</p> : null}
-      {attachments.map((attachment) => (
+      {generalAttachments.length === 0 ? <p className="muted">暂无通用客户附件</p> : null}
+      {generalAttachments.map((attachment) => (
         <div className="subpanel stack" key={attachment.id}>
           {editable ? (
-            <form className="form-grid" action={updateCustomerAttachmentAction.bind(null, customerId, attachment.id)}>
-              <label>附件名称<input name="attachmentName" defaultValue={attachment.attachmentName} required /></label>
-              <label>附件类型<AttachmentTypeSelect types={attachmentTypes} defaultValue={attachment.attachmentType} /></label>
+            <div className="form-grid">
+              <label>附件名称<input name={`${attachment.id}__attachmentName`} defaultValue={attachment.attachmentName} required /></label>
+              <label>附件类型<AttachmentTypeSelect namePrefix={`${attachment.id}__`} types={attachmentTypes} defaultValue={attachment.attachmentType} /></label>
               {attachment.storageProvider === "aliyun_oss" ? (
                 <div className="readonly">
                   阿里云 OSS 文件<br />
@@ -64,14 +65,14 @@ export async function CustomerAttachmentsPanel({
                   MIME：{attachment.mimeType || "-"}
                 </div>
               ) : (
-                <label>附件链接<input name="fileUrl" type="url" defaultValue={attachment.fileUrl || ""} required /></label>
+                <label>附件链接<input name={`${attachment.id}__fileUrl`} type="url" defaultValue={attachment.fileUrl || ""} required /></label>
               )}
-              <label style={{ gridColumn: "1 / -1" }}>附件说明<textarea name="description" defaultValue={attachment.description || ""} /></label>
+              <label style={{ gridColumn: "1 / -1" }}>附件说明<textarea name={`${attachment.id}__description`} defaultValue={attachment.description || ""} /></label>
               <div className="actions">
-                <button type="submit">保存附件</button>
+                <button type="submit" formAction={updateCustomerAttachmentAction.bind(null, customerId, attachment.id)}>保存附件</button>
                 <CustomerAttachmentDownloadButton customerId={customerId} attachmentId={attachment.id} />
               </div>
-            </form>
+            </div>
           ) : (
             <div className="detail-grid">
               <div className="kv"><b>附件名称</b><span>{attachment.attachmentName}</span></div>
@@ -89,14 +90,12 @@ export async function CustomerAttachmentsPanel({
             </div>
           )}
           {editable ? (
-            <form action={deleteCustomerAttachmentAction.bind(null, customerId, attachment.id)}>
-              <button className="ghost" type="submit">删除附件</button>
-            </form>
+            <button className="ghost" type="submit" formAction={deleteCustomerAttachmentAction.bind(null, customerId, attachment.id)}>删除附件</button>
           ) : null}
         </div>
       ))}
       {editable ? (
-        <CustomerOssUpload customerId={customerId} attachmentTypes={attachmentTypes} ossConfigured={ossReady} />
+        <CustomerOssUpload customerId={customerId} attachmentTypes={attachmentTypes} ossConfigured={ossConfigured} />
       ) : null}
     </section>
   );

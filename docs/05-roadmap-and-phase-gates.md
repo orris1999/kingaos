@@ -48,6 +48,7 @@
 - 附件类型由管理员 / 超级管理员在字段配置页维护。
 - 字段类型 UI 显示中文；内部值仍使用 `text` / `textarea` / `number` / `date` / `select` / `multiselect` / `boolean` / `url` / `attachment`。
 - 字段配置支持多选、超链接和附件字段；附件字段复用 `CustomerAttachment` 和 OSS，不保存文件二进制、base64 或临时 uploadUrl。
+- 字段型附件使用紧凑控件，联系人信息等步骤只显示附件摘要和操作入口；通用客户附件集中在附件区域展示。
 - 客户类型支持多选，旧单值 `Customer.customerType` 继续兼容。
 - 下拉 / 多选选项支持内部说明，内部说明只在填写页面显示，不进入详情页或未来对外客户信息卡。
 - 管理员可以修改自定义字段类型，系统字段类型默认锁定，修改类型不会清空历史 `customFields`。

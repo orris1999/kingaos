@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { CustomerDetailTabs } from "@/components/customer-detail-tabs";
+import { CustomerAttachmentFieldValue } from "@/components/customer-attachment-field";
 import { CustomerAttachmentsPanel } from "@/components/customer-attachments-panel";
-import { CustomerAttachmentDownloadButton } from "@/components/customer-oss-upload";
 import { Forbidden, KingaShell } from "@/components/kinga-shell";
 import { requireCurrentUser } from "@/lib/honoa/server/auth";
 import { canEditCustomerServer, contactsForDisplay, getExportCustomerForActor, listCustomerFieldChangeHistoryForActor } from "@/lib/honoa/server/customers";
 import { listCustomerFieldConfigsForActor } from "@/lib/honoa/server/field-config";
+import { getCustomerAttachmentTypes } from "@/lib/honoa/server/field-config";
+import { isOssConfigured } from "@/lib/honoa/server/oss";
 import { CUSTOMER_COMPANY_DUPLICATE_FIELD_KEYS, CUSTOMER_GEO_FIELD_KEYS, CUSTOMER_LEGACY_CONTACT_FIELD_KEYS, CUSTOMER_SYSTEM_FIELD_KEYS, customerCompanyDisplay, customerStatusCompatibilityOptions, customerStatusLabel, customerTypeValues } from "@/lib/honoa/shared/constants";
 import type { CustomerFieldConfig } from "@/lib/honoa/shared/domain-types";
 import { fieldOptionLabel } from "@/lib/honoa/shared/field-options";
@@ -32,22 +34,7 @@ function fieldValue(customer: Customer & { attachments?: CustomerAttachment[] },
     return <a href={link.url} target={external ? "_blank" : undefined} rel={external ? "noopener noreferrer" : undefined}>{link.label || link.url}</a>;
   }
   if (field.fieldType === "attachment") {
-    const attachmentIds = normalizeMultiValue(value);
-    const attachments = (customer.attachments || []).filter((attachment) =>
-      !attachment.deletedAt &&
-      (attachment.fieldKey === field.fieldKey || attachmentIds.includes(attachment.id))
-    );
-    if (attachments.length === 0) return "-";
-    return (
-      <div className="inline-stack">
-        {attachments.map((attachment) => (
-          <span className="tag" key={attachment.id}>
-            {attachment.attachmentName}
-            <CustomerAttachmentDownloadButton customerId={customer.id} attachmentId={attachment.id} />
-          </span>
-        ))}
-      </div>
-    );
+    return <CustomerAttachmentFieldValue customer={customer} field={field} />;
   }
   return displayFieldValue(value, field.fieldType, field.options);
 }
@@ -133,9 +120,10 @@ export default async function CustomerDetailPage({
   const { id } = await params;
   try {
     const customer = await getExportCustomerForActor(user, id);
-    const [fields, histories] = await Promise.all([
+    const [fields, histories, attachmentTypes] = await Promise.all([
       listCustomerFieldConfigsForActor(undefined, false),
-      listCustomerFieldChangeHistoryForActor(user, id)
+      listCustomerFieldChangeHistoryForActor(user, id),
+      getCustomerAttachmentTypes()
     ]);
     const tabParams = await searchParams;
     const initialTabIndex = tabParams?.tab === "history" ? 5 : 0;
@@ -242,6 +230,8 @@ export default async function CustomerDetailPage({
                 customerId={customer.id}
                 attachments={(customer.attachments || []) as CustomerAttachment[]}
                 editable={canEdit}
+                attachmentTypes={attachmentTypes}
+                ossConfigured={isOssConfigured()}
               />
             </section>
             <section className="panel stack" id="history">

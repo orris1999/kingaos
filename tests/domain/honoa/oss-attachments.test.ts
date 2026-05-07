@@ -105,6 +105,7 @@ describe("KingaOS OSS customer attachments", () => {
     expect(fieldSettingsPage).toContain("保存附件类型");
     expect(uploadUrlRoute).toContain("getCustomerAttachmentTypes");
     expect(customerServer).toContain("await getCustomerAttachmentTypes()");
-    expect(attachmentPanel).toContain("getCustomerAttachmentTypes");
+    expect(attachmentPanel).toContain("attachmentTypes?: string[]");
+    expect(attachmentPanel).toContain("AttachmentTypeSelect");
   });
 });
