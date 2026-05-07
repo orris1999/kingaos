@@ -5,6 +5,7 @@ import { receiptAccountPaymentMethodLabel } from "@/lib/honoa/shared/constants";
 
 export type ReceiptAccountOption = {
   id: string;
+  accountCode?: string | null;
   displayName: string;
   scenarioName?: string | null;
   paymentMethod?: string | null;
@@ -63,35 +64,39 @@ export function CustomerReceiptAccountSelector({
       </label>
       {!selected ? <p className="muted">未设置默认收款方案，未来合同可能需要重新选择。</p> : null}
       {selected ? (
-        <div className="detail-grid readonly-panel">
-          <div className="kv" style={{ gridColumn: "1 / -1" }}>
-            <b>只读说明</b><span className="muted">财务维护，业务只读。</span>
+        <div className="readonly-panel receipt-account-panel" data-testid="readonly-field">
+          <div className="receipt-account-summary">
+            <div>
+              <b>收款方案</b>
+              <span>{selected.displayName}{selected.accountCode ? ` / ${selected.accountCode}` : ""}</span>
+            </div>
+            <span className={selected.isActive ? "tag ok" : "tag warn"}>{selected.isActive ? "有效" : "已停用"}</span>
           </div>
+          <p className="tiny muted">财务维护，业务只读。</p>
           {!selected.isActive ? (
-            <div className="kv" style={{ gridColumn: "1 / -1" }}>
-              <b>状态提醒</b><span className="warn-text">该收款账号已停用，请重新选择有效账号。</span>
-            </div>
+            <p className="warn-text">该收款账号已停用，请重新选择有效账号。</p>
           ) : null}
           {!selected.isActive ? (
-            <div className="kv" style={{ gridColumn: "1 / -1" }}>
-              <b>原收款方案</b><span>{selected.displayName}</span>
-            </div>
+            <p className="tiny muted">原收款方案：{selected.displayName}{selected.accountCode ? ` / ${selected.accountCode}` : ""}</p>
           ) : null}
-          <div className="kv"><b>方案名称</b><span>{selected.displayName}</span></div>
-          <div className="kv"><b>收款场景</b><span>{selected.scenarioName || "-"}</span></div>
-          <div className="kv"><b>支付方式</b><span>{receiptAccountPaymentMethodLabel(selected.paymentMethod)}</span></div>
-          <div className="kv"><b>币种</b><span>{selected.currency}</span></div>
-          <div className="kv"><b>收款主体</b><span>{selected.companyName}</span></div>
-          <div className="kv"><b>账号</b><span>{selected.accountNo}</span></div>
-          <div className="kv"><b>开户行</b><span>{selected.bankName}</span></div>
-          <div className="kv"><b>SWIFT CODE</b><span>{selected.swiftCode || "-"}</span></div>
-          <div className="kv"><b>银行地址</b><span>{selected.bankAddress || "-"}</span></div>
-          <div className="kv"><b>状态</b><span>{selected.isActive ? "有效" : "已停用"}</span></div>
-          {!selected.isActive ? <div className="kv"><b>停用时间</b><span>{selected.disabledAt ? formatDate(selected.disabledAt) : "-"}</span></div> : null}
-          {!selected.isActive ? <div className="kv" style={{ gridColumn: "1 / -1" }}><b>停用原因</b><span className="warn-text">{selected.disabledReason || "-"}</span></div> : null}
-          <div className="kv"><b>财务最后更新时间</b><span>{formatDate(selected.updatedAt)}</span></div>
-          <div className="kv" style={{ gridColumn: "1 / -1" }}><b>使用说明</b><span>{selected.usageNotes || "-"}</span></div>
-          <div className="kv" style={{ gridColumn: "1 / -1" }}><b>风险提醒</b><span>{selected.riskNotes || "-"}</span></div>
+          <details className="receipt-account-details">
+            <summary>查看官方账号详情</summary>
+            <div className="detail-grid">
+              <div className="kv"><b>收款场景</b><span>{selected.scenarioName || "-"}</span></div>
+              <div className="kv"><b>支付方式</b><span>{receiptAccountPaymentMethodLabel(selected.paymentMethod)}</span></div>
+              <div className="kv"><b>币种</b><span>{selected.currency}</span></div>
+              <div className="kv"><b>收款主体</b><span>{selected.companyName}</span></div>
+              <div className="kv"><b>账号</b><span>{selected.accountNo}</span></div>
+              <div className="kv"><b>开户行</b><span>{selected.bankName}</span></div>
+              <div className="kv"><b>SWIFT CODE</b><span>{selected.swiftCode || "-"}</span></div>
+              <div className="kv"><b>银行地址</b><span>{selected.bankAddress || "-"}</span></div>
+              {!selected.isActive ? <div className="kv"><b>停用时间</b><span>{selected.disabledAt ? formatDate(selected.disabledAt) : "-"}</span></div> : null}
+              {!selected.isActive ? <div className="kv"><b>停用原因</b><span className="warn-text">{selected.disabledReason || "-"}</span></div> : null}
+              <div className="kv"><b>财务最后更新时间</b><span>{formatDate(selected.updatedAt)}</span></div>
+              <div className="kv"><b>使用说明</b><span>{selected.usageNotes || "-"}</span></div>
+              <div className="kv"><b>风险提醒</b><span>{selected.riskNotes || "-"}</span></div>
+            </div>
+          </details>
         </div>
       ) : null}
     </div>

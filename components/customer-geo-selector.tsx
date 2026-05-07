@@ -130,25 +130,25 @@ export function CustomerGeoSelector({ initialValue }: { initialValue?: CustomerG
       <label>
         州 / 省
         {!countryCode ? (
-          <div className="readonly">请先选择国家 / 地区</div>
+          <div className="readonly" data-testid="readonly-field">请先选择国家 / 地区</div>
         ) : loadingStates ? (
-          <div className="readonly">加载中...</div>
+          <div className="readonly" data-testid="readonly-field">加载中...</div>
         ) : hasStates ? (
           <select value={stateCode} onChange={(event) => chooseState(event.target.value)}>
             <option value="">请选择州 / 省</option>
             {states.map((state) => <option key={state.code} value={state.code}>{state.name}</option>)}
           </select>
         ) : (
-          <div className="readonly">该国家暂无州 / 省数据，可直接填写城市。</div>
+          <div className="readonly" data-testid="readonly-field">该国家暂无州 / 省数据，可直接填写城市。</div>
         )}
       </label>
 
       <label>
         城市
         {!countryCode ? (
-          <div className="readonly">请先选择国家 / 地区</div>
+          <div className="readonly" data-testid="readonly-field">请先选择国家 / 地区</div>
         ) : hasStates && !stateCode ? (
-          <div className="readonly">请先选择州 / 省</div>
+          <div className="readonly" data-testid="readonly-field">请先选择州 / 省</div>
         ) : manualCity || !canPickCity || (!loadingCities && cities.length === 0) ? (
           <input value={cityName} onChange={(event) => setCityName(event.target.value)} placeholder="手动输入城市" />
         ) : (

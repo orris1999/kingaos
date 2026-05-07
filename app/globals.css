@@ -61,7 +61,7 @@ a:hover {
 }
 
 .wrap {
-  max-width: 1180px;
+  max-width: 1240px;
   margin: 0 auto;
   padding: 28px;
 }
@@ -251,6 +251,21 @@ textarea {
   gap: 14px;
 }
 
+.customer-form-shell {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.customer-step-panel {
+  padding: 24px;
+}
+
+.customer-step-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 20px;
+  align-items: start;
+}
+
 .compact-grid {
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
@@ -260,6 +275,7 @@ textarea {
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+  padding: 4px;
 }
 
 .step {
@@ -267,6 +283,7 @@ textarea {
   background: var(--surface);
   color: var(--text);
   min-height: 42px;
+  box-shadow: 0 1px 2px rgb(24 33 47 / 5%);
 }
 
 .step span {
@@ -365,6 +382,79 @@ textarea {
   margin-top: 4px;
 }
 
+.multi-select {
+  display: grid;
+  gap: 6px;
+}
+
+.multi-select-dropdown {
+  position: relative;
+}
+
+.multi-select-summary {
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  list-style: none;
+}
+
+.multi-select-summary::-webkit-details-marker {
+  display: none;
+}
+
+.multi-select-summary::after {
+  content: "展开选择";
+  float: right;
+  color: var(--muted);
+  font-size: 12px;
+  margin-left: 12px;
+}
+
+.multi-select-dropdown[open] .multi-select-summary::after {
+  content: "收起";
+}
+
+.multi-select-menu {
+  margin-top: 8px;
+  max-height: 260px;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 10px 24px rgb(24 33 47 / 8%);
+}
+
+.multi-option {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 8px;
+  border-radius: 6px;
+  background: #f3f6f8;
+  font-weight: 500;
+}
+
+.multi-option input {
+  width: auto;
+  min-height: auto;
+  margin-top: 4px;
+}
+
+.tag-list-nowrap {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  align-items: center;
+  white-space: nowrap;
+}
+
 .table-wrap {
   overflow-x: auto;
   border: 1px solid var(--line);
@@ -372,9 +462,18 @@ textarea {
   background: var(--surface);
 }
 
+.customer-table-scroll {
+  overflow-x: auto;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
+}
+
+.customer-table {
+  min-width: 1180px;
+  table-layout: auto;
 }
 
 th,
@@ -383,6 +482,41 @@ td {
   padding: 10px;
   text-align: left;
   vertical-align: top;
+}
+
+.customer-table th,
+.customer-table td {
+  white-space: nowrap;
+}
+
+.customer-table th {
+  min-width: 92px;
+}
+
+.customer-table .customer-name-cell {
+  min-width: 180px;
+  max-width: 280px;
+  white-space: normal;
+  font-weight: 700;
+}
+
+.customer-table .action-cell {
+  min-width: 100px;
+  white-space: nowrap;
+}
+
+.receipt-account-compact {
+  display: inline-grid;
+  gap: 5px;
+  max-width: 220px;
+  white-space: normal;
+}
+
+.customer-filter-bar {
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) 220px auto;
+  gap: 14px;
+  align-items: end;
 }
 
 th {
@@ -488,6 +622,30 @@ th {
   background: #f4f6f8;
 }
 
+.receipt-account-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.receipt-account-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.receipt-account-summary b {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.receipt-account-details summary {
+  color: var(--primary);
+  cursor: pointer;
+  font-weight: 700;
+}
+
 .detail-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -515,5 +673,15 @@ th {
 
   .wrap {
     padding: 18px 14px;
+  }
+
+  .customer-filter-bar,
+  .customer-step-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tag-list-nowrap {
+    flex-wrap: wrap;
+    white-space: normal;
   }
 }

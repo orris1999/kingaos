@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { CustomerFormWizard } from "@/components/customer-form-wizard";
 import { CustomerGeoSelector } from "@/components/customer-geo-selector";
 import { CustomerContactEditor } from "@/components/customer-contact-editor";
+import { CustomerMultiselectField } from "@/components/customer-multiselect-field";
 import { CustomerAttachmentDownloadButton, CustomerOssUpload } from "@/components/customer-oss-upload";
 import { CustomerReceiptAccountSelector, type ReceiptAccountOption } from "@/components/customer-receipt-account-selector";
 import { createCustomerFieldAttachmentAction, createExportCustomerAction, updateExportCustomerAction, canAssignOwnerServer, canManageDuplicateReviewServer } from "@/lib/honoa/server/customers";
@@ -70,7 +71,7 @@ export function ServerCustomerForm({
         }]
       : [];
   return (
-    <form className="stack" action={action}>
+    <form className="stack customer-form-shell" action={action}>
       <div>
         <div className="breadcrumbs">KingaOS / 出口部 / 客户档案 / {customer ? "编辑客户" : "新建客户"}</div>
         <h1>{customer ? `编辑客户：${customerCompanyDisplay(customer)}` : "新建客户"}</h1>
@@ -85,7 +86,7 @@ export function ServerCustomerForm({
         <CustomerStep group="基础信息" fields={activeFields} customer={customer} actor={actor} owners={owners} canChooseOwner={canChooseOwner} attachmentTypes={attachmentTypes} ossConfigured={ossConfigured}>
           <label>
             客户编号
-            <div className="readonly"><span>{customer?.customerCode || "保存后系统自动生成"}</span><span className="readonly-badge">系统生成</span></div>
+            <div className="readonly" data-testid="readonly-field"><span>{customer?.customerCode || "保存后系统自动生成"}</span><span className="readonly-badge">系统生成</span></div>
           </label>
           <CustomerGeoSelector initialValue={customer} />
         </CustomerStep>
@@ -134,6 +135,7 @@ export function ServerCustomerForm({
 function toReceiptAccountOption(account: CompanyReceiptAccount): ReceiptAccountOption {
   return {
     id: account.id,
+    accountCode: account.accountCode,
     displayName: account.displayName,
     scenarioName: account.scenarioName,
     paymentMethod: account.paymentMethod,
@@ -180,9 +182,9 @@ function CustomerStep({
   const groupFields = fields.filter((field) => field.fieldGroup === group);
   if (hideEmpty && groupFields.length === 0 && !children) return null;
   return (
-    <section className="panel stack">
+    <section className="panel stack customer-step-panel">
       <h2>{title || group}</h2>
-      <div className="form-grid">
+      <div className="form-grid customer-step-grid">
         {groupFields.map((field) => (
           <CustomerInput
             key={field.id}
@@ -228,15 +230,14 @@ function CustomerInput({
     return (
       <div className={fieldLabelClass(field.required)}>
         <FieldLabel label={label} required={field.required} />
-        <div className="check-grid required-control">
-          {options.map((option) => (
-            <label className="checkrow" key={option.value}>
-              <input name="customerTypes" type="checkbox" value={option.value} defaultChecked={selected.includes(option.value)} />
-              <span>{option.label}{option.internalNote ? <small className="tiny muted"> {option.internalNote}</small> : null}</span>
-            </label>
-          ))}
-        </div>
-        {field.required ? <span className="tiny muted">请至少选择一个客户类型。</span> : null}
+        <CustomerMultiselectField
+          name="customerTypes"
+          options={options.map((option) => ({ value: option.value, label: option.label, internalNote: option.internalNote }))}
+          placeholder="请选择客户类型"
+          required={field.required}
+          selectedValues={selected}
+          testId="customer-type-multiselect"
+        />
       </div>
     );
   }
@@ -246,7 +247,7 @@ function CustomerInput({
       return (
         <label className={fieldLabelClass(field.required)}>
           <FieldLabel label={label} required={field.required} />
-          <div className="readonly"><span>{actor.name}</span><span className="readonly-badge">只读</span></div>
+          <div className="readonly" data-testid="readonly-field"><span>{actor.name}</span><span className="readonly-badge">只读</span></div>
           <input type="hidden" name="ownerUserId" value={actor.id} />
         </label>
       );
@@ -295,14 +296,13 @@ function CustomerInput({
     return (
       <div className={fieldLabelClass(field.required)}>
         <FieldLabel label={label} required={field.required} />
-        <div className={field.required ? "check-grid required-control" : "check-grid"}>
-          {options.map((option) => (
-            <label className="checkrow" key={option.value}>
-              <input name={field.fieldKey} type="checkbox" value={option.value} defaultChecked={selected.includes(option.value)} />
-              <span>{option.label}{option.internalNote ? <small className="tiny muted"> {option.internalNote}</small> : null}</span>
-            </label>
-          ))}
-        </div>
+        <CustomerMultiselectField
+          name={field.fieldKey}
+          options={options}
+          placeholder={`请选择${field.fieldLabel}`}
+          required={field.required}
+          selectedValues={selected}
+        />
         {compatibilityMessage ? <span className="tiny warn-text">{compatibilityMessage}</span> : null}
       </div>
     );
@@ -373,7 +373,7 @@ function FieldLabel({ label, required }: { label: string; required: boolean }) {
     <span className="field-label-text">
       {label}
       {required ? <span className="required-mark" aria-label="必填">*</span> : null}
-      {required ? <span className="required-badge">必填</span> : null}
+      {required ? <span className="required-badge" data-testid="required-field">必填</span> : null}
     </span>
   );
 }

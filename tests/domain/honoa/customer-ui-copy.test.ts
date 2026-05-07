@@ -25,6 +25,41 @@ describe("客户档案 UI 文案和表单状态", () => {
     expect(source).toContain("搜索公司名称 / 客户编号 / 国家 / 负责人");
   });
 
+  it("客户列表使用横向滚动和固定最小宽度，避免表头逐字换行", () => {
+    const page = readRepoFile("app/export/customers/page.tsx");
+    const css = readRepoFile("app/globals.css");
+
+    expect(page).toContain('data-testid="customer-table-scroll"');
+    expect(page).toContain('className="customer-table"');
+    expect(page).toContain("<th>客户类型</th>");
+    expect(page).toContain("<th>国家 / 地区</th>");
+    expect(page).toContain("<th>默认收款方案</th>");
+    expect(css).toContain(".customer-table-scroll");
+    expect(css).toContain("overflow-x: auto");
+    expect(css).toContain(".customer-table");
+    expect(css).toContain("min-width: 1180px");
+    expect(css).toContain("white-space: nowrap");
+  });
+
+  it("客户列表把客户类型显示为标签并限制展示数量", () => {
+    const source = readRepoFile("app/export/customers/page.tsx");
+
+    expect(source).toContain("function CustomerTypeTags");
+    expect(source).toContain("values.slice(0, 3)");
+    expect(source).toContain("tag-list-nowrap");
+    expect(source).toContain("+{values.length - 3}");
+  });
+
+  it("客户列表紧凑显示默认收款方案状态", () => {
+    const page = readRepoFile("app/export/customers/page.tsx");
+    const css = readRepoFile("app/globals.css");
+
+    expect(page).toContain("receipt-account-compact");
+    expect(page).toContain("已停用");
+    expect(css).toContain(".receipt-account-compact");
+    expect(css).toContain("max-width: 220px");
+  });
+
   it("基础信息主字段显示公司名称，内部仍使用 name 字段", () => {
     const fields = defaultCustomerFields("2026-05-07T00:00:00.000Z");
     const nameField = fields.find((field) => field.fieldKey === "name");
@@ -37,6 +72,35 @@ describe("客户档案 UI 文案和表单状态", () => {
     const source = readRepoFile("components/server-customer-form.tsx");
 
     expect(source).toContain("!CUSTOMER_COMPANY_DUPLICATE_FIELD_KEYS.has(field.fieldKey)");
+  });
+
+  it("新建和编辑页使用居中表单、步骤卡片和两列基础布局", () => {
+    const form = readRepoFile("components/server-customer-form.tsx");
+    const css = readRepoFile("app/globals.css");
+
+    expect(form).toContain("customer-form-shell");
+    expect(form).toContain("customer-step-panel");
+    expect(form).toContain("customer-step-grid");
+    expect(css).toContain(".customer-form-shell");
+    expect(css).toContain("max-width: 1200px");
+    expect(css).toContain(".customer-step-grid");
+    expect(css).toContain("repeat(2, minmax(0, 1fr))");
+  });
+
+  it("客户类型多选使用紧凑控件，不再把全部选项直接铺开", () => {
+    const form = readRepoFile("components/server-customer-form.tsx");
+    const component = readRepoFile("components/customer-multiselect-field.tsx");
+    const css = readRepoFile("app/globals.css");
+
+    expect(form).toContain("CustomerMultiselectField");
+    expect(form).toContain('testId="customer-type-multiselect"');
+    expect(form).toContain('placeholder="请选择客户类型"');
+    expect(component).toContain("<details");
+    expect(component).toContain('placeholder = "请选择"');
+    expect(component).toContain("selectedOptions.slice(0, 3)");
+    expect(css).toContain(".multi-select-menu");
+    expect(css).toContain("max-height: 260px");
+    expect(css).toContain("overflow-y: auto");
   });
 
   it("已归档在 UI 上显示为资料已完善", () => {
@@ -64,7 +128,9 @@ describe("客户档案 UI 文案和表单状态", () => {
 
     expect(form).toContain("required-mark");
     expect(form).toContain("required-badge");
+    expect(form).toContain('data-testid="required-field"');
     expect(css).toContain(".required-control");
+    expect(css).toContain("background: #fffdf2");
   });
 
   it("只读字段有只读或系统生成标识", () => {
@@ -73,7 +139,17 @@ describe("客户档案 UI 文案和表单状态", () => {
 
     expect(form).toContain("readonly-badge");
     expect(form).toContain("系统生成");
+    expect(form).toContain('data-testid="readonly-field"');
     expect(css).toContain("cursor: not-allowed");
+    expect(css).toContain("background: #eef1f4");
+  });
+
+  it("默认收款方案详情标明财务维护且业务只读", () => {
+    const selector = readRepoFile("components/customer-receipt-account-selector.tsx");
+
+    expect(selector).toContain("财务维护，业务只读");
+    expect(selector).toContain("查看官方账号详情");
+    expect(selector).toContain("receipt-account-panel");
   });
 
   it("新建客户页提示附件保存后上传", () => {
