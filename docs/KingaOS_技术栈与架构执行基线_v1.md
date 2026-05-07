@@ -12,6 +12,8 @@
 - [06-multiplayer-deploy-notes.md](./06-multiplayer-deploy-notes.md)
 - [07-local-postgres-and-ci.md](./07-local-postgres-and-ci.md)
 - [08-production-data-safety.md](./08-production-data-safety.md)
+- [09-codex-task-prompt-template.md](./09-codex-task-prompt-template.md)
+- [CHANGELOG.md](./CHANGELOG.md)
 
 硬口径摘要：
 
@@ -26,6 +28,8 @@ GitHub Actions 每次 push / pull request 自动执行 migration、seed、typech
 生产环境只允许 npx prisma migrate deploy，禁止 migrate reset / db push --force-reset / migrate dev。
 生产 db:seed 必须是安全 seed，不创建/修改/删除用户，不创建/修改/删除客户。
 默认用户 bootstrap 和客户 backfill 必须人工显式执行，不能放进部署脚本；backfill 默认 dry-run，写入必须强确认。
+每轮代码、页面、文档、配置、测试或部署流程变更，都必须同步更新 docs/CHANGELOG.md 和 lib/honoa/shared/release-notes.ts。
+KingaOS 视觉基线：深绿色主色、中性色背景、白色卡片、细边框、柔和阴影、统一圆角、统一间距、清晰按钮层级和统一状态 badge。
 ```
 
 当前真实开放范围：
@@ -33,6 +37,7 @@ GitHub Actions 每次 push / pull request 自动执行 migration、seed、typech
 ```text
 KingaOS -> 登录 / 权限 / 用户管理 / 出口部 -> 客户档案
 KingaOS -> 财务部 -> 收款账号管理（小型财务主数据入口）
+KingaOS -> 管理员后台 -> 版本更新日志（只读）
 ```
 
 出口部客户档案当前包括：

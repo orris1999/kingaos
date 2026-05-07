@@ -36,6 +36,13 @@ export default async function AdminPage() {
               <span className="tag ok">已开放</span>
             </Link>
           ) : <DisabledCard title="权限管理" description="需要 permissions.manage 权限" />}
+          {user.role === "super_admin" || user.role === "admin" ? (
+            <Link className="card open" href="/admin/changelog">
+              <h2>版本更新日志</h2>
+              <p className="muted">查看每次功能、修复、安全、数据和 UI 更新记录。</p>
+              <span className="tag ok">已开放</span>
+            </Link>
+          ) : <DisabledCard title="版本更新日志" description="需要管理员角色" />}
           {canExport ? (
             <Link className="card open" href="/export">
               <h2>出口部</h2>

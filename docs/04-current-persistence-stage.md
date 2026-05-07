@@ -6,6 +6,10 @@
 当前多人版本默认使用 PostgreSQL + Prisma。用户、权限、session、客户、客户联系人、客户附件元数据、字段配置、客户字段修改历史、财务官方收款账号和审计日志都保存到 PostgreSQL。真实附件文件保存到私有阿里云 OSS Bucket。
 页面上统一显示“公司名称”，内部仍使用 `Customer.name`；公司名称判重使用 `CustomerIdentity` 和 `CustomerDuplicateReviewRequest` 持久化，不能只靠前端校验或简单 `Customer.name unique`。
 
+管理员版本更新日志不写入数据库，当前由 `docs/CHANGELOG.md` 和 `lib/honoa/shared/release-notes.ts` 双轨维护。每轮代码、页面、文档、配置、测试或部署流程变更，都必须同步更新版本日志。
+
+KingaOS 当前采用统一 B2B SaaS 视觉基线：深绿色主色、中性色背景、白色卡片、细边框、柔和阴影、统一圆角、统一间距、清晰按钮层级、统一表格和状态 badge。
+
 ## 生产路径
 
 - PostgreSQL 是 production / admin trial / salesperson usage 默认数据库。

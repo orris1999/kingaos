@@ -10,6 +10,10 @@
 
 生产部署 seed 必须是安全 seed：不创建、修改、删除用户；不创建、修改、删除客户。默认用户 bootstrap、客户 backfill 只能人工显式执行，不能作为部署脚本的一部分。Backfill 默认必须 dry-run，写入前必须强确认。
 
+版本更新日志门禁：任何代码、页面、文档、配置、测试或部署流程变更，都必须同步更新 `docs/CHANGELOG.md` 和 `lib/honoa/shared/release-notes.ts`。管理员可在 `/admin/changelog` 查看只读版本更新日志。
+
+视觉基线：KingaOS 使用统一 B2B SaaS 风格，保持深绿色主色、中性色背景、白色卡片、细边框、柔和阴影、统一圆角、统一间距、清晰按钮层级和统一状态 badge。
+
 ## 当前上线门
 
 多人试用前必须满足：
