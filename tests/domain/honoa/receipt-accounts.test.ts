@@ -12,7 +12,11 @@ const receiptServer = readFileSync(join(process.cwd(), "lib/honoa/server/receipt
 const customerServer = readFileSync(join(process.cwd(), "lib/honoa/server/customers.ts"), "utf8");
 const customerForm = readFileSync(join(process.cwd(), "components/server-customer-form.tsx"), "utf8");
 const customerSelector = readFileSync(join(process.cwd(), "components/customer-receipt-account-selector.tsx"), "utf8");
+const receiptDisableForm = readFileSync(join(process.cwd(), "components/receipt-account-disable-form.tsx"), "utf8");
 const customerDetail = readFileSync(join(process.cwd(), "app/export/customers/[id]/page.tsx"), "utf8");
+const customerList = readFileSync(join(process.cwd(), "app/export/customers/page.tsx"), "utf8");
+const receiptAccountListPage = readFileSync(join(process.cwd(), "app/finance/receipt-accounts/page.tsx"), "utf8");
+const receiptAccountDetailPage = readFileSync(join(process.cwd(), "app/finance/receipt-accounts/[id]/page.tsx"), "utf8");
 const financePage = readFileSync(join(process.cwd(), "app/finance/page.tsx"), "utf8");
 
 describe("KingaOS company receipt accounts", () => {
@@ -79,6 +83,51 @@ describe("KingaOS company receipt accounts", () => {
     expect(receiptServer).toContain("nextAccountId !== existingAccountId");
     expect(customerSelector).toContain("该收款账号已停用，请重新选择有效账号");
     expect(customerDetail).toContain("当前默认收款账号已停用，请重新选择有效账号");
+    expect(customerDetail).toContain("停用时间");
+    expect(customerDetail).toContain("停用原因");
+  });
+
+  it("财务账号详情页显示引用客户列表和有限客户摘要", () => {
+    expect(receiptServer).toContain("listCustomersUsingReceiptAccount");
+    expect(receiptServer).toContain("canViewReceiptAccountsServer(actor)");
+    expect(receiptServer).toContain("canOpenCustomer: canViewCustomerServer(actor, customer)");
+    expect(receiptAccountDetailPage).toContain("正在使用该账号的客户");
+    expect(receiptAccountDetailPage).toContain("有限客户摘要");
+    expect(receiptAccountDetailPage).toContain("无客户详情权限");
+    expect(receiptAccountDetailPage).not.toContain("internalNotes");
+    expect(receiptAccountDetailPage).not.toContain("specialReminder");
+  });
+
+  it("财务账号列表显示使用客户数和停用账号引用提醒", () => {
+    expect(receiptServer).toContain("include: { _count: { select: { customers: true } } }");
+    expect(receiptAccountListPage).toContain("使用客户数");
+    expect(receiptAccountListPage).toContain("已停用，仍有");
+    expect(receiptAccountListPage).toContain("#using-customers");
+  });
+
+  it("停用账号前提示 affectedCustomerCount，并写入 AuditLog metadata", () => {
+    expect(receiptDisableForm).toContain("affectedCustomerCount");
+    expect(receiptDisableForm).toContain("系统不会自动清空客户档案引用，也不会自动替换为其他账号");
+    expect(receiptServer).toContain("affectedCustomerCount");
+    expect(receiptServer).toContain("affectedCustomerIds");
+    expect(receiptServer).toContain("take: 20");
+  });
+
+  it("停用账号不会自动清空或替换 Customer.defaultReceiptAccountId", () => {
+    const disableAction = receiptServer.match(/export async function disableReceiptAccountAction[\s\S]*?export async function enableReceiptAccountAction/)?.[0] || "";
+    expect(disableAction).not.toContain("customer.update");
+    expect(disableAction).not.toContain("updateMany");
+  });
+
+  it("客户列表显示默认收款方案状态，并支持收款账号状态服务端筛选", () => {
+    expect(customerList).toContain("收款账号状态");
+    expect(customerList).toContain("默认收款方案");
+    expect(customerList).toContain("receiptAccountStatus");
+    expect(customerServer).toContain("ReceiptAccountStatusFilter");
+    expect(customerServer).toContain("defaultReceiptAccount: { is: { isActive: false } }");
+    expect(customerServer).toContain("defaultReceiptAccountId: null");
+    expect(customerServer).toContain("hasServerPermission(actor, \"export.customers.view_all\")");
+    expect(customerServer).toContain("ownerUserId: actor.id");
   });
 
   it("客户新建 / 编辑在合作信息步骤选择默认收款方案，业务员不能手填银行账号", () => {

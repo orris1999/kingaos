@@ -146,6 +146,8 @@ function toReceiptAccountOption(account: CompanyReceiptAccount): ReceiptAccountO
     usageNotes: account.usageNotes,
     riskNotes: account.riskNotes,
     isActive: account.isActive,
+    disabledAt: account.disabledAt?.toISOString() || null,
+    disabledReason: account.disabledReason,
     updatedAt: account.updatedAt.toISOString()
   };
 }

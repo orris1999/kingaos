@@ -17,6 +17,8 @@ export type ReceiptAccountOption = {
   usageNotes?: string | null;
   riskNotes?: string | null;
   isActive: boolean;
+  disabledAt?: string | null;
+  disabledReason?: string | null;
   updatedAt: string;
 };
 
@@ -70,6 +72,11 @@ export function CustomerReceiptAccountSelector({
               <b>状态提醒</b><span className="warn-text">该收款账号已停用，请重新选择有效账号。</span>
             </div>
           ) : null}
+          {!selected.isActive ? (
+            <div className="kv" style={{ gridColumn: "1 / -1" }}>
+              <b>原收款方案</b><span>{selected.displayName}</span>
+            </div>
+          ) : null}
           <div className="kv"><b>方案名称</b><span>{selected.displayName}</span></div>
           <div className="kv"><b>收款场景</b><span>{selected.scenarioName || "-"}</span></div>
           <div className="kv"><b>支付方式</b><span>{receiptAccountPaymentMethodLabel(selected.paymentMethod)}</span></div>
@@ -80,6 +87,8 @@ export function CustomerReceiptAccountSelector({
           <div className="kv"><b>SWIFT CODE</b><span>{selected.swiftCode || "-"}</span></div>
           <div className="kv"><b>银行地址</b><span>{selected.bankAddress || "-"}</span></div>
           <div className="kv"><b>状态</b><span>{selected.isActive ? "有效" : "已停用"}</span></div>
+          {!selected.isActive ? <div className="kv"><b>停用时间</b><span>{selected.disabledAt ? formatDate(selected.disabledAt) : "-"}</span></div> : null}
+          {!selected.isActive ? <div className="kv" style={{ gridColumn: "1 / -1" }}><b>停用原因</b><span className="warn-text">{selected.disabledReason || "-"}</span></div> : null}
           <div className="kv"><b>财务最后更新时间</b><span>{formatDate(selected.updatedAt)}</span></div>
           <div className="kv" style={{ gridColumn: "1 / -1" }}><b>使用说明</b><span>{selected.usageNotes || "-"}</span></div>
           <div className="kv" style={{ gridColumn: "1 / -1" }}><b>风险提醒</b><span>{selected.riskNotes || "-"}</span></div>

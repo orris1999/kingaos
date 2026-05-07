@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { RECEIPT_ACCOUNT_CURRENCIES, RECEIPT_ACCOUNT_PAYMENT_METHODS } from "../shared/constants";
 import type { AuthUser } from "./auth";
 import { hasAnyServerPermission, hasServerPermission, requireCurrentUser, requireServerPermission } from "./auth";
-import { canEditCustomerServer } from "./customers";
+import { canEditCustomerServer, canViewCustomerServer } from "./customers";
 import { prisma } from "./db";
 
 export function canViewReceiptAccountsServer(actor: AuthUser) {
@@ -23,6 +23,7 @@ export async function listReceiptAccountsForActor(actor: AuthUser, includeInacti
   if (!canViewReceiptAccountsServer(actor)) throw new Error("当前账号不能查看官方收款账号。");
   return prisma.companyReceiptAccount.findMany({
     where: includeInactive ? {} : { isActive: true },
+    include: { _count: { select: { customers: true } } },
     orderBy: [{ isActive: "desc" }, { updatedAt: "desc" }]
   });
 }
@@ -32,6 +33,50 @@ export async function getReceiptAccountForActor(actor: AuthUser, accountId: stri
   const account = await prisma.companyReceiptAccount.findUnique({ where: { id: accountId } });
   if (!account) throw new Error("收款账号不存在。");
   return account;
+}
+
+export async function countCustomersUsingReceiptAccount(actor: AuthUser, accountId: string) {
+  if (!canViewReceiptAccountsServer(actor)) throw new Error("当前账号不能查看官方收款账号影响范围。");
+  return prisma.customer.count({ where: { department: "export", defaultReceiptAccountId: accountId } });
+}
+
+export async function listCustomersUsingReceiptAccount(actor: AuthUser, accountId: string) {
+  if (!canViewReceiptAccountsServer(actor)) throw new Error("当前账号不能查看官方收款账号影响范围。");
+  const customers = await prisma.customer.findMany({
+    where: { department: "export", defaultReceiptAccountId: accountId },
+    select: {
+      id: true,
+      customerCode: true,
+      name: true,
+      companyName: true,
+      ownerUserId: true,
+      ownerName: true,
+      department: true,
+      status: true,
+      country: true,
+      countryCode: true,
+      countryName: true,
+      stateCode: true,
+      stateName: true,
+      city: true,
+      cityName: true,
+      updatedAt: true,
+      defaultReceiptAccount: { select: { isActive: true } }
+    },
+    orderBy: { updatedAt: "desc" }
+  });
+  return customers.map((customer) => ({
+    ...customer,
+    canOpenCustomer: canViewCustomerServer(actor, customer)
+  }));
+}
+
+export async function getReceiptAccountImpactSummary(actor: AuthUser, accountId: string) {
+  const [affectedCustomerCount, customers] = await Promise.all([
+    countCustomersUsingReceiptAccount(actor, accountId),
+    listCustomersUsingReceiptAccount(actor, accountId)
+  ]);
+  return { affectedCustomerCount, customers };
 }
 
 export async function listSelectableReceiptAccounts(currentReceiptAccountId?: string | null) {
@@ -172,6 +217,15 @@ export async function disableReceiptAccountAction(accountId: string, formData: F
   requireServerPermission(actor, "finance.receipt_accounts.manage");
   const disabledReason = formString(formData, "disabledReason");
   if (!disabledReason) throw new Error("请填写停用原因。");
+  const affectedCustomers = await prisma.customer.findMany({
+    where: { department: "export", defaultReceiptAccountId: accountId },
+    select: { id: true },
+    orderBy: { updatedAt: "desc" },
+    take: 20
+  });
+  const affectedCustomerCount = await prisma.customer.count({
+    where: { department: "export", defaultReceiptAccountId: accountId }
+  });
   const updated = await prisma.companyReceiptAccount.update({
     where: { id: accountId },
     data: {
@@ -188,7 +242,14 @@ export async function disableReceiptAccountAction(accountId: string, formData: F
       action: "company_receipt_account.disable",
       entityType: "CompanyReceiptAccount",
       entityId: accountId,
-      metadata: { receiptAccountId: accountId, accountCode: updated.accountCode, displayName: updated.displayName, disabledReason }
+      metadata: {
+        receiptAccountId: accountId,
+        accountCode: updated.accountCode,
+        displayName: updated.displayName,
+        disabledReason,
+        affectedCustomerCount,
+        affectedCustomerIds: affectedCustomers.map((customer) => customer.id)
+      }
     }
   });
   revalidatePath("/finance/receipt-accounts");

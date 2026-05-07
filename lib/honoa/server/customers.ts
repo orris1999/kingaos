@@ -44,17 +44,31 @@ export function canViewDuplicateReviewsServer(actor: AuthUser) {
   return hasAnyServerPermission(actor, ["export.customers.duplicate_review.view", "export.customers.duplicate_review.manage"]);
 }
 
-export async function listExportCustomersForActor(actor: AuthUser, query = "") {
+export type ReceiptAccountStatusFilter = "all" | "unset" | "active" | "inactive";
+
+function receiptAccountStatusWhere(filter: ReceiptAccountStatusFilter): Prisma.CustomerWhereInput | null {
+  if (filter === "unset") return { defaultReceiptAccountId: null };
+  if (filter === "active") return { defaultReceiptAccountId: { not: null }, defaultReceiptAccount: { is: { isActive: true } } };
+  if (filter === "inactive") return { defaultReceiptAccountId: { not: null }, defaultReceiptAccount: { is: { isActive: false } } };
+  return null;
+}
+
+export async function listExportCustomersForActor(actor: AuthUser, query = "", receiptAccountStatus: ReceiptAccountStatusFilter = "all") {
   if (!hasAnyServerPermission(actor, ["export.customers.view_own", "export.customers.view_all"])) {
     throw new Error("当前账号不能查看出口部客户档案。");
   }
-  const where = hasServerPermission(actor, "export.customers.view_all")
+  const permissionWhere: Prisma.CustomerWhereInput = hasServerPermission(actor, "export.customers.view_all")
     ? { department: "export" }
     : { department: "export", ownerUserId: actor.id };
+  const statusWhere = receiptAccountStatusWhere(receiptAccountStatus);
+  const where: Prisma.CustomerWhereInput = statusWhere ? { AND: [permissionWhere, statusWhere] } : permissionWhere;
   const customers = await prisma.customer.findMany({
     where,
     orderBy: { updatedAt: "desc" },
-    include: { contacts: { orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }, { createdAt: "asc" }] } }
+    include: {
+      defaultReceiptAccount: true,
+      contacts: { orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }, { createdAt: "asc" }] }
+    }
   });
   const q = query.trim().toLowerCase();
   if (!q) return customers;
@@ -68,6 +82,9 @@ export async function listExportCustomersForActor(actor: AuthUser, query = "") {
       customer.source,
       customer.status,
       customer.ownerName,
+      customer.defaultReceiptAccount?.displayName,
+      customer.defaultReceiptAccount?.accountCode,
+      customer.defaultReceiptAccount?.isActive ? "有效" : customer.defaultReceiptAccount ? "已停用" : "未设置",
       primaryContactSummary(customer)?.name,
       primaryContactSummary(customer)?.phone,
       primaryContactSummary(customer)?.email

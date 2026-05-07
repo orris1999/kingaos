@@ -76,9 +76,14 @@ function ReceiptAccountDetail({ account }: { account?: CompanyReceiptAccount | n
         <b>只读说明</b><span className="muted">财务维护，业务只读。</span>
       </div>
       {!account.isActive ? (
-        <div className="kv" style={{ gridColumn: "1 / -1" }}>
-          <b>状态提醒</b><span className="warn-text">当前默认收款账号已停用，请重新选择有效账号。</span>
-        </div>
+        <>
+          <div className="kv" style={{ gridColumn: "1 / -1" }}>
+            <b>状态提醒</b><span className="warn-text">当前默认收款账号已停用，请重新选择有效账号。</span>
+          </div>
+          <div className="kv" style={{ gridColumn: "1 / -1" }}>
+            <b>原收款方案</b><span>{account.displayName} / {account.accountCode}</span>
+          </div>
+        </>
       ) : null}
       <div className="kv"><b>方案名称</b><span>{account.displayName}</span></div>
       <div className="kv"><b>币种</b><span>{account.currency}</span></div>
@@ -86,6 +91,8 @@ function ReceiptAccountDetail({ account }: { account?: CompanyReceiptAccount | n
       <div className="kv"><b>账号</b><span>{account.accountNo}</span></div>
       <div className="kv"><b>SWIFT CODE</b><span>{account.swiftCode || "-"}</span></div>
       <div className="kv"><b>状态</b><span>{account.isActive ? "有效" : "已停用"}</span></div>
+      {!account.isActive ? <div className="kv"><b>停用时间</b><span>{account.disabledAt ? formatDate(account.disabledAt) : "-"}</span></div> : null}
+      {!account.isActive ? <div className="kv" style={{ gridColumn: "1 / -1" }}><b>停用原因</b><span className="warn-text">{account.disabledReason || "-"}</span></div> : null}
     </div>
   );
 }
