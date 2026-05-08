@@ -338,4 +338,5 @@ npm run cleanup:customer-history-spam:apply
 - [多人部署说明](./docs/06-multiplayer-deploy-notes.md)
 - [本地 PostgreSQL 与 CI 门禁](./docs/07-local-postgres-and-ci.md)
 - [生产数据安全](./docs/08-production-data-safety.md)
+- [国内部一期路由与开放契约](./docs/domestic-phase1-contract.md)
 - [合并版基线](./docs/KingaOS_技术栈与架构执行基线_v1.md)
