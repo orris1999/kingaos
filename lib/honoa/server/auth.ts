@@ -6,6 +6,7 @@ import { ALL_PERMISSION_KEYS } from "../shared/constants";
 import type { PermissionKey, User } from "../shared/domain-types";
 import { verifyPassword } from "../shared/password";
 import { prisma } from "./db";
+import { canAccessDomesticDashboard } from "./domestic-access";
 
 export type AuthUser = User & { permissionKeys: PermissionKey[] };
 
@@ -85,7 +86,7 @@ export function requireServerPermission(user: AuthUser, permissionKey: Permissio
 export function homePathForUser(user: AuthUser): string {
   if (hasServerPermission(user, "admin.dashboard.view")) return "/admin";
   if (user.department === "export" && hasServerPermission(user, "export.dashboard.view")) return "/export";
-  if (user.department === "domestic") return "/domestic";
+  if (user.department === "domestic" && canAccessDomesticDashboard(user)) return "/domestic";
   if (user.department === "technical") return "/technical";
   if (user.department === "finance") return "/finance";
   return "/login";
