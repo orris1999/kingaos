@@ -7,6 +7,22 @@
 - `docs/CHANGELOG.md`：给团队阅读，记录背景和规则。
 - `lib/honoa/shared/release-notes.ts`：给管理员页面展示。
 
+## 2026.05.12-04 Quote Task 001C KJ 报价草稿解析器 dry-run 加固
+
+- 类型：功能 / 数据
+- 影响范围：报价草稿规划、KJ 输入解析、纯内存 dry-run、领域测试
+- Migration：无
+- 生产数据命令：未运行
+- 生产数据风险：无
+- Release note id：`2026-05-12-04-quote-draft-parser-dry-run`
+- Commit：待填写
+
+主要变化：
+
+- 增强 `parseQuoteDraftInput`，支持空格、逗号、中文逗号、`*`、`x` 等常见业务员粘贴格式。
+- 增加缺少数量、数量异常、OEM 暂不支持、KJ 缺失 / 重复等更清晰的草稿 warning。
+- 新增 `npm run quote-draft:dry-run`，只使用 mock 数据输出报价草稿候选，不读 Excel、不写数据库、不生成正式报价。
+
 ## 2026.05.12-03 Quote Task 001B KJ 报价草稿解析器纯内存原型
 
 - 类型：功能 / 数据

@@ -1,6 +1,6 @@
 import type { QuoteDraftInputLine, QuoteDraftRequestedCodeType } from "./types";
 
-const QUANTITY_PATTERN = /(?:^|[\s,，])(\d+(?:\.\d+)?)(?:\s*(?:PCS|PCS\.|PC|件|个|套))?(?=$|[\s,，])/i;
+const QUANTITY_PATTERN = /^[\s,，*]*(?:[xX×]\s*)?(-?\d+(?:\.\d+)?)(?:\s*(?:PCS\.?|PC|件|个|套))?(?=$|[\s,，]|[^0-9.])/i;
 
 function detectRequestedCodeType(code: string): QuoteDraftRequestedCodeType {
   const normalized = code.normalize("NFKC").trim().toUpperCase();
@@ -29,12 +29,15 @@ function detectRequestedCodeType(code: string): QuoteDraftRequestedCodeType {
 }
 
 function getRequestedCode(line: string) {
-  const firstSegment = line.split(/[,\uFF0C]/)[0]?.trim() ?? "";
-  return firstSegment.split(/\s+/)[0]?.trim() ?? "";
+  const normalized = line.normalize("NFKC").trim();
+  return normalized.match(/^([^\s,，*]+)/)?.[1]?.trim() ?? "";
 }
 
 function removeFirstQuantity(text: string) {
-  return text.replace(QUANTITY_PATTERN, " ").replace(/^[\s,，]+|[\s,，]+$/g, "").trim();
+  return text
+    .replace(QUANTITY_PATTERN, " ")
+    .replace(/^[\s,，*xX×]+|[\s,，]+$/g, "")
+    .trim();
 }
 
 export function parseQuoteDraftInput(text: string): QuoteDraftInputLine[] {
@@ -44,18 +47,29 @@ export function parseQuoteDraftInput(text: string): QuoteDraftInputLine[] {
     .filter(Boolean)
     .map((rawInput) => {
       const requestedCode = getRequestedCode(rawInput);
-      const quantityMatch = rawInput.match(QUANTITY_PATTERN);
+      const afterCode = rawInput.normalize("NFKC").slice(rawInput.normalize("NFKC").indexOf(requestedCode) + requestedCode.length).trim();
+      const quantityMatch = afterCode.match(QUANTITY_PATTERN);
       const quantity = quantityMatch ? Number(quantityMatch[1]) : undefined;
-      const afterCode = rawInput.slice(rawInput.indexOf(requestedCode) + requestedCode.length).trim();
       const customerNote = removeFirstQuantity(afterCode).replace(/^[,，]+/, "").trim() || undefined;
+      const warnings: string[] = [];
+
+      if (!requestedCode) {
+        warnings.push("未识别到请求编码，需要人工确认。");
+      }
+
+      if (!quantityMatch) {
+        warnings.push("缺少数量，请人工确认。");
+      } else if (!Number.isFinite(quantity) || Number(quantity) <= 0) {
+        warnings.push("数量异常，请输入大于 0 的数量。");
+      }
 
       return {
         rawInput,
         requestedCode,
         requestedCodeType: detectRequestedCodeType(requestedCode),
         quantity,
-        customerNote
+        customerNote,
+        warnings
       };
     });
 }
-

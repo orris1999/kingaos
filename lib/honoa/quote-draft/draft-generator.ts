@@ -79,7 +79,7 @@ function unsupportedCodeCandidate(line: QuoteDraftInputLine, lineNo: number): Qu
     imageStatus: "not_supported_yet",
     quantity: line.quantity,
     priceStatus: "missing",
-    warnings: ["V1 暂不支持 OEM / OE 自动匹配，请提供 KJ 或进入人工匹配。"]
+    warnings: [...line.warnings, "OEM / OE 自动匹配暂未开放，请提供 KJ 或进入人工匹配。"]
   };
 }
 
@@ -104,7 +104,7 @@ export function generateQuoteDraftCandidates(
         imageStatus: "not_supported_yet",
         quantity: line.quantity,
         priceStatus: "missing",
-        warnings: ["输入编码类型不明确，需要人工确认。"]
+        warnings: [...line.warnings, "输入编码类型不明确，需要技术确认。"]
       };
     }
 
@@ -121,7 +121,7 @@ export function generateQuoteDraftCandidates(
         imageStatus: "missing",
         quantity: line.quantity,
         priceStatus: "missing",
-        warnings: [...normalized.warnings, "未找到 KJ，请检查编码或提交人工确认。"]
+        warnings: [...line.warnings, ...normalized.warnings, "KJ 未找到，请检查编码或提交人工确认。"]
       };
     }
 
@@ -136,7 +136,7 @@ export function generateQuoteDraftCandidates(
         imageStatus: "not_supported_yet",
         quantity: line.quantity,
         priceStatus: "requires_finance_review",
-        warnings: [...normalized.warnings, "找到多个 KJ 候选，请人工选择。"]
+        warnings: [...line.warnings, ...normalized.warnings, "KJ 匹配多个候选，请人工选择。"]
       };
     }
 
@@ -161,8 +161,7 @@ export function generateQuoteDraftCandidates(
       unit: item.unit,
       priceStatus: price.priceStatus,
       priceCandidate: item.priceCandidate,
-      warnings: [...normalized.warnings, ...(item.warnings ?? []), ...image.warnings, ...price.warnings]
+      warnings: [...line.warnings, ...normalized.warnings, ...(item.warnings ?? []), ...image.warnings, ...price.warnings]
     };
   });
 }
-

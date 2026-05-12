@@ -25,6 +25,23 @@ export const RELEASE_CATEGORY_LABELS: Record<ReleaseNoteCategory, string> = {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-05-12-04-quote-draft-parser-dry-run",
+    date: "2026-05-12",
+    version: "2026.05.12-04",
+    title: "Quote Task 001C KJ 报价草稿解析器 dry-run 加固",
+    category: "feature",
+    summary: [
+      "增强 KJ 批量输入解析，支持空格、逗号、中文逗号、* 和 x 等常见粘贴格式。",
+      "补充缺少数量、数量异常、OEM 暂不支持、KJ 缺失 / 重复等业务 warning。",
+      "新增 quote-draft dry-run 脚本，只使用 mock 数据输出草稿候选，不读 Excel、不写数据库。"
+    ],
+    affectedAreas: ["报价草稿规划", "KJ 输入解析", "纯内存 dry-run", "领域测试"],
+    migration: "none",
+    productionDataCommand: "none",
+    productionDataRisk: "none",
+    commitHash: "待填写"
+  },
+  {
     id: "2026-05-12-03-quote-draft-parser-memory-prototype",
     date: "2026-05-12",
     version: "2026.05.12-03",

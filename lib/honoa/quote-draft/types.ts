@@ -35,6 +35,7 @@ export type QuoteDraftInputLine = {
   requestedCodeType: QuoteDraftRequestedCodeType;
   quantity?: number;
   customerNote?: string;
+  warnings: string[];
 };
 
 export type QuoteDraftPriceCandidate = {
@@ -78,4 +79,3 @@ export type QuoteDraftLineCandidate = {
   priceCandidate?: QuoteDraftPriceCandidate;
   warnings: string[];
 };
-

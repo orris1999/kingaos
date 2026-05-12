@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import {
   generateQuoteDraftCandidates,
   normalizeKjCode,
@@ -69,12 +70,74 @@ describe("Quote Task 001B KJ 报价草稿解析器纯内存原型", () => {
     });
   });
 
+  it("parseQuoteDraftInput 支持 KJ12345 100 pcs", () => {
+    const [line] = parseQuoteDraftInput("KJ12345 100 pcs");
+
+    expect(line.requestedCode).toBe("KJ12345");
+    expect(line.quantity).toBe(100);
+    expect(line.warnings).toEqual([]);
+  });
+
+  it("parseQuoteDraftInput 支持 KJ12345*100", () => {
+    const [line] = parseQuoteDraftInput("KJ12345*100");
+
+    expect(line.requestedCode).toBe("KJ12345");
+    expect(line.quantity).toBe(100);
+  });
+
+  it("parseQuoteDraftInput 支持 KJ12345 x 100", () => {
+    const [line] = parseQuoteDraftInput("KJ12345 x 100");
+
+    expect(line.requestedCode).toBe("KJ12345");
+    expect(line.quantity).toBe(100);
+  });
+
+  it("parseQuoteDraftInput 支持中文逗号", () => {
+    const [line] = parseQuoteDraftInput("KJ12345，100，客户要求打托");
+
+    expect(line.requestedCode).toBe("KJ12345");
+    expect(line.quantity).toBe(100);
+    expect(line.customerNote).toBe("客户要求打托");
+  });
+
   it("parseQuoteDraftInput 能保留客户备注", () => {
     const [line] = parseQuoteDraftInput("KJ-ABC-001, 50, 客户要中性包装");
 
     expect(line.requestedCode).toBe("KJ-ABC-001");
     expect(line.quantity).toBe(50);
     expect(line.customerNote).toBe("客户要中性包装");
+  });
+
+  it("parseQuoteDraftInput 支持空格分隔备注", () => {
+    const [line] = parseQuoteDraftInput("KJ-ABC-001 50 客户要中性包装");
+
+    expect(line.requestedCode).toBe("KJ-ABC-001");
+    expect(line.quantity).toBe(50);
+    expect(line.customerNote).toBe("客户要中性包装");
+  });
+
+  it("没有数量时保留输入并加 warning", () => {
+    const [line] = parseQuoteDraftInput("KJ12345");
+    const [candidate] = generateQuoteDraftCandidates([line], mockCatalog);
+
+    expect(line.rawInput).toBe("KJ12345");
+    expect(line.quantity).toBeUndefined();
+    expect(line.warnings).toContain("缺少数量，请人工确认。");
+    expect(candidate.warnings).toContain("缺少数量，请人工确认。");
+  });
+
+  it("数量为 0 时加 warning", () => {
+    const [line] = parseQuoteDraftInput("KJ12345 0");
+
+    expect(line.quantity).toBe(0);
+    expect(line.warnings).toContain("数量异常，请输入大于 0 的数量。");
+  });
+
+  it("数量为负数时加 warning", () => {
+    const [line] = parseQuoteDraftInput("KJ12345 -5");
+
+    expect(line.quantity).toBe(-5);
+    expect(line.warnings).toContain("数量异常，请输入大于 0 的数量。");
   });
 
   it("KJ 精确匹配返回 matched_by_kj", () => {
@@ -124,6 +187,15 @@ describe("Quote Task 001B KJ 报价草稿解析器纯内存原型", () => {
     expect(candidate.imageStatus).toBe("not_supported_yet");
   });
 
+  it("unknown 输入返回 requires_technical_review", () => {
+    const lines = parseQuoteDraftInput("ABC-UNKNOWN 10");
+    const [candidate] = generateQuoteDraftCandidates(lines, mockCatalog);
+
+    expect(lines[0].requestedCodeType).toBe("unknown");
+    expect(candidate.matchStatus).toBe("requires_technical_review");
+    expect(candidate.warnings).toContain("输入编码类型不明确，需要技术确认。");
+  });
+
   it("无图片返回 imageStatus = missing", () => {
     const lines = parseQuoteDraftInput("KJ67890 2");
     const [candidate] = generateQuoteDraftCandidates(lines, mockCatalog);
@@ -160,6 +232,13 @@ describe("Quote Task 001B KJ 报价草稿解析器纯内存原型", () => {
     expect(Object.prototype.hasOwnProperty.call(candidate, forbiddenKey)).toBe(false);
   });
 
+  it("warnings 不包含真实价格金额", () => {
+    const lines = parseQuoteDraftInput("KJ12345 2");
+    const [candidate] = generateQuoteDraftCandidates(lines, mockCatalog);
+
+    expect(candidate.warnings.join("\n")).not.toContain("12.5");
+  });
+
   it("输出 DTO 不包含正式报价或发送客户状态", () => {
     const lines = parseQuoteDraftInput("KJ12345 2");
     const [candidate] = generateQuoteDraftCandidates(lines, mockCatalog);
@@ -167,6 +246,16 @@ describe("Quote Task 001B KJ 报价草稿解析器纯内存原型", () => {
 
     expect(serialized).not.toContain(["sent", "to", "customer"].join("_"));
     expect(serialized).not.toContain("official" + "Quote");
+  });
+
+  it("dry-run 脚本不读 Excel、不写数据库", () => {
+    const script = readFileSync("scripts/quote-draft-dry-run.mjs", "utf8");
+
+    expect(script).not.toContain(".xlsx");
+    expect(script).not.toContain(".xls");
+    expect(script).not.toContain("PrismaClient");
+    expect(script).not.toContain("DATABASE_URL");
+    expect(script).not.toContain("prisma.");
   });
 
   it("纯内存 parser 不需要数据库即可运行", () => {

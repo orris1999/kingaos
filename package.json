@@ -25,6 +25,7 @@
     "backfill:customer-identities": "node scripts/backfill-customer-identities.mjs",
     "cleanup:customer-history-spam:dry-run": "node scripts/cleanup-customer-field-history-spam.mjs --dry-run",
     "cleanup:customer-history-spam:apply": "node scripts/cleanup-customer-field-history-spam.mjs --apply",
+    "quote-draft:dry-run": "node scripts/quote-draft-dry-run.mjs",
     "postinstall": "prisma generate"
   },
   "dependencies": {
