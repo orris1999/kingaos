@@ -24,6 +24,16 @@ function normalizeComparableText(value: string) {
   return value.normalize("NFKC").trim().toLowerCase();
 }
 
+function doesHeaderMatchCandidate(header: string, candidate: string) {
+  const normalizedHeader = normalizeComparableText(header);
+  const normalizedCandidate = normalizeComparableText(candidate);
+
+  return (
+    normalizedHeader === normalizedCandidate ||
+    (normalizedCandidate.length >= 4 && normalizedHeader.includes(normalizedCandidate))
+  );
+}
+
 function unique(values: string[]) {
   return Array.from(new Set(values.filter(Boolean)));
 }
@@ -155,13 +165,11 @@ export function matchQuoteSourceAdapter(metadata: QuoteSourceWorkbookMetadata): 
 }
 
 function mapColumnsForHeaders(columnMapping: QuoteColumnMapping, headers: string[]) {
-  const normalizedHeaderByRaw = new Map(headers.map((header) => [normalizeComparableText(header), header]));
   const mappedColumns: Record<string, string[]> = {};
 
   for (const [fieldKey, candidates] of Object.entries(columnMapping)) {
     const matchedHeaders = (candidates ?? [])
-      .map((candidate) => normalizedHeaderByRaw.get(normalizeComparableText(candidate)))
-      .filter((header): header is string => Boolean(header));
+      .flatMap((candidate) => headers.filter((header) => doesHeaderMatchCandidate(header, candidate)));
 
     if (matchedHeaders.length > 0) {
       mappedColumns[fieldKey] = unique([...(mappedColumns[fieldKey] ?? []), ...matchedHeaders]);

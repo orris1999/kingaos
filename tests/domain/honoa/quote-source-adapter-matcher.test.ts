@@ -135,13 +135,14 @@ describe("Quote Task 003B 报价表 adapter matcher", () => {
       fileType: "xls",
       detectedSheets: ["2026年冷凝器成本核算"],
       detectedHeadersBySheet: {
-        "2026年冷凝器成本核算": ["KJ编码", "OE", "出口成本", "车型车系"]
+        "2026年冷凝器成本核算": ["KJ编码", "OE", "2026.5.11出口成本", "车型车系"]
       }
     });
 
     expect(summary.mappedColumns.kjCode).toEqual(["KJ编码"]);
     expect(summary.mappedColumns.oemCode).toEqual(["OE"]);
-    expect(summary.mappedColumns.costPrice).toEqual(["出口成本"]);
+    expect(summary.mappedColumns.costPrice).toEqual(["2026.5.11出口成本"]);
+    expect(summary.mappedColumns.quotePrice).toBeUndefined();
     expect(summary.mappedColumns.productName).toEqual(["车型车系"]);
   });
 

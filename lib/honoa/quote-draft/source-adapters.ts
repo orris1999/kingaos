@@ -19,7 +19,7 @@ const MULTI_CODE_MAPPING: QuoteColumnMapping = {
   specification: ["规格", "芯体", "芯体总成尺寸", "纸箱尺寸", "波距", "厚度"],
   category: ["车型类别", "自产/外购", "PA/BA", "A/B", "AT/MT"],
   costPrice: ["出口成本", "出口成本价", "出口成本报价", "出口部内销成本", "出口部内销成本价", "出口部内销成本报价"],
-  quotePrice: ["报价", "单价", "成本报价"],
+  quotePrice: ["报价", "单价"],
   packaging: ["纸箱尺寸", "纸箱", "包装", "包装方案成本价"],
   unit: ["单位"],
   moq: ["MOQ", "起订量"],
@@ -34,6 +34,7 @@ const RADIATOR_LIKE_MAPPING: QuoteColumnMapping = {
   model: ["车系", "车型", "型号"],
   specification: ["规格", "芯体", "主板/水室", "纸箱", "厚度", "波距"],
   costPrice: ["出口成本报价", "出口部内销成本报价", "包装方案成本价"],
+  packaging: ["纸箱(内尺寸)", "纸箱", "包装", "包装方案成本价"],
   notes: ["备注", "是否允限销", "能否报价"]
 };
 

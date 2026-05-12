@@ -91,6 +91,16 @@ function normalizeHeaderCandidate(value) {
   return String(value ?? "").normalize("NFKC").trim().toLowerCase();
 }
 
+function doesHeaderMatchCandidate(header, candidate) {
+  const normalizedHeader = normalizeHeaderCandidate(header);
+  const normalizedCandidate = normalizeHeaderCandidate(candidate);
+
+  return (
+    normalizedHeader === normalizedCandidate ||
+    (normalizedCandidate.length >= 4 && normalizedHeader.includes(normalizedCandidate))
+  );
+}
+
 function getAllColumnHeaderCandidates(adapterId) {
   const configs = adapterId
     ? [getQuoteSourceWorkbookConfig(adapterId)].filter(Boolean)
@@ -134,7 +144,8 @@ function extractHeaderCandidatesFromSheet(sheet, maxRows, headerVocabulary) {
       }
 
       const normalized = normalizeHeaderCandidate(value);
-      if (headerVocabulary.has(normalized)) {
+      const isKnownHeader = Array.from(headerVocabulary).some((candidate) => doesHeaderMatchCandidate(normalized, candidate));
+      if (isKnownHeader) {
         rowHeaders.push(String(value).normalize("NFKC").trim());
       }
     }
