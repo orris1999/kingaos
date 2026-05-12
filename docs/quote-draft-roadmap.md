@@ -86,7 +86,7 @@ V2 暂不做：
 
 ## 下一步建议
 
-Quote Task 003A 已建立报价表 workbook / sheet adapter 的结构配置和 dry-run summary 类型。Quote Task 003B 进一步补充了基于 mock workbook metadata 的 adapter matcher：先用文件名、文件类型、sheet 名称和 mock 表头做结构化匹配，不读取真实 Excel、不提取价格、不写生产库。下一步进入真实 Excel 读取前，仍建议先做本地 / staging 的只读 dry-run，不触碰生产库：
+Quote Task 003A 已建立报价表 workbook / sheet adapter 的结构配置和 dry-run summary 类型。Quote Task 003B 进一步补充了基于 mock workbook metadata 的 adapter matcher：先用文件名、文件类型、sheet 名称和 mock 表头做结构化匹配，不读取真实 Excel、不提取价格、不写生产库。Quote Task 003C 增加本地只读 CLI，用于显式指定单个 Excel 文件并输出结构摘要，不输出真实价格明细、不写数据库、不导入报价表。下一步进入真实 Excel 读取前，仍建议先做本地 / staging 的只读 dry-run，不触碰生产库：
 
 1. 在 Finance / FinancePricing 域设计未来报价表提交入口，例如 `/finance/quote-source-tables`，先只做 dry-run。
 2. dry-run 只读取 Excel 结构，不导入价格，不写生产 PostgreSQL。
