@@ -1,5 +1,7 @@
 export type QuoteSourceFileType = "xls" | "xlsx";
 
+export type QuoteSourceWorkbookMetadataFileType = QuoteSourceFileType | "unknown";
+
 export type QuoteSourceSubmitterRole = "finance";
 
 export type QuoteSourceConsumerDepartment = "export";
@@ -55,6 +57,27 @@ export type QuoteSourceWorkbookConfig = {
   primarySheets: QuoteSourceSheetConfig[];
   auxiliarySheets?: QuoteSourceSheetConfig[];
   notes?: string[];
+};
+
+export type QuoteSourceWorkbookMetadata = {
+  sourceFileName: string;
+  fileType: QuoteSourceWorkbookMetadataFileType;
+  detectedSheets: string[];
+  detectedHeadersBySheet?: Record<string, string[]>;
+};
+
+export type QuoteSourceAdapterMatchConfidence = "high" | "medium" | "low" | "none";
+
+export type QuoteSourceAdapterMatchResult = {
+  matchedAdapter: boolean;
+  adapterId?: string;
+  category?: string;
+  confidence: QuoteSourceAdapterMatchConfidence;
+  submittedByRole?: QuoteSourceSubmitterRole;
+  consumerDepartment?: QuoteSourceConsumerDepartment;
+  matchedReasons: string[];
+  warnings: string[];
+  unsupportedReasons: string[];
 };
 
 export type QuoteSourceDryRunSummary = {

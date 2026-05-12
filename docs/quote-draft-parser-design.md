@@ -119,6 +119,7 @@ Quote Task 003A 已将只描述结构的 adapter 配置落在：
 
 - `lib/honoa/quote-draft/source-adapter-types.ts`
 - `lib/honoa/quote-draft/source-adapters.ts`
+- `lib/honoa/quote-draft/source-adapter-matcher.ts`
 
 这些配置只描述文件模式、sheet 角色、表头行提示、列名候选、图片策略、价格候选策略和风险提示：
 
@@ -127,6 +128,14 @@ Quote Task 003A 已将只描述结构的 adapter 配置落在：
 - 出口部只能消费财务提交的数据生成报价草稿，不能上传或维护报价表。
 - adapter 配置不包含任何真实价格、客户价格、底价、毛利或财务批准价格。
 - 未来 dry-run 只输出结构匹配、字段映射、缺失字段和风险提示，不写生产数据库、不自动批准价格、不生成正式报价。
+
+Quote Task 003B 在不读取真实 Excel 的前提下补充了 adapter matcher 和 mock dry-run summary skeleton：
+
+- 输入只接受 `QuoteSourceWorkbookMetadata`，包含文件名、文件类型、sheet 名称和可选 mock 表头。
+- matcher 只根据 `fileNamePattern`、`supportedFileTypes`、`sheetNameHint` 和列名候选做结构判断。
+- `submittedByRole` 仍固定为 `finance`，`consumerDepartment` 仍固定为 `export`。
+- dry-run summary 可以输出 adapter 匹配置信度、字段映射候选、缺失关键列 warning 和风险提示。
+- 当前不读取文件内容、不提取 KJ / OEM 真实值、不读取价格、不写数据库、不生成正式报价。
 
 ```ts
 type QuoteSourceWorkbookConfig = {
