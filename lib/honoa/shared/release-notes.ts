@@ -25,6 +25,23 @@ export const RELEASE_CATEGORY_LABELS: Record<ReleaseNoteCategory, string> = {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-05-12-02-quote-draft-parser-design",
+    date: "2026-05-12",
+    version: "2026.05.12-02",
+    title: "Quote Task 001A KJ 报价草稿解析器技术设计",
+    category: "docs",
+    summary: [
+      "定义 KJ 规范化规则、sourceCodeType 和主 KJ 字段优先级。",
+      "设计 workbook / sheet adapter、报价草稿输入和候选 DTO、异常状态与人工处理提示。",
+      "明确 priceCandidate 不是 FinanceApprovedPrice，V1 不生成正式报价、不导入生产数据库。"
+    ],
+    affectedAreas: ["报价草稿规划", "KJ 规范化", "价格边界", "测试验收"],
+    migration: "none",
+    productionDataCommand: "none",
+    productionDataRisk: "none",
+    commitHash: "待填写"
+  },
+  {
     id: "2026-05-12-01-quote-draft-data-audit",
     date: "2026-05-12",
     version: "2026.05.12-01",

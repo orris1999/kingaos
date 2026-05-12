@@ -7,6 +7,22 @@
 - `docs/CHANGELOG.md`：给团队阅读，记录背景和规则。
 - `lib/honoa/shared/release-notes.ts`：给管理员页面展示。
 
+## 2026.05.12-02 Quote Task 001A KJ 报价草稿解析器技术设计
+
+- 类型：文档 / 数据
+- 影响范围：报价草稿规划、KJ 规范化、价格边界、测试验收
+- Migration：无
+- 生产数据命令：未运行
+- 生产数据风险：无
+- Release note id：`2026-05-12-02-quote-draft-parser-design`
+- Commit：待填写
+
+主要变化：
+
+- 新增 `docs/quote-draft-parser-design.md`，定义 KJ 规范化、 workbook / sheet adapter、报价草稿 DTO、异常状态和图片策略。
+- 新增 `docs/quote-draft-v1-acceptance.md`，明确 V1 KJ 批量报价草稿验收标准。
+- 更新 `docs/quote-draft-roadmap.md`，将下一步拆为纯内存 parser 原型，继续不导入生产数据库、不生成正式报价。
+
 ## 2026.05.12-01 Quote Task 000 报价表结构盘点
 
 - 类型：文档 / 数据

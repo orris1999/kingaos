@@ -35,10 +35,11 @@ describe("管理员版本更新日志和 SaaS 视觉基线", () => {
   });
 
   it("release-notes.ts 至少包含最近一次 UI/UX 更新和本轮更新", () => {
-    expect(RELEASE_NOTES[0].id).toBe("2026-05-12-01-quote-draft-data-audit");
-    expect(RELEASE_NOTES[0].title).toContain("报价表结构盘点");
+    expect(RELEASE_NOTES[0].id).toBe("2026-05-12-02-quote-draft-parser-design");
+    expect(RELEASE_NOTES[0].title).toContain("KJ 报价草稿解析器");
     expect(RELEASE_NOTES[0].migration).toBe("none");
     expect(RELEASE_NOTES[0].productionDataCommand).toBe("none");
+    expect(RELEASE_NOTES.some((note) => note.id === "2026-05-12-01-quote-draft-data-audit")).toBe(true);
     expect(RELEASE_NOTES.some((note) => note.id === "2026-05-07-11-customer-archive-ui-form-layout")).toBe(true);
     expect(RELEASE_NOTES.some((note) => note.id === "2026-05-07-12-admin-changelog-saas-visual-baseline")).toBe(true);
     expect(RELEASE_NOTES.some((note) => note.id === "2026-05-07-13-attachment-field-ui-dedup")).toBe(true);
@@ -50,6 +51,8 @@ describe("管理员版本更新日志和 SaaS 视觉基线", () => {
     const source = readRepoFile("docs/CHANGELOG.md");
 
     expect(existsSync(filePath)).toBe(true);
+    expect(source).toContain("2026.05.12-02");
+    expect(source).toContain("Quote Task 001A");
     expect(source).toContain("2026.05.12-01");
     expect(source).toContain("Quote Task 000");
     expect(source).toContain("2026.05.07-13");
