@@ -25,6 +25,23 @@ export const RELEASE_CATEGORY_LABELS: Record<ReleaseNoteCategory, string> = {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-05-12-01-quote-draft-data-audit",
+    date: "2026-05-12",
+    version: "2026.05.12-01",
+    title: "Quote Task 000 报价表结构盘点",
+    category: "docs",
+    summary: [
+      "只读盘点 8 个出口部成本报价表的 sheet、表头、字段结构和数据质量信号。",
+      "新增报价草稿数据字典，整理 KJ / OEM / 成本 / 包装 / 状态等字段映射建议。",
+      "明确下一阶段只做 KJ / OEM 批量报价草稿生成器，不做正式报价、不绕过 FinancePricing。"
+    ],
+    affectedAreas: ["报价草稿规划", "数据字典", "架构边界"],
+    migration: "none",
+    productionDataCommand: "none",
+    productionDataRisk: "none",
+    commitHash: "待填写"
+  },
+  {
     id: "2026-05-07-13-attachment-field-ui-dedup",
     date: "2026-05-07",
     version: "2026.05.07-13",

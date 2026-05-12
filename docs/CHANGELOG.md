@@ -7,6 +7,22 @@
 - `docs/CHANGELOG.md`：给团队阅读，记录背景和规则。
 - `lib/honoa/shared/release-notes.ts`：给管理员页面展示。
 
+## 2026.05.12-01 Quote Task 000 报价表结构盘点
+
+- 类型：文档 / 数据
+- 影响范围：报价草稿规划、数据字典、架构边界
+- Migration：无
+- 生产数据命令：未运行
+- 生产数据风险：无
+- Release note id：`2026-05-12-01-quote-draft-data-audit`
+- Commit：待填写
+
+主要变化：
+
+- 只读盘点 8 个出口部成本报价表的 sheet、表头、字段结构和数据质量信号。
+- 新增 `docs/quote-draft-data-audit.md`，记录 KJ / OEM / 成本 / 包装 / 状态等字段映射建议。
+- 新增 `docs/quote-draft-roadmap.md`，明确下一阶段只做 `KJ / OEM 批量报价草稿生成器`，不做正式报价、不绕过 FinancePricing。
+
 ## 2026.05.07-13 附件字段 UI 去重与联系人页简化
 
 - 类型：修复 / UI
