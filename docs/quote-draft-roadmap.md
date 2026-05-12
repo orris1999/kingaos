@@ -86,12 +86,10 @@ V2 暂不做：
 
 ## 下一步建议
 
-Quote Task 001A 已拆为纯技术设计，不实现功能。下一轮建议做 `Quote Task 001B - KJ 报价草稿解析器纯内存原型`：
+Quote Task 003A 已建立报价表 workbook / sheet adapter 的结构配置和 dry-run summary 类型。下一步进入真实 Excel 读取前，仍建议先做本地 / staging 的只读 dry-run，不触碰生产库：
 
-1. 定义导入 adapter 接口。
-2. 定义各品类 sheet 配置。
-3. 定义 KJ 规范化规则。
-4. 定义草稿输出 DTO。
-5. 定义冲突 / 缺失 / 风险提示结构。
-6. 使用本地 mock / fixture 验证 parser。
-7. 继续不导入生产数据库。
+1. 在 Finance / FinancePricing 域设计未来报价表提交入口，例如 `/finance/quote-source-tables`，先只做 dry-run。
+2. dry-run 只读取 Excel 结构，不导入价格，不写生产 PostgreSQL。
+3. 输出 adapter 匹配、sheet 检测、表头行、字段映射、缺失字段和风险提示。
+4. 出口部继续只使用 dry-run / staging 结果生成报价草稿，不维护报价表。
+5. 继续不做正式报价、财务批准价格、订单或合同。

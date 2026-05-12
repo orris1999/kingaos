@@ -115,6 +115,19 @@ type NormalizedKjCode = {
 
 报价表结构差异较大，应通过配置适配每个品类，不要把列号写死在业务逻辑中。
 
+Quote Task 003A 已将只描述结构的 adapter 配置落在：
+
+- `lib/honoa/quote-draft/source-adapter-types.ts`
+- `lib/honoa/quote-draft/source-adapters.ts`
+
+这些配置只描述文件模式、sheet 角色、表头行提示、列名候选、图片策略、价格候选策略和风险提示：
+
+- `submittedByRole` 固定为 `finance`。
+- `consumerDepartment` 固定为 `export`。
+- 出口部只能消费财务提交的数据生成报价草稿，不能上传或维护报价表。
+- adapter 配置不包含任何真实价格、客户价格、底价、毛利或财务批准价格。
+- 未来 dry-run 只输出结构匹配、字段映射、缺失字段和风险提示，不写生产数据库、不自动批准价格、不生成正式报价。
+
 ```ts
 type QuoteSourceWorkbookConfig = {
   id: string;
