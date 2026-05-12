@@ -10,27 +10,45 @@ function readRepoFile(relativePath: string) {
   return readFileSync(relativePath, "utf8");
 }
 
-describe("Quote Task 002B 管理员 KJ 报价草稿 Workbench", () => {
-  it("/admin/quote-draft-workbench 页面存在并只允许 super_admin", () => {
-    const page = readRepoFile("app/admin/quote-draft-workbench/page.tsx");
+describe("Quote Task 002C 出口部 KJ 报价草稿 Workbench", () => {
+  it("/admin 页面不再显示报价草稿 Workbench 入口", () => {
+    const page = readRepoFile("app/admin/page.tsx");
+
+    expect(page).not.toContain("/admin/quote-draft-workbench");
+    expect(page).not.toContain("/export/quote-draft-workbench");
+    expect(page).not.toContain("内部 mock 解析器演示");
+  });
+
+  it("/export 页面显示 workbench 入口但只给 super_admin", () => {
+    const page = readRepoFile("app/export/page.tsx");
+
+    expect(page).toContain("/export/quote-draft-workbench");
+    expect(page).toContain('user.role === "super_admin"');
+    expect(page).toContain("内部 mock 解析器演示");
+  });
+
+  it("/export/quote-draft-workbench 页面存在并只允许 super_admin", () => {
+    const page = readRepoFile("app/export/quote-draft-workbench/page.tsx");
 
     expect(page).toContain("QuoteDraftWorkbench");
     expect(page).toContain('user.role !== "super_admin"');
     expect(page).toContain("当前账号不能查看报价草稿解析器 Workbench");
   });
 
-  it("管理员首页显示 workbench 入口但只给 super_admin", () => {
-    const page = readRepoFile("app/admin/page.tsx");
+  it("旧 /admin/quote-draft-workbench 重定向到出口部 canonical route", () => {
+    const page = readRepoFile("app/admin/quote-draft-workbench/page.tsx");
 
-    expect(page).toContain("/admin/quote-draft-workbench");
-    expect(page).toContain('user.role === "super_admin"');
-    expect(page).toContain("内部 mock 解析器演示");
+    expect(page).toContain('redirect("/export/quote-draft-workbench")');
+    expect(page).not.toContain("@/components/quote-draft-workbench");
+    expect(page).not.toContain("<QuoteDraftWorkbench");
   });
 
-  it("页面显示 mock 数据和不是正式报价警示", () => {
+  it("页面显示 mock 数据、财务维护报价表和不是正式报价警示", () => {
     const component = readRepoFile("components/quote-draft-workbench.tsx");
 
     expect(component).toContain("当前使用 mock 数据，不读取真实报价表");
+    expect(component).toContain("未来真实报价表 / 成本表 / 价格候选数据由财务提交和维护");
+    expect(component).toContain("出口部只能基于财务数据生成报价草稿，不能上传或维护价格表");
     expect(component).toContain("本页面不会生成正式报价");
     expect(component).toContain("价格候选不是财务批准价格");
     expect(component).toContain("不能发客户");
@@ -91,7 +109,7 @@ describe("Quote Task 002B 管理员 KJ 报价草稿 Workbench", () => {
 
   it("workbench 不保存数据、不读取真实报价表、不接 API 或 server action", () => {
     const component = readRepoFile("components/quote-draft-workbench.tsx");
-    const page = readRepoFile("app/admin/quote-draft-workbench/page.tsx");
+    const page = readRepoFile("app/export/quote-draft-workbench/page.tsx");
     const mockCatalog = readRepoFile("lib/honoa/quote-draft/mock-catalog.ts");
 
     expect(component).not.toContain("fetch(");

@@ -43,13 +43,6 @@ export default async function AdminPage() {
               <span className="tag ok">已开放</span>
             </Link>
           ) : <DisabledCard title="版本更新日志" description="需要管理员角色" />}
-          {user.role === "super_admin" ? (
-            <Link className="card open" href="/admin/quote-draft-workbench">
-              <h2>报价草稿 Workbench</h2>
-              <p className="muted">内部 mock 解析器演示，不读取真实报价表，不生成正式报价。</p>
-              <span className="tag warn">内部原型</span>
-            </Link>
-          ) : <DisabledCard title="报价草稿 Workbench" description="仅 super_admin 可见" />}
           {canExport ? (
             <Link className="card open" href="/export">
               <h2>出口部</h2>

@@ -107,6 +107,8 @@ export function QuoteDraftWorkbench() {
       <section className="notice warn-notice">
         <h2>报价草稿解析器 Workbench</h2>
         <p>仅用于内部测试。当前使用 mock 数据，不读取真实报价表。</p>
+        <p>未来真实报价表 / 成本表 / 价格候选数据由财务提交和维护。</p>
+        <p>出口部只能基于财务数据生成报价草稿，不能上传或维护价格表。</p>
         <p>本页面不会生成正式报价，价格候选不是财务批准价格，不能发客户。</p>
       </section>
 
