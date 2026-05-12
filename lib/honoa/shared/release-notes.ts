@@ -25,6 +25,23 @@ export const RELEASE_CATEGORY_LABELS: Record<ReleaseNoteCategory, string> = {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-05-12-05-quote-draft-workbench-mock",
+    date: "2026-05-12",
+    version: "2026.05.12-05",
+    title: "Quote Task 002A KJ 报价草稿 Workbench（mock）",
+    category: "feature",
+    summary: [
+      "新增 super_admin-only 的 /admin/quote-draft-workbench 内部页面。",
+      "页面复用纯内存 parser / generator 和 mock catalog，不读取真实报价表、不保存数据。",
+      "醒目标注结果只是报价草稿，不是正式报价，价格候选不是财务批准价格。"
+    ],
+    affectedAreas: ["管理员后台", "报价草稿规划", "内部 mock workbench"],
+    migration: "none",
+    productionDataCommand: "none",
+    productionDataRisk: "none",
+    commitHash: "待填写"
+  },
+  {
     id: "2026-05-12-04-quote-draft-parser-dry-run",
     date: "2026-05-12",
     version: "2026.05.12-04",

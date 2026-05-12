@@ -7,6 +7,22 @@
 - `docs/CHANGELOG.md`：给团队阅读，记录背景和规则。
 - `lib/honoa/shared/release-notes.ts`：给管理员页面展示。
 
+## 2026.05.12-05 Quote Task 002A KJ 报价草稿 Workbench（mock）
+
+- 类型：功能 / UI
+- 影响范围：管理员后台、报价草稿规划、内部 mock workbench
+- Migration：无
+- 生产数据命令：未运行
+- 生产数据风险：无
+- Release note id：`2026-05-12-05-quote-draft-workbench-mock`
+- Commit：待填写
+
+主要变化：
+
+- 新增 `/admin/quote-draft-workbench`，仅 `super_admin` 可访问，用于内部演示 KJ 报价草稿解析器。
+- 页面使用 Quote Task 001C 的纯内存 parser / generator 和 mock catalog，不读取真实报价表、不保存数据。
+- 页面醒目标注“不是正式报价、价格候选不是财务批准价格、不能发客户”。
+
 ## 2026.05.12-04 Quote Task 001C KJ 报价草稿解析器 dry-run 加固
 
 - 类型：功能 / 数据

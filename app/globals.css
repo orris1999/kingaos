@@ -551,6 +551,33 @@ tbody tr:hover {
   white-space: nowrap;
 }
 
+.quote-draft-table {
+  min-width: 1320px;
+}
+
+.quote-draft-table th,
+.quote-draft-table td {
+  white-space: nowrap;
+}
+
+.quote-draft-raw-cell {
+  min-width: 180px;
+  max-width: 260px;
+  white-space: normal;
+  font-weight: 700;
+}
+
+.quote-draft-warning-cell {
+  min-width: 260px;
+  max-width: 380px;
+  white-space: normal;
+}
+
+.quote-draft-warning-cell ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
 .receipt-account-compact {
   display: inline-grid;
   gap: 5px;
@@ -694,6 +721,11 @@ th {
   border: 1px solid #c9d8e8;
   border-radius: var(--kinga-radius-md);
   background: #f7faf9;
+}
+
+.warn-notice {
+  border-color: #f2d08a;
+  background: var(--kinga-warning-bg);
 }
 
 .notice p {
