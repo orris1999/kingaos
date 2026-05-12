@@ -7,6 +7,22 @@
 - `docs/CHANGELOG.md`：给团队阅读，记录背景和规则。
 - `lib/honoa/shared/release-notes.ts`：给管理员页面展示。
 
+## 2026.05.12-03 Quote Task 001B KJ 报价草稿解析器纯内存原型
+
+- 类型：功能 / 数据
+- 影响范围：报价草稿规划、KJ 规范化、纯内存 parser、领域测试
+- Migration：无
+- 生产数据命令：未运行
+- 生产数据风险：无
+- Release note id：`2026-05-12-03-quote-draft-parser-memory-prototype`
+- Commit：待填写
+
+主要变化：
+
+- 新增 `lib/honoa/quote-draft/**` 纯内存 domain 原型，不接 UI、不接数据库、不导入报价表。
+- 实现 KJ 规范化、批量输入解析和基于 mock catalog 的 KJ 精确匹配。
+- 输出 `QuoteDraftLineCandidate`，明确 `priceCandidate` 只是价格候选，不是财务批准价格，也不会生成正式报价。
+
 ## 2026.05.12-02 Quote Task 001A KJ 报价草稿解析器技术设计
 
 - 类型：文档 / 数据

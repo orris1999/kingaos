@@ -25,6 +25,23 @@ export const RELEASE_CATEGORY_LABELS: Record<ReleaseNoteCategory, string> = {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-05-12-03-quote-draft-parser-memory-prototype",
+    date: "2026-05-12",
+    version: "2026.05.12-03",
+    title: "Quote Task 001B KJ 报价草稿解析器纯内存原型",
+    category: "feature",
+    summary: [
+      "新增 lib/honoa/quote-draft 纯内存 domain 原型，不接 UI / DB。",
+      "实现 KJ 规范化、批量输入解析和 mock catalog KJ 精确匹配。",
+      "输出 QuoteDraftLineCandidate，并把成本候选标记为非财务批准价格。"
+    ],
+    affectedAreas: ["报价草稿规划", "KJ 规范化", "纯内存 parser", "领域测试"],
+    migration: "none",
+    productionDataCommand: "none",
+    productionDataRisk: "none",
+    commitHash: "待填写"
+  },
+  {
     id: "2026-05-12-02-quote-draft-parser-design",
     date: "2026-05-12",
     version: "2026.05.12-02",
