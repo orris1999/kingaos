@@ -24,17 +24,17 @@ const CODE_TYPE_LABELS: Record<QuoteDraftRequestedCodeType, string> = {
 };
 
 const MATCH_STATUS_LABELS: Record<QuoteDraftMatchStatus, string> = {
-  matched_by_kj: "KJ 命中",
+  matched_by_kj: "KJ 已匹配",
   kj_not_found: "KJ 未找到",
   ambiguous_kj: "KJ 多候选",
   matched_by_oem_candidate: "OEM 候选命中",
-  oem_not_supported_yet: "OEM 暂不支持",
-  requires_technical_review: "需要技术确认"
+  oem_not_supported_yet: "OEM 暂未开放",
+  requires_technical_review: "需技术确认"
 };
 
 const IMAGE_STATUS_LABELS: Record<QuoteDraftImageStatus, string> = {
-  available: "有稳定图片",
-  missing: "缺少图片",
+  available: "有图片",
+  missing: "缺图片",
   embedded_only: "仅 Excel 嵌入图",
   not_supported_yet: "暂不支持"
 };
@@ -42,10 +42,10 @@ const IMAGE_STATUS_LABELS: Record<QuoteDraftImageStatus, string> = {
 const PRICE_STATUS_LABELS: Record<QuoteDraftPriceStatus, string> = {
   candidate_cost_available: "成本候选",
   candidate_quote_available: "报价候选",
-  missing: "缺少价格",
+  missing: "无价格",
   expired: "已过期",
-  requires_finance_review: "需财务确认",
-  not_finance_approved: "非财务批准价"
+  requires_finance_review: "需财务核价",
+  not_finance_approved: "非财务批准价格"
 };
 
 function statusClass(candidate: QuoteDraftLineCandidate) {
@@ -67,13 +67,40 @@ function hasForbiddenQuoteFields(candidate: QuoteDraftLineCandidate) {
 export function QuoteDraftWorkbench() {
   const [input, setInput] = useState(QUOTE_DRAFT_WORKBENCH_SAMPLE_INPUT);
   const [submittedInput, setSubmittedInput] = useState(QUOTE_DRAFT_WORKBENCH_SAMPLE_INPUT);
+  const [copyMessage, setCopyMessage] = useState("");
 
   const inputLines = useMemo(() => parseQuoteDraftInput(submittedInput), [submittedInput]);
   const candidates = useMemo(
     () => generateQuoteDraftCandidates(inputLines, QUOTE_DRAFT_MOCK_CATALOG),
     [inputLines]
   );
+  const summary = useMemo(() => ({
+    total: candidates.length,
+    matchedByKj: candidates.filter((candidate) => candidate.matchStatus === "matched_by_kj").length,
+    kjNotFound: candidates.filter((candidate) => candidate.matchStatus === "kj_not_found").length,
+    oemNotSupported: candidates.filter((candidate) => candidate.matchStatus === "oem_not_supported_yet").length,
+    missingImage: candidates.filter((candidate) => candidate.imageStatus === "missing").length,
+    missingPrice: candidates.filter((candidate) => candidate.priceStatus === "missing").length,
+    notFinanceApproved: candidates.filter((candidate) => candidate.priceStatus === "not_finance_approved").length,
+    technicalReview: candidates.filter((candidate) => candidate.matchStatus === "requires_technical_review").length
+  }), [candidates]);
   const forbiddenOutputDetected = candidates.some(hasForbiddenQuoteFields);
+
+  function fillSampleInput() {
+    setInput(QUOTE_DRAFT_WORKBENCH_SAMPLE_INPUT);
+    setSubmittedInput(QUOTE_DRAFT_WORKBENCH_SAMPLE_INPUT);
+    setCopyMessage("");
+  }
+
+  async function copyResultJson() {
+    const payload = {
+      notice: "mock 数据，仅用于内部报价草稿解析器 workbench；不是正式报价，价格候选不是财务批准价格。",
+      inputLines,
+      candidates
+    };
+    await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+    setCopyMessage("已复制 mock 结果 JSON。");
+  }
 
   return (
     <div className="stack" data-testid="quote-draft-workbench">
@@ -101,8 +128,14 @@ export function QuoteDraftWorkbench() {
           />
         </label>
         <div className="actions">
+          <button className="ghost" type="button" onClick={fillSampleInput}>
+            填入示例
+          </button>
           <button type="button" onClick={() => setSubmittedInput(input)}>
             生成草稿候选
+          </button>
+          <button className="secondary" type="button" onClick={copyResultJson} disabled={candidates.length === 0}>
+            复制结果 JSON
           </button>
           <button
             className="ghost"
@@ -110,11 +143,13 @@ export function QuoteDraftWorkbench() {
             onClick={() => {
               setInput("");
               setSubmittedInput("");
+              setCopyMessage("");
             }}
           >
             清空
           </button>
         </div>
+        {copyMessage ? <p className="ok-text tiny">{copyMessage}</p> : null}
       </section>
 
       <section className="panel stack">
@@ -127,6 +162,17 @@ export function QuoteDraftWorkbench() {
             <span className="tag">输入 {inputLines.length} 行</span>
             <span className="tag">候选 {candidates.length} 行</span>
           </div>
+        </div>
+
+        <div className="quote-draft-summary-grid" data-testid="quote-draft-summary">
+          <div className="quote-draft-summary-card"><span>总行数</span><strong>{summary.total}</strong></div>
+          <div className="quote-draft-summary-card"><span>KJ 已匹配</span><strong>{summary.matchedByKj}</strong></div>
+          <div className="quote-draft-summary-card"><span>KJ 未找到</span><strong>{summary.kjNotFound}</strong></div>
+          <div className="quote-draft-summary-card"><span>OEM 暂未开放</span><strong>{summary.oemNotSupported}</strong></div>
+          <div className="quote-draft-summary-card"><span>缺图片</span><strong>{summary.missingImage}</strong></div>
+          <div className="quote-draft-summary-card"><span>无价格</span><strong>{summary.missingPrice}</strong></div>
+          <div className="quote-draft-summary-card"><span>非财务批准价格</span><strong>{summary.notFinanceApproved}</strong></div>
+          <div className="quote-draft-summary-card"><span>需技术确认</span><strong>{summary.technicalReview}</strong></div>
         </div>
 
         {forbiddenOutputDetected ? (

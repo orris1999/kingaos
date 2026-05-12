@@ -555,6 +555,33 @@ tbody tr:hover {
   min-width: 1320px;
 }
 
+.quote-draft-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
+  gap: 10px;
+}
+
+.quote-draft-summary-card {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--kinga-radius-md);
+  background: #fbfcfb;
+}
+
+.quote-draft-summary-card span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.quote-draft-summary-card strong {
+  color: var(--text);
+  font-size: 20px;
+  line-height: 1;
+}
+
 .quote-draft-table th,
 .quote-draft-table td {
   white-space: nowrap;

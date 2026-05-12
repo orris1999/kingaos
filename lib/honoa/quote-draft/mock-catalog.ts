@@ -47,6 +47,7 @@ export const QUOTE_DRAFT_MOCK_CATALOG: QuoteDraftCatalogItem[] = [
 export const QUOTE_DRAFT_WORKBENCH_SAMPLE_INPUT = [
   "KJMOCK001 100pcs",
   "KJMOCK002*200",
-  "KJMOCK-DUP, 50, 客户要中性包装",
-  "16400-XXXXX 300"
+  "KJMOCK-MISSING 50",
+  "16400-XXXXX 300",
+  "UNKNOWN123"
 ].join("\n");

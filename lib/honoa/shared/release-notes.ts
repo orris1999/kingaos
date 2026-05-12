@@ -25,6 +25,23 @@ export const RELEASE_CATEGORY_LABELS: Record<ReleaseNoteCategory, string> = {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-05-12-06-quote-draft-workbench-readability",
+    date: "2026-05-12",
+    version: "2026.05.12-06",
+    title: "Quote Task 002B KJ 报价草稿 Workbench 可读性优化",
+    category: "ui",
+    summary: [
+      "将报价草稿 workbench 的内部状态枚举显示为业务可读中文标签。",
+      "增加结果汇总、填入 mock 示例、清空和复制当前 mock 结果 JSON 的纯前端操作。",
+      "继续只使用 mock catalog，不读取真实报价表、不保存数据、不生成正式报价。"
+    ],
+    affectedAreas: ["管理员后台", "报价草稿规划", "内部 mock workbench"],
+    migration: "none",
+    productionDataCommand: "none",
+    productionDataRisk: "none",
+    commitHash: "待填写"
+  },
+  {
     id: "2026-05-12-05-quote-draft-workbench-mock",
     date: "2026-05-12",
     version: "2026.05.12-05",

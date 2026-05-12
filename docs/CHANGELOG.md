@@ -7,6 +7,22 @@
 - `docs/CHANGELOG.md`：给团队阅读，记录背景和规则。
 - `lib/honoa/shared/release-notes.ts`：给管理员页面展示。
 
+## 2026.05.12-06 Quote Task 002B KJ 报价草稿 Workbench 可读性优化
+
+- 类型：UI
+- 影响范围：管理员后台、报价草稿规划、内部 mock workbench
+- Migration：无
+- 生产数据命令：未运行
+- 生产数据风险：无
+- Release note id：`2026-05-12-06-quote-draft-workbench-readability`
+- Commit：待填写
+
+主要变化：
+
+- 将报价草稿 workbench 的内部状态枚举显示为业务可读中文标签，例如 `KJ 已匹配`、`OEM 暂未开放`、`非财务批准价格`。
+- 增加结果汇总、填入 mock 示例、清空和复制当前 mock 结果 JSON 的纯前端操作。
+- 继续只使用 mock catalog，不读取真实报价表、不保存数据、不生成正式报价。
+
 ## 2026.05.12-05 Quote Task 002A KJ 报价草稿 Workbench（mock）
 
 - 类型：功能 / UI

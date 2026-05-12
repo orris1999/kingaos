@@ -10,7 +10,7 @@ function readRepoFile(relativePath: string) {
   return readFileSync(relativePath, "utf8");
 }
 
-describe("Quote Task 002A 管理员 KJ 报价草稿 Workbench", () => {
+describe("Quote Task 002B 管理员 KJ 报价草稿 Workbench", () => {
   it("/admin/quote-draft-workbench 页面存在并只允许 super_admin", () => {
     const page = readRepoFile("app/admin/quote-draft-workbench/page.tsx");
 
@@ -34,6 +34,41 @@ describe("Quote Task 002A 管理员 KJ 报价草稿 Workbench", () => {
     expect(component).toContain("本页面不会生成正式报价");
     expect(component).toContain("价格候选不是财务批准价格");
     expect(component).toContain("不能发客户");
+  });
+
+  it("状态显示为业务可读中文标签", () => {
+    const component = readRepoFile("components/quote-draft-workbench.tsx");
+
+    expect(component).toContain("KJ 已匹配");
+    expect(component).toContain("KJ 未找到");
+    expect(component).toContain("KJ 多候选");
+    expect(component).toContain("OEM 暂未开放");
+    expect(component).toContain("需技术确认");
+    expect(component).toContain("有图片");
+    expect(component).toContain("缺图片");
+    expect(component).toContain("仅 Excel 嵌入图");
+    expect(component).toContain("无价格");
+    expect(component).toContain("需财务核价");
+    expect(component).toContain("非财务批准价格");
+  });
+
+  it("页面提供结果汇总、填入示例、清空和复制 mock JSON", () => {
+    const component = readRepoFile("components/quote-draft-workbench.tsx");
+    const mockCatalog = readRepoFile("lib/honoa/quote-draft/mock-catalog.ts");
+
+    expect(component).toContain('data-testid="quote-draft-summary"');
+    expect(component).toContain("总行数");
+    expect(component).toContain("KJ 已匹配");
+    expect(component).toContain("KJ 未找到");
+    expect(component).toContain("OEM 暂未开放");
+    expect(component).toContain("填入示例");
+    expect(component).toContain("清空");
+    expect(component).toContain("复制结果 JSON");
+    expect(mockCatalog).toContain("KJMOCK001 100pcs");
+    expect(mockCatalog).toContain("KJMOCK002*200");
+    expect(mockCatalog).toContain("KJMOCK-MISSING 50");
+    expect(mockCatalog).toContain("UNKNOWN123");
+    expect(mockCatalog).not.toContain("KJ" + "12345");
   });
 
   it("输入 KJMOCK001 100pcs 后能生成 matched_by_kj 行", () => {
