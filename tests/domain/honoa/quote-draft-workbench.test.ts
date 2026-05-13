@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
-  generateQuoteDraftCandidates,
+  generateV1QuoteDraftCandidates,
   parseQuoteDraftInput,
   QUOTE_DRAFT_MOCK_CATALOG
 } from "@/lib/honoa/quote-draft";
@@ -68,9 +68,14 @@ describe("Quote Task 002C 出口部 KJ 报价草稿 Workbench", () => {
     expect(component).toContain("无价格");
     expect(component).toContain("需财务核价");
     expect(component).toContain("非财务批准价格");
+    expect(component).toContain("可进入 V1 草稿");
+    expect(component).toContain("可进入 V1，复杂规则");
+    expect(component).toContain("需人工确认");
+    expect(component).toContain("仅附加项候选");
+    expect(component).toContain("暂缓");
   });
 
-  it("页面提供结果汇总、填入示例、清空和复制 mock JSON", () => {
+  it("页面提供结果汇总、V1 汇总、填入示例、清空和复制 mock JSON", () => {
     const component = readRepoFile("components/quote-draft-workbench.tsx");
     const mockCatalog = readRepoFile("lib/honoa/quote-draft/mock-catalog.ts");
 
@@ -79,31 +84,78 @@ describe("Quote Task 002C 出口部 KJ 报价草稿 Workbench", () => {
     expect(component).toContain("KJ 已匹配");
     expect(component).toContain("KJ 未找到");
     expect(component).toContain("OEM 暂未开放");
+    expect(component).toContain("可进入 V1 草稿");
+    expect(component).toContain("可进入 V1，复杂规则");
+    expect(component).toContain("需人工确认");
+    expect(component).toContain("仅附加项候选");
+    expect(component).toContain("暂缓");
     expect(component).toContain("填入示例");
     expect(component).toContain("清空");
     expect(component).toContain("复制结果 JSON");
-    expect(mockCatalog).toContain("KJMOCK001 100pcs");
-    expect(mockCatalog).toContain("KJMOCK002*200");
-    expect(mockCatalog).toContain("KJMOCK-MISSING 50");
+    expect(mockCatalog).toContain("KJMOCK-COND-001 100pcs");
+    expect(mockCatalog).toContain("KJMOCK-RAD-PA16-A 80");
+    expect(mockCatalog).toContain("KJMOCK-RAD-BASE-001 50");
+    expect(mockCatalog).toContain("KJMOCK-IC-001 60");
+    expect(mockCatalog).toContain("KJMOCK-IC-OLD-001 30");
+    expect(mockCatalog).toContain("KJMOCK-PACK-001 20");
     expect(mockCatalog).toContain("UNKNOWN123");
     expect(mockCatalog).not.toContain("KJ" + "12345");
   });
 
-  it("输入 KJMOCK001 100pcs 后能生成 matched_by_kj 行", () => {
-    const inputLines = parseQuoteDraftInput("KJMOCK001 100pcs");
-    const [candidate] = generateQuoteDraftCandidates(inputLines, QUOTE_DRAFT_MOCK_CATALOG);
+  it("输入普通冷凝器 mock 后能生成可进入 V1 草稿行", () => {
+    const inputLines = parseQuoteDraftInput("KJMOCK-COND-001 100pcs");
+    const [candidate] = generateV1QuoteDraftCandidates(inputLines, QUOTE_DRAFT_MOCK_CATALOG);
 
     expect(candidate.matchStatus).toBe("matched_by_kj");
-    expect(candidate.kjCode).toBe("KJMOCK001");
-    expect(candidate.productName).toBe("Mock Radiator");
+    expect(candidate.kjCode).toBe("KJMOCK-COND-001");
+    expect(candidate.productName).toBe("Mock Condenser");
     expect(candidate.quantity).toBe(100);
+    expect(candidate.v1ReadinessLabel).toBe("可进入 V1 草稿");
+  });
+
+  it("水箱完整标准 KJ 唯一匹配可进入 V1 草稿", () => {
+    const inputLines = parseQuoteDraftInput("KJMOCK-RAD-PA16-A 80");
+    const [candidate] = generateV1QuoteDraftCandidates(inputLines, QUOTE_DRAFT_MOCK_CATALOG);
+
+    expect(candidate.matchStatus).toBe("matched_by_kj");
+    expect(candidate.v1Readiness).toBe("v1_eligible_with_conditions");
+    expect(candidate.v1ReadinessLabel).toBe("可进入 V1 草稿");
+    expect(candidate.requiresManualConfirmation).toBe(false);
+  });
+
+  it("水箱基础 KJ 多候选显示需人工确认", () => {
+    const inputLines = parseQuoteDraftInput("KJMOCK-RAD-BASE-001 50");
+    const [candidate] = generateV1QuoteDraftCandidates(inputLines, QUOTE_DRAFT_MOCK_CATALOG);
+
+    expect(candidate.matchStatus).toBe("ambiguous_kj");
+    expect(candidate.v1ReadinessLabel).toBe("需人工确认");
+    expect(candidate.requiresManualConfirmation).toBe(true);
+  });
+
+  it("中冷器旧码匹配显示需人工确认", () => {
+    const inputLines = parseQuoteDraftInput("KJMOCK-IC-OLD-001 30");
+    const [candidate] = generateV1QuoteDraftCandidates(inputLines, QUOTE_DRAFT_MOCK_CATALOG);
+
+    expect(candidate.matchStatus).toBe("matched_by_kj");
+    expect(candidate.v1ReadinessLabel).toBe("需人工确认");
+    expect(candidate.v1LineRisks).toContain("old_kj_code_match");
+  });
+
+  it("特殊包装 mock 显示仅附加项候选", () => {
+    const inputLines = parseQuoteDraftInput("KJMOCK-PACK-001 20");
+    const [candidate] = generateV1QuoteDraftCandidates(inputLines, QUOTE_DRAFT_MOCK_CATALOG);
+
+    expect(candidate.v1Readiness).toBe("addon_only");
+    expect(candidate.v1ReadinessLabel).toBe("仅附加项候选");
+    expect(candidate.isAddonOnly).toBe(true);
   });
 
   it("OEM / OE 输入显示 oem_not_supported_yet", () => {
     const inputLines = parseQuoteDraftInput("16400-XXXXX 300");
-    const [candidate] = generateQuoteDraftCandidates(inputLines, QUOTE_DRAFT_MOCK_CATALOG);
+    const [candidate] = generateV1QuoteDraftCandidates(inputLines, QUOTE_DRAFT_MOCK_CATALOG);
 
     expect(candidate.matchStatus).toBe("oem_not_supported_yet");
+    expect(candidate.v1ReadinessLabel).toBe("暂缓");
     expect(candidate.warnings).toContain("OEM / OE 自动匹配暂未开放，请提供 KJ 或进入人工匹配。");
   });
 
@@ -117,13 +169,13 @@ describe("Quote Task 002C 出口部 KJ 报价草稿 Workbench", () => {
     expect(page).not.toContain("PrismaClient");
     expect(mockCatalog).not.toContain(".xlsx");
     expect(mockCatalog).not.toContain(".xls");
-    expect(mockCatalog).toContain("KJMOCK001");
+    expect(mockCatalog).toContain("KJMOCK-COND-001");
     expect(mockCatalog).not.toContain("KJ" + "12345");
   });
 
   it("输出和页面源码不包含正式报价状态字段", () => {
-    const inputLines = parseQuoteDraftInput("KJMOCK001 100pcs");
-    const [candidate] = generateQuoteDraftCandidates(inputLines, QUOTE_DRAFT_MOCK_CATALOG);
+    const inputLines = parseQuoteDraftInput("KJMOCK-COND-001 100pcs");
+    const [candidate] = generateV1QuoteDraftCandidates(inputLines, QUOTE_DRAFT_MOCK_CATALOG);
     const serialized = JSON.stringify(candidate) + readRepoFile("components/quote-draft-workbench.tsx");
 
     expect(serialized).not.toContain("finance" + "Approved" + "Price");

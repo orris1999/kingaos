@@ -133,6 +133,7 @@ export function generateQuoteDraftCandidates(
         kjCode: normalized.standardKjCode,
         rawKjCode: normalized.rawKjCode,
         sourceCodeType: normalized.sourceCodeType,
+        category: matches[0]?.category,
         imageStatus: "not_supported_yet",
         quantity: line.quantity,
         priceStatus: "requires_finance_review",

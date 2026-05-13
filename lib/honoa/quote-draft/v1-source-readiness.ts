@@ -1,8 +1,22 @@
 export type QuoteV1SourceReadiness =
   | "v1_auto_eligible"
+  | "v1_eligible_with_conditions"
   | "v1_manual_confirmation_required"
   | "addon_only"
   | "deferred";
+
+export type QuoteV1LineRisk =
+  | "base_kj_multi_candidate"
+  | "old_kj_code_match"
+  | "fumacrm_code_match"
+  | "dingjie_code_match"
+  | "oem_input_not_supported"
+  | "special_sheet_match"
+  | "sales_restriction_warning"
+  | "packaging_affects_price"
+  | "embedded_image_only"
+  | "multiple_candidates"
+  | "missing_required_spec";
 
 export type QuoteV1SourceReadinessReason =
   | "stable_kj_cost_table"
@@ -55,7 +69,7 @@ type ManualConfirmationCategoryConfig = {
   warning: string;
 };
 
-const MANUAL_CONFIRMATION_CATEGORY_ENTRIES: Array<[string, ManualConfirmationCategoryConfig]> = [
+const CONDITIONAL_CATEGORY_ENTRIES: Array<[string, ManualConfirmationCategoryConfig]> = [
   [
     "水箱",
     {
@@ -74,7 +88,7 @@ const MANUAL_CONFIRMATION_CATEGORY_ENTRIES: Array<[string, ManualConfirmationCat
   ]
 ];
 
-const MANUAL_CONFIRMATION_CATEGORIES = new Map(MANUAL_CONFIRMATION_CATEGORY_ENTRIES);
+const CONDITIONAL_CATEGORIES = new Map(CONDITIONAL_CATEGORY_ENTRIES);
 
 const ADDON_ONLY_CATEGORY_ENTRIES: Array<[string, string[]]> = [
   ["特殊包装及其他", ["special_packaging", "packaging_addon", "特殊包装及其他", "特殊包装", "其他"]]
@@ -135,11 +149,11 @@ export function getQuoteV1SourceReadiness(categoryOrAdapterId: string): QuoteV1S
     }
   }
 
-  for (const [category, config] of MANUAL_CONFIRMATION_CATEGORIES.entries()) {
+  for (const [category, config] of CONDITIONAL_CATEGORIES.entries()) {
     if (matchesAlias(input, config.aliases)) {
       return {
         category,
-        readiness: "v1_manual_confirmation_required",
+        readiness: "v1_eligible_with_conditions",
         reasons: [
           config.reason,
           "complex_multi_code_mapping",
@@ -153,12 +167,12 @@ export function getQuoteV1SourceReadiness(categoryOrAdapterId: string): QuoteV1S
         ],
         warnings: [
           ...PRICE_BOUNDARY_WARNINGS,
-          config.warning,
-          "基础 KJ 多候选不能静默选择第一行，需人工确认。",
+          `${category}主成本表可以进入 V1 KJ 批量报价草稿，但需要按行级风险判断是否人工确认。`,
+          "完整标准 KJ 唯一命中时可进入 V1 草稿；基础 KJ、多候选、旧码、鼎捷码、OEM、特殊 sheet、风险字段或包装规格不明确时需人工确认。",
           ...DEFERRED_CAPABILITY_WARNINGS
         ],
         allowedForV1ProductDraft: true,
-        requiresManualConfirmation: true,
+        requiresManualConfirmation: false,
         allowedAsAddonOnly: false
       };
     }
@@ -206,6 +220,10 @@ export function isV1AutoEligibleQuoteCategory(category: string) {
 
 export function requiresV1ManualConfirmation(category: string) {
   return getQuoteV1SourceReadiness(category).requiresManualConfirmation;
+}
+
+export function isV1EligibleWithConditionsQuoteCategory(category: string) {
+  return getQuoteV1SourceReadiness(category).readiness === "v1_eligible_with_conditions";
 }
 
 export function isQuoteAddonOnlyCategory(category: string) {

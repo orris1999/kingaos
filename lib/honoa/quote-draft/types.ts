@@ -1,4 +1,4 @@
-import type { QuoteV1SourceReadiness } from "./v1-source-readiness";
+import type { QuoteV1LineRisk, QuoteV1SourceReadiness } from "./v1-source-readiness";
 
 export type SourceCodeType = "standard_kj" | "old_code" | "erp_code" | "fumacrm_code" | "unknown_code";
 
@@ -80,6 +80,8 @@ export type QuoteDraftLineCandidate = {
   priceStatus: QuoteDraftPriceStatus;
   priceCandidate?: QuoteDraftPriceCandidate;
   v1Readiness?: QuoteV1SourceReadiness;
+  v1ReadinessLabel?: string;
+  v1LineRisks?: QuoteV1LineRisk[];
   v1ReadinessWarnings?: string[];
   requiresManualConfirmation?: boolean;
   isAddonOnly?: boolean;

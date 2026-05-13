@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import {
-  generateQuoteDraftCandidates,
+  generateV1QuoteDraftCandidates,
   parseQuoteDraftInput,
   QUOTE_DRAFT_MOCK_CATALOG,
   QUOTE_DRAFT_WORKBENCH_SAMPLE_INPUT
@@ -12,7 +12,8 @@ import type {
   QuoteDraftLineCandidate,
   QuoteDraftMatchStatus,
   QuoteDraftPriceStatus,
-  QuoteDraftRequestedCodeType
+  QuoteDraftRequestedCodeType,
+  QuoteV1SourceReadiness
 } from "@/lib/honoa/quote-draft";
 
 const CODE_TYPE_LABELS: Record<QuoteDraftRequestedCodeType, string> = {
@@ -48,11 +49,26 @@ const PRICE_STATUS_LABELS: Record<QuoteDraftPriceStatus, string> = {
   not_finance_approved: "非财务批准价格"
 };
 
+const V1_READINESS_LABELS: Record<QuoteV1SourceReadiness, string> = {
+  v1_auto_eligible: "可进入 V1 草稿",
+  v1_eligible_with_conditions: "可进入 V1，复杂规则",
+  v1_manual_confirmation_required: "需人工确认",
+  addon_only: "仅附加项候选",
+  deferred: "暂缓"
+};
+
 function statusClass(candidate: QuoteDraftLineCandidate) {
   if (candidate.matchStatus === "matched_by_kj" && candidate.priceStatus !== "not_finance_approved") return "tag ok";
   if (candidate.matchStatus === "matched_by_kj") return "tag warn";
   if (candidate.matchStatus === "kj_not_found" || candidate.matchStatus === "ambiguous_kj") return "tag danger";
   return "tag warn";
+}
+
+function v1StatusClass(candidate: QuoteDraftLineCandidate) {
+  if (candidate.isAddonOnly) return "tag warn";
+  if (candidate.v1Readiness === "deferred") return "tag danger";
+  if (candidate.requiresManualConfirmation) return "tag warn";
+  return "tag ok";
 }
 
 function hasForbiddenQuoteFields(candidate: QuoteDraftLineCandidate) {
@@ -71,7 +87,7 @@ export function QuoteDraftWorkbench() {
 
   const inputLines = useMemo(() => parseQuoteDraftInput(submittedInput), [submittedInput]);
   const candidates = useMemo(
-    () => generateQuoteDraftCandidates(inputLines, QUOTE_DRAFT_MOCK_CATALOG),
+    () => generateV1QuoteDraftCandidates(inputLines, QUOTE_DRAFT_MOCK_CATALOG),
     [inputLines]
   );
   const summary = useMemo(() => ({
@@ -82,7 +98,14 @@ export function QuoteDraftWorkbench() {
     missingImage: candidates.filter((candidate) => candidate.imageStatus === "missing").length,
     missingPrice: candidates.filter((candidate) => candidate.priceStatus === "missing").length,
     notFinanceApproved: candidates.filter((candidate) => candidate.priceStatus === "not_finance_approved").length,
-    technicalReview: candidates.filter((candidate) => candidate.matchStatus === "requires_technical_review").length
+    technicalReview: candidates.filter((candidate) => candidate.matchStatus === "requires_technical_review").length,
+    v1DraftEligible: candidates.filter((candidate) =>
+      candidate.v1Readiness !== "deferred" && !candidate.requiresManualConfirmation && !candidate.isAddonOnly
+    ).length,
+    v1EligibleWithConditions: candidates.filter((candidate) => candidate.v1Readiness === "v1_eligible_with_conditions").length,
+    manualConfirmation: candidates.filter((candidate) => candidate.requiresManualConfirmation).length,
+    addonOnly: candidates.filter((candidate) => candidate.isAddonOnly).length,
+    deferred: candidates.filter((candidate) => candidate.v1Readiness === "deferred").length
   }), [candidates]);
   const forbiddenOutputDetected = candidates.some(hasForbiddenQuoteFields);
 
@@ -175,6 +198,11 @@ export function QuoteDraftWorkbench() {
           <div className="quote-draft-summary-card"><span>无价格</span><strong>{summary.missingPrice}</strong></div>
           <div className="quote-draft-summary-card"><span>非财务批准价格</span><strong>{summary.notFinanceApproved}</strong></div>
           <div className="quote-draft-summary-card"><span>需技术确认</span><strong>{summary.technicalReview}</strong></div>
+          <div className="quote-draft-summary-card"><span>可进入 V1 草稿</span><strong>{summary.v1DraftEligible}</strong></div>
+          <div className="quote-draft-summary-card"><span>可进入 V1，复杂规则</span><strong>{summary.v1EligibleWithConditions}</strong></div>
+          <div className="quote-draft-summary-card"><span>需人工确认</span><strong>{summary.manualConfirmation}</strong></div>
+          <div className="quote-draft-summary-card"><span>仅附加项候选</span><strong>{summary.addonOnly}</strong></div>
+          <div className="quote-draft-summary-card"><span>暂缓</span><strong>{summary.deferred}</strong></div>
         </div>
 
         {forbiddenOutputDetected ? (
@@ -190,6 +218,7 @@ export function QuoteDraftWorkbench() {
                 <th>识别编码</th>
                 <th>输入类型</th>
                 <th>匹配状态</th>
+                <th>V1 状态</th>
                 <th>KJ</th>
                 <th>产品名称</th>
                 <th>品类</th>
@@ -209,6 +238,14 @@ export function QuoteDraftWorkbench() {
                     <td>{inputLine?.requestedCode || "-"}</td>
                     <td>{inputLine ? CODE_TYPE_LABELS[inputLine.requestedCodeType] : "-"}</td>
                     <td><span className={statusClass(candidate)}>{MATCH_STATUS_LABELS[candidate.matchStatus]}</span></td>
+                    <td>
+                      <span className={v1StatusClass(candidate)}>
+                        {candidate.v1ReadinessLabel || (candidate.v1Readiness ? V1_READINESS_LABELS[candidate.v1Readiness] : "-")}
+                      </span>
+                      {candidate.v1Readiness === "v1_eligible_with_conditions" ? (
+                        <span className="tag soft">可进入 V1，复杂规则</span>
+                      ) : null}
+                    </td>
                     <td>{candidate.kjCode || "-"}</td>
                     <td>{candidate.productName || "-"}</td>
                     <td>{candidate.category || "-"}</td>
