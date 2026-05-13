@@ -624,6 +624,38 @@ Feature flag：
 - `not_finance_approved` 可以作为报价草稿候选，但不能作为正式报价。
 - `needs_manual_review` / `addon_only` / `blocked` / `ignored` 不会自动给出口部消费。
 
+## Quote Task 007D feature flag verification and rollout runbook
+
+007D 只做 feature flag 与 confirmation flow 验证，以及 production rollout runbook。不新增 schema / migration，不启用 production feature flag，不修改 ECS `.env`，不写 production 数据。
+
+已验证边界：
+
+1. `KINGA_ENABLE_FINANCE_STAGING_CONFIRM` 缺失或 `false` 时默认关闭。
+2. `KINGA_ENABLE_FINANCE_STAGING_CONFIRM=true` 时，本地 / test 环境可显示确认表单并调用 confirmation action。
+3. 不使用 `NEXT_PUBLIC_`，不把 flag 暴露到浏览器运行时。
+4. 关闭时按钮 disabled，不存在可提交 form，不调用 action。
+5. 开启时 `rowVisibilityPolicy` 固定为 `strict_candidate_only`。
+6. 普通 admin、普通财务、出口部用户和未登录用户不能 confirm。
+7. `candidate + cost_candidate_available` 可以变成 `export_draft_candidate`。
+8. `candidate + not_finance_approved` 可以作为草稿候选，但仍然不是正式报价。
+9. `needs_manual_review` / `addon_only` / `blocked` / `ignored` 不会自动给出口部消费。
+10. `missing` / `requires_finance_review` 价格状态不会自动给出口部消费。
+11. AuditLog 写入 `quote_source_staging.finance_confirmed`，metadata 不含敏感价格字段。
+
+Production rollout runbook：
+
+- `docs/quote-source-staging-confirmation-rollout-runbook.md`
+
+开启 production 前必须确认：
+
+1. 已有真实 staging batch。
+2. staging batch 已通过 Finance dry-run 和确认流程。
+3. 当前代码版本已部署。
+4. AuditLog 可用。
+5. super_admin 明确确认本次动作只是报价草稿候选数据源确认。
+
+开启和关闭都必须由人工修改 ECS `.env` 并重启 PM2；Codex 不自动修改 ECS `.env`。
+
 ## 下一步
 
 如果后续进入实现，需要另立任务并重新评审：

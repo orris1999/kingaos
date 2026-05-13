@@ -324,6 +324,36 @@ Feature flag：
 3. 只有符合条件的 candidate 行会成为出口部报价草稿候选。
 4. `needs_manual_review` / `addon_only` / `blocked` / `ignored` 行不会自动给出口部使用。
 
+## 007D feature flag verification and rollout runbook
+
+Quote Task 007D 已补充 feature flag 验证和 production rollout runbook。007D 不启用 production flag，不修改 ECS `.env`，不读取真实 Excel，不导入报价表，不写 production 数据。
+
+验证结论：
+
+1. `KINGA_ENABLE_FINANCE_STAGING_CONFIRM` 缺失时默认关闭。
+2. `KINGA_ENABLE_FINANCE_STAGING_CONFIRM=false` 时关闭。
+3. `KINGA_ENABLE_FINANCE_STAGING_CONFIRM=true` 时，本地 / test 环境可以进入确认表单分支。
+4. 不使用 `NEXT_PUBLIC_`，flag 不暴露给前端运行时。
+5. feature flag 关闭时不渲染可提交 form，不调用 `confirmQuoteSourceStagingBatchAction`。
+6. feature flag 开启时仍固定 `rowVisibilityPolicy = strict_candidate_only`，不提供 `include_manual_review`。
+7. `super_admin` 可以确认，普通 admin、普通财务、出口部用户和未登录用户不能确认。
+8. 确认后只有符合条件的 `candidate + finance_only` 行可以变成 `export_draft_candidate`。
+9. `needs_manual_review` / `addon_only` / `blocked` / `ignored` / `missing` / `requires_finance_review` 不会自动给出口部消费。
+10. AuditLog action = `quote_source_staging.finance_confirmed`，metadata 不含敏感价格字段。
+
+Production rollout runbook：
+
+- `docs/quote-source-staging-confirmation-rollout-runbook.md`
+
+production 仍默认关闭。未来如需开启，必须由人工修改 ECS `.env`：
+
+```bash
+KINGA_ENABLE_FINANCE_STAGING_CONFIRM=true
+pm2 restart kingaos --update-env
+```
+
+Codex 不应自动修改 ECS `.env`，也不应自动启用该 flag。
+
 ## 错误状态
 
 未来页面应展示清晰错误：
