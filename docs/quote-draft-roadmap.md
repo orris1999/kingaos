@@ -14,6 +14,7 @@
 - Finance dry-run 页面不上传文件、不写数据库、不保存结果、不生成报价草稿、不生成正式报价；检测到成本 / 报价列时只显示布尔信号，不显示具体价格金额。
 - Quote Task 005C 定义 Finance dry-run 结果确认流程，详见 `docs/quote-source-dry-run-confirmation-flow.md`。dry-run 结果只能进入后续 staging 导入模型设计判断，不能直接给出口部消费；所有 dry-run 决策的 `canBeUsedByExportDraft` 都必须为 `false`。
 - Quote Task 006A 设计 Finance 报价表 staging 导入模型，详见 `docs/quote-source-staging-import-design.md`。staging batch / row 只表示财务确认后的草稿数据源候选，不是正式价格表；本阶段不设计具体金额字段，仍不得绕过 FinancePricing。
+- Quote Task 006B 将 staging 设计落到 metadata-only Prisma schema：只新增 `QuoteSourceStagingBatch` / `QuoteSourceStagingRow` 元数据表，不保存具体金额、不新增导入动作、不生成报价草稿、不生成正式报价。
 - 正式价格必须后续接入 FinancePricing，报价草稿不能绕过财务确认。
 
 ## V1｜KJ 批量报价草稿
@@ -105,6 +106,12 @@ staging 的边界：
 - 本阶段不设计具体金额字段，只设计 `hasCostCandidate`、`hasQuoteCandidate` 和 `priceCandidateStatus`。
 - 如果未来需要保存具体金额，必须进入 FinancePricing / 权限脱敏 / 审计 / 审批设计。
 
+Quote Task 006B 只新增 staging metadata schema：
+
+- `QuoteSourceStagingBatch` 保存来源文件、adapter、dry-run 决策、batch 状态、财务确认信息和 warnings。
+- `QuoteSourceStagingRow` 保存编码候选、产品候选信息、结构布尔值、visibility、rowStatus 和 warnings。
+- 006B 不保存具体金额，不保存底价 / 毛利，不保存财务批准价格，不新增 API / server action / UI，也不导入任何报价表。
+
 ## V2｜KJ / OEM 混合匹配
 
 目标：在 KJ 精确匹配稳定后，把 OEM / OE 作为候选匹配能力接入。
@@ -159,7 +166,7 @@ V2 暂不做：
 
 Quote Task 003A 已建立报价表 workbook / sheet adapter 的结构配置和 dry-run summary 类型。Quote Task 003B 进一步补充了基于 mock workbook metadata 的 adapter matcher：先用文件名、文件类型、sheet 名称和 mock 表头做结构化匹配，不读取真实 Excel、不提取价格、不写生产库。Quote Task 003C 增加本地只读 CLI，用于显式指定单个 Excel 文件并输出结构摘要，不输出真实价格明细、不写数据库、不导入报价表。Quote Task 003D 对 8 份财务报价表执行本地 dry-run 并生成脱敏结构报告。Quote Task 003E 锁定了 V1 数据源准入范围和 adapter 修正清单。Quote Task 003E-R 固化了水箱 / 中冷器的会议确认规则。Quote Task 004A 将 V1 source readiness gate 编码为纯 domain 规则。Quote Task 004B-R 修正水箱 / 中冷器口径：品类是 `v1_eligible_with_conditions`，人工确认下沉到具体草稿行。Quote Task 005A 将 dry-run 能力放到 Finance 侧浏览器本地页面，继续不上传、不入库、不展示真实价格明细。Quote Task 005C 定义 dry-run 结果确认流程，明确哪些结果可进入 staging 设计、哪些需要财务修表、哪些需要 adapter 修正、哪些只能作为附加项，以及所有 dry-run 结果都不能直接给出口部消费。Quote Task 006A 设计 staging batch / row / visibility 的纯类型草案，继续不落库、不保存具体金额、不生成报价草稿。
 
-下一步进入 V1 开发前，仍建议先完成以下准备，不触碰生产库：
+下一步进入 V1 开发前，仍建议先完成以下准备：
 
 1. 在 Finance / FinancePricing 域设计未来报价表提交入口，例如 `/finance/quote-source-tables`，先只做 dry-run。
 2. dry-run 只读取 Excel 结构，不导入价格，不写生产 PostgreSQL。

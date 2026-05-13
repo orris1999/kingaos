@@ -93,6 +93,8 @@ dry-run 决策状态：
 
 Quote Task 006A 定义了 staging 导入模型设计，详见 `docs/quote-source-staging-import-design.md`。staging 是 dry-run 和 Export 草稿消费之间的中间层，不是正式价格表。
 
+Quote Task 006B 将该设计落为 metadata-only Prisma schema，仅新增 `QuoteSourceStagingBatch` 和 `QuoteSourceStagingRow` 两张 staging 元数据表。006B 不导入报价表、不保存具体金额、不新增 API / server action / UI，也不生成报价草稿或正式报价。
+
 验收要求：
 
 1. staging batch 的 `submittedByRole` 必须是 `finance`。
@@ -106,6 +108,8 @@ Quote Task 006A 定义了 staging 导入模型设计，详见 `docs/quote-source
 9. 水箱 / 中冷器完整标准 KJ 唯一匹配可以是 `candidate`；基础 KJ 多候选、旧码 / 孚盟 / 鼎捷码、OEM 或特殊 sheet 命中必须是 `needs_manual_review` 或更严格状态。
 10. 特殊包装及其他只能是 `addon_only`，不能作为产品标准报价行。
 11. 任何 staging 数据进入正式报价前都必须后续接 FinancePricing。
+12. Prisma schema 不得在 staging row 中保存具体金额、底价、毛利、财务批准价格或可发客户状态。
+13. 006B migration 必须只新增 staging metadata 表、索引和约束，不修改现有客户、附件、收款账号或用户表。
 
 1. 用户输入 `KJ-80002` 这类标准 KJ 时，系统能按规范化后的 KJ 查找候选。
 2. 用户输入含前后空格、全角字符、大小写差异或无意义空格的 KJ 时，系统能归一为同一 `standardKjCode`。

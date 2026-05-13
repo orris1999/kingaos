@@ -7,6 +7,23 @@
 - `docs/CHANGELOG.md`：给团队阅读，记录背景和规则。
 - `lib/honoa/shared/release-notes.ts`：给管理员页面展示。
 
+## 2026.05.13-08 Quote Task 006B Finance quote source staging metadata schema
+
+- 类型：数据 / 文档
+- 影响范围：财务部、报价表 staging、报价草稿规划、Prisma schema
+- Migration：additive
+- 生产数据命令：未运行
+- 生产数据风险：低
+- Release note id：`2026-05-13-08-quote-source-staging-metadata-schema`
+- Commit：待填写
+
+主要变化：
+
+- 新增 `QuoteSourceStagingBatch` / `QuoteSourceStagingRow` Prisma model，为未来 Finance 报价表 staging 导入保留 metadata-only 结构。
+- staging metadata 只保存批次、结构识别、字段映射、行级状态、visibility 和 warnings，不保存具体金额、底价、毛利或财务批准价格。
+- 新增 additive migration，仅创建 staging 表、索引和外键；不修改现有客户、附件、收款账号或用户表。
+- 继续明确 `finance_confirmed` 不等于财务批准价格，`export_draft_candidate` 仍不是正式报价，正式报价必须后续接 FinancePricing。
+
 ## 2026.05.13-04 Quote Task 005A Finance 报价表 dry-run 页面
 
 - 类型：功能 / 数据

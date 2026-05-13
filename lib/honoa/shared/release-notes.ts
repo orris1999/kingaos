@@ -25,6 +25,23 @@ export const RELEASE_CATEGORY_LABELS: Record<ReleaseNoteCategory, string> = {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-05-13-08-quote-source-staging-metadata-schema",
+    date: "2026-05-13",
+    version: "2026.05.13-08",
+    title: "Quote Task 006B Finance quote source staging metadata schema",
+    category: "data",
+    summary: [
+      "新增 QuoteSourceStagingBatch / QuoteSourceStagingRow Prisma model，为未来 Finance 报价表 staging 导入保留 metadata-only 结构。",
+      "staging metadata 只保存批次、结构识别、字段映射、行级状态、visibility 和 warnings，不保存具体金额、底价、毛利或财务批准价格。",
+      "新增 additive migration，仅创建 staging 表、索引和外键；继续明确 finance_confirmed 不等于财务批准价格，export_draft_candidate 仍不是正式报价。"
+    ],
+    affectedAreas: ["财务部", "报价表 staging", "报价草稿规划", "Prisma schema"],
+    migration: "additive",
+    productionDataCommand: "none",
+    productionDataRisk: "low",
+    commitHash: "待填写"
+  },
+  {
     id: "2026-05-13-04-finance-quote-source-dry-run-page",
     date: "2026-05-13",
     version: "2026.05.13-04",

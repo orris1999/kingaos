@@ -303,6 +303,73 @@ model CustomerFieldChangeHistory {
   @@index([changedByUserId])
 }
 
+model QuoteSourceStagingBatch {
+  id                   String    @id @default(cuid())
+  sourceFileName       String
+  adapterId            String
+  category             String?
+  submittedByRole      String    @default("finance")
+  consumerDepartment   String    @default("export")
+  dryRunDecisionStatus String
+  status               String    @default("draft")
+  createdByUserId      String?
+  createdByName        String?
+  createdAt            DateTime  @default(now())
+  confirmedByUserId    String?
+  confirmedByName      String?
+  confirmedAt          DateTime?
+  warnings             Json?
+  notes                String?
+
+  rows QuoteSourceStagingRow[]
+
+  @@index([adapterId])
+  @@index([category])
+  @@index([status])
+  @@index([dryRunDecisionStatus])
+  @@index([createdAt])
+}
+
+model QuoteSourceStagingRow {
+  id                     String                  @id @default(cuid())
+  batchId                String
+  batch                  QuoteSourceStagingBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  sourceRowNumber        Int?
+  rawKjCode              String?
+  standardKjCode         String?
+  baseKjCode             String?
+  oldKjNo                String?
+  fumacrmCode            String?
+  dingjieCodeWithoutCap  String?
+  dingjieCodeWithCap     String?
+  productNameCandidate   String?
+  category               String?
+  modelCandidate         String?
+  specificationCandidate String?
+  tradeMode              String                  @default("unknown")
+  priceCandidateStatus   String
+  hasCostCandidate       Boolean                 @default(false)
+  hasQuoteCandidate      Boolean                 @default(false)
+  hasPackagingInfo       Boolean                 @default(false)
+  hasOemInfo             Boolean                 @default(false)
+  visibility             String
+  rowStatus              String
+  warnings               Json?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+
+  @@index([batchId])
+  @@index([standardKjCode])
+  @@index([baseKjCode])
+  @@index([oldKjNo])
+  @@index([fumacrmCode])
+  @@index([dingjieCodeWithoutCap])
+  @@index([dingjieCodeWithCap])
+  @@index([category])
+  @@index([rowStatus])
+  @@index([visibility])
+}
+
 model AuditLog {
   id          String   @id @default(cuid())
   actorUserId String?

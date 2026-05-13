@@ -35,10 +35,11 @@ describe("管理员版本更新日志和 SaaS 视觉基线", () => {
   });
 
   it("release-notes.ts 至少包含最近一次 Finance dry-run 更新和报价草稿历史更新", () => {
-    expect(RELEASE_NOTES[0].id).toBe("2026-05-13-04-finance-quote-source-dry-run-page");
-    expect(RELEASE_NOTES[0].title).toContain("Finance 报价表 dry-run");
-    expect(RELEASE_NOTES[0].migration).toBe("none");
+    expect(RELEASE_NOTES[0].id).toBe("2026-05-13-08-quote-source-staging-metadata-schema");
+    expect(RELEASE_NOTES[0].title).toContain("staging metadata schema");
+    expect(RELEASE_NOTES[0].migration).toBe("additive");
     expect(RELEASE_NOTES[0].productionDataCommand).toBe("none");
+    expect(RELEASE_NOTES.some((note) => note.id === "2026-05-13-04-finance-quote-source-dry-run-page")).toBe(true);
     expect(RELEASE_NOTES.some((note) => note.id === "2026-05-12-06-quote-draft-workbench-readability")).toBe(true);
     expect(RELEASE_NOTES.some((note) => note.id === "2026-05-12-05-quote-draft-workbench-mock")).toBe(true);
     expect(RELEASE_NOTES.some((note) => note.id === "2026-05-12-04-quote-draft-parser-dry-run")).toBe(true);
@@ -56,6 +57,8 @@ describe("管理员版本更新日志和 SaaS 视觉基线", () => {
     const source = readRepoFile("docs/CHANGELOG.md");
 
     expect(existsSync(filePath)).toBe(true);
+    expect(source).toContain("2026.05.13-08");
+    expect(source).toContain("Quote Task 006B");
     expect(source).toContain("2026.05.13-04");
     expect(source).toContain("Quote Task 005A");
     expect(source).toContain("2026.05.12-06");

@@ -2,7 +2,7 @@
 
 日期：2026-05-13
 
-本文件只设计 Finance 报价表 staging 导入模型，不实现数据库、不新增 Prisma schema、不新增 migration、不导入报价表、不生成报价草稿、不生成正式报价。
+本文件设计 Finance 报价表 staging 导入模型。Quote Task 006A 先固化纯 domain 类型；Quote Task 006B 开始落地 metadata-only Prisma schema，只新增 staging batch / row 元数据表，不导入报价表、不保存具体金额、不生成报价草稿、不生成正式报价。
 
 ## 为什么需要 staging
 
@@ -28,7 +28,7 @@ staging 仍然不解决：
 | 阶段 | 作用 | 是否写库 | 是否可给出口部消费 | 是否是正式价格 |
 |---|---|---:|---:|---:|
 | dry-run | 浏览器本地或 CLI 结构识别，输出 adapter 匹配、字段映射和风险提示。 | 否 | 否 | 否 |
-| staging | 财务确认后进入中间候选层，保留结构化 batch / row 和 visibility。 | 未来单独设计 | 仅特定 visibility 后可作为草稿候选 | 否 |
+| staging | 财务确认后进入中间候选层，保留结构化 batch / row 和 visibility。 | 006B 仅新增 metadata 表 | 仅特定 visibility 后可作为草稿候选 | 否 |
 | FinancePricing | 财务核价 / 批准价格事实。 | 未来单独设计 | 可被正式报价引用 | 是 |
 
 dry-run 进入 staging 的前置条件：
@@ -60,6 +60,23 @@ staging batch 的 `finance_confirmed` 只表示：
 - 可以作为订单或合同价格。
 
 正式价格必须后续接 FinancePricing，并在正式报价链路中保存财务批准后的价格快照。
+
+## Quote Task 006B metadata-only Prisma schema
+
+006B 新增两个 Prisma model：
+
+1. `QuoteSourceStagingBatch`：保存来源文件名、adapter、品类、dry-run 决策状态、batch 状态、财务确认人、warnings 和 notes。
+2. `QuoteSourceStagingRow`：保存行级编码候选、产品候选信息、tradeMode、priceCandidateStatus、结构布尔值、visibility、rowStatus 和 warnings。
+
+006B 仍然不保存：
+
+- 具体金额。
+- 底价。
+- 毛利。
+- 财务批准价格。
+- 可发客户的正式报价状态。
+
+这两个表只是 staging metadata，不是正式价格表，也不是 FinanceApprovedPrice。它们为后续 Finance 报价表 staging 导入留结构位置，但不提供导入动作、上传后台、API route 或 server action。
 
 ## Batch 设计
 
@@ -154,15 +171,21 @@ type QuoteSourceStagingRow = {
 
 ## 为什么本轮不保存具体金额
 
-本轮不设计以下字段：
+006B Prisma schema 也不设计以下字段：
 
 - `amount`
 - `unitPrice`
 - `costPrice`
+- `quotePrice`
+- `salesPrice`
 - `minimumPrice`
 - `grossMargin`
+- `margin`
+- `profit`
 - `approvedPrice`
 - `financeApprovedPrice`
+- `sentToCustomer`
+- `officialQuote`
 
 原因：
 

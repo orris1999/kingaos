@@ -6,6 +6,7 @@ export * from "./source-adapter-matcher";
 export * from "./source-adapter-types";
 export * from "./source-adapters";
 export * from "./source-dry-run-decision";
+export * from "./source-staging-repository-types";
 export * from "./source-staging-types";
 export * from "./types";
 export * from "./v1-draft-rules";
