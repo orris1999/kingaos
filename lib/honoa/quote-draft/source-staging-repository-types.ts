@@ -11,10 +11,10 @@ export type CreateQuoteSourceStagingBatchInput = {
   sourceFileName: string;
   adapterId: string;
   category?: string;
-  submittedByRole: "finance";
-  consumerDepartment: "export";
+  submittedByRole?: "finance";
+  consumerDepartment?: "export";
   dryRunDecisionStatus: QuoteSourceDryRunDecisionStatus;
-  status: QuoteSourceStagingBatchStatus;
+  status?: QuoteSourceStagingBatchStatus;
   createdByUserId?: string;
   createdByName?: string;
   confirmedByUserId?: string;
@@ -47,4 +47,24 @@ export type CreateQuoteSourceStagingRowInput = {
   visibility: QuoteSourceStagingVisibility;
   rowStatus: QuoteSourceStagingRowStatus;
   warnings?: string[];
+};
+
+export type QuoteSourceStagingBatchFilter = {
+  status?: QuoteSourceStagingBatchStatus;
+  adapterId?: string;
+  category?: string;
+};
+
+export type QuoteSourceStagingRowFilter = {
+  rowStatus?: QuoteSourceStagingRowStatus;
+  visibility?: QuoteSourceStagingVisibility;
+};
+
+export type QuoteSourceStagingStatusActor = {
+  userId?: string;
+  name?: string;
+};
+
+export type QuoteSourceStagingRepositoryOptions = {
+  databaseUrl?: string;
 };

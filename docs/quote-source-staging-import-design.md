@@ -78,6 +78,36 @@ staging batch 的 `finance_confirmed` 只表示：
 
 这两个表只是 staging metadata，不是正式价格表，也不是 FinanceApprovedPrice。它们为后续 Finance 报价表 staging 导入留结构位置，但不提供导入动作、上传后台、API route 或 server action。
 
+## Quote Task 006C repository 边界
+
+006C 新增 repository 层，只服务于 staging metadata。它不新增 UI、API route、server action、导入脚本或 production 写入入口。
+
+repository 当前边界：
+
+1. 只允许写入 `QuoteSourceStagingBatch` / `QuoteSourceStagingRow` metadata。
+2. 不保存具体金额、底价、毛利或财务批准价格。
+3. `finance_confirmed` 仍然只表示财务确认这份 staging 来源可以继续作为草稿数据源候选，不等于 FinanceApprovedPrice。
+4. `export_draft_candidate` 仍然只是出口部报价草稿候选，不是正式报价，也不能发客户。
+5. `addon_only`、`blocked`、`ignored` 行不能设置为 `export_draft_candidate`。
+6. repository 不暴露给浏览器页面，不提供上传报价表能力。
+7. repository tests 只能连接 local / test / temporary PostgreSQL，不能连接 production RDS。
+
+repository 写入保护：
+
+1. `NODE_ENV=production` 时拒绝写入。
+2. `DATABASE_URL` 缺失或无效时拒绝写入。
+3. 数据库 host 不是 `localhost`、`127.0.0.1` 或 `::1` 时拒绝写入。
+4. 数据库名必须包含 `dev`、`test`、`verify` 或 `local` 这类非生产标识。
+5. 任何输入中出现敏感价格字段都抛错，不静默忽略。
+
+repository 默认值和校验：
+
+1. `submittedByRole` 缺省为 `finance`，非 `finance` 拒绝。
+2. `consumerDepartment` 缺省为 `export`，非 `export` 拒绝。
+3. batch status、rowStatus、visibility、priceCandidateStatus 必须在 domain 类型允许范围内。
+4. `addon_only + export_draft_candidate` 拒绝。
+5. `blocked / ignored + export_draft_candidate` 拒绝。
+
 ## Batch 设计
 
 ```ts
