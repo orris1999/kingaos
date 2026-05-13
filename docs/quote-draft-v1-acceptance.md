@@ -111,6 +111,24 @@ Quote Task 006B 将该设计落为 metadata-only Prisma schema，仅新增 `Quot
 12. Prisma schema 不得在 staging row 中保存具体金额、底价、毛利、财务批准价格或可发客户状态。
 13. 006B migration 必须只新增 staging metadata 表、索引和约束，不修改现有客户、附件、收款账号或用户表。
 
+### Export 消费 Finance-confirmed staging 候选
+
+Quote Task 008A 定义 Export 侧读取 staging 候选的 read-only contract，详见 `docs/quote-draft-export-staging-consumption-design.md`。
+
+验收要求：
+
+1. Export 只能消费 `batch.status = finance_confirmed` 的数据。
+2. Export 只能消费 `row.visibility = export_draft_candidate`。
+3. Export 只能消费 `row.rowStatus = candidate`。
+4. `finance_only` / `internal_risk_only` 不得给 Export 读取。
+5. `needs_manual_review` / `addon_only` / `blocked` / `ignored` 不得给 Export 读取。
+6. `missing` / `requires_finance_review` 价格状态不得给 Export 读取。
+7. `not_finance_approved` 可以作为草稿候选，但必须显示“不是正式报价 / 不是财务批准价格”。
+8. Export 看到的是脱敏候选，不包含具体价格、底价、毛利、财务批准价格或可发客户状态。
+9. 水箱 / 中冷器即使可消费，也必须保留多编码、多规格、多包装人工确认 warning。
+10. 特殊包装及其他不能作为产品标准报价候选。
+11. V1 仍然不生成正式报价，仍然不能发客户。
+
 1. 用户输入 `KJ-80002` 这类标准 KJ 时，系统能按规范化后的 KJ 查找候选。
 2. 用户输入含前后空格、全角字符、大小写差异或无意义空格的 KJ 时，系统能归一为同一 `standardKjCode`。
 3. 找到唯一 KJ 时，输出 `matchStatus = "matched_by_kj"`。

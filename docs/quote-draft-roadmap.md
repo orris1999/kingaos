@@ -122,6 +122,37 @@ Quote Task 006G 设计未来 Finance staging confirmation 页面和 action contr
 - confirmation result 不返回具体价格、底价、毛利或财务批准价格。
 - 该 contract 仍不等于正式报价，也不绕过 FinancePricing。
 
+### Export consumes finance-confirmed staging candidates
+
+Quote Task 008A 设计 Export 侧如何读取财务已确认的 staging 候选数据，详见 `docs/quote-draft-export-staging-consumption-design.md`。
+
+Export 只能消费：
+
+- `batch.status = finance_confirmed`
+- `row.visibility = export_draft_candidate`
+- `row.rowStatus = candidate`
+- `priceCandidateStatus = cost_candidate_available` / `quote_candidate_available` / `not_finance_approved`
+
+Export 不能消费：
+
+- `finance_only`
+- `internal_risk_only`
+- `needs_manual_review`
+- `addon_only`
+- `blocked`
+- `ignored`
+- `missing`
+- `requires_finance_review`
+- `batch.status != finance_confirmed`
+
+Export 看到的仍然只是脱敏候选：
+
+- 不展示具体价格。
+- 不展示底价 / 毛利。
+- 不展示财务批准价格。
+- `not_finance_approved` 可以作为草稿候选，但必须继续提示不是正式报价。
+- 正式报价仍必须后续接 FinancePricing。
+
 ## V2｜KJ / OEM 混合匹配
 
 目标：在 KJ 精确匹配稳定后，把 OEM / OE 作为候选匹配能力接入。
