@@ -25,6 +25,23 @@ export const RELEASE_CATEGORY_LABELS: Record<ReleaseNoteCategory, string> = {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-05-13-04-finance-quote-source-dry-run-page",
+    date: "2026-05-13",
+    version: "2026.05.13-04",
+    title: "Quote Task 005A Finance 报价表 dry-run 页面",
+    category: "feature",
+    summary: [
+      "新增 super_admin-only 的 /finance/quote-source-dry-run，用于 Finance 侧在浏览器本地识别 Excel 报价表结构。",
+      "页面复用报价表 adapter matcher，展示 sheet、表头候选、字段映射、warnings 和 finance / export 边界。",
+      "文件不上传服务器、不写数据库、不保存结果；检测到价格字段时只显示结构信号，不显示真实价格明细，也不生成报价草稿或正式报价。"
+    ],
+    affectedAreas: ["财务部", "报价表 dry-run", "报价草稿规划"],
+    migration: "none",
+    productionDataCommand: "none",
+    productionDataRisk: "none",
+    commitHash: "待填写"
+  },
+  {
     id: "2026-05-12-06-quote-draft-workbench-readability",
     date: "2026-05-12",
     version: "2026.05.12-06",

@@ -10,6 +10,8 @@
 - 报价表、成本表和价格候选数据提交归财务部：未来真实报价表上传入口应放在 Finance / FinancePricing 域，例如文档占位路径 `/finance/quote-source-tables`。
 - 出口部不能上传报价表、维护价格表、设置底价或维护毛利规则。
 - Workbench 当前只使用 mock catalog，不读取真实报价表、不接数据库、不保存数据。
+- Quote Task 005A 新增 Finance 侧 `/finance/quote-source-dry-run` 内部页面，只在浏览器本地读取单个 Excel 文件的结构 metadata，并复用 adapter matcher 输出 sheet、表头候选、字段映射和风险提示。
+- Finance dry-run 页面不上传文件、不写数据库、不保存结果、不生成报价草稿、不生成正式报价；检测到成本 / 报价列时只显示布尔信号，不显示具体价格金额。
 - 正式价格必须后续接入 FinancePricing，报价草稿不能绕过财务确认。
 
 ## V1｜KJ 批量报价草稿
@@ -123,7 +125,7 @@ V2 暂不做：
 
 ## 下一步建议
 
-Quote Task 003A 已建立报价表 workbook / sheet adapter 的结构配置和 dry-run summary 类型。Quote Task 003B 进一步补充了基于 mock workbook metadata 的 adapter matcher：先用文件名、文件类型、sheet 名称和 mock 表头做结构化匹配，不读取真实 Excel、不提取价格、不写生产库。Quote Task 003C 增加本地只读 CLI，用于显式指定单个 Excel 文件并输出结构摘要，不输出真实价格明细、不写数据库、不导入报价表。Quote Task 003D 对 8 份财务报价表执行本地 dry-run 并生成脱敏结构报告。Quote Task 003E 锁定了 V1 数据源准入范围和 adapter 修正清单。Quote Task 003E-R 固化了水箱 / 中冷器的会议确认规则。Quote Task 004A 将 V1 source readiness gate 编码为纯 domain 规则。Quote Task 004B-R 修正水箱 / 中冷器口径：品类是 `v1_eligible_with_conditions`，人工确认下沉到具体草稿行。
+Quote Task 003A 已建立报价表 workbook / sheet adapter 的结构配置和 dry-run summary 类型。Quote Task 003B 进一步补充了基于 mock workbook metadata 的 adapter matcher：先用文件名、文件类型、sheet 名称和 mock 表头做结构化匹配，不读取真实 Excel、不提取价格、不写生产库。Quote Task 003C 增加本地只读 CLI，用于显式指定单个 Excel 文件并输出结构摘要，不输出真实价格明细、不写数据库、不导入报价表。Quote Task 003D 对 8 份财务报价表执行本地 dry-run 并生成脱敏结构报告。Quote Task 003E 锁定了 V1 数据源准入范围和 adapter 修正清单。Quote Task 003E-R 固化了水箱 / 中冷器的会议确认规则。Quote Task 004A 将 V1 source readiness gate 编码为纯 domain 规则。Quote Task 004B-R 修正水箱 / 中冷器口径：品类是 `v1_eligible_with_conditions`，人工确认下沉到具体草稿行。Quote Task 005A 将 dry-run 能力放到 Finance 侧浏览器本地页面，继续不上传、不入库、不展示真实价格明细。
 
 下一步进入 V1 开发前，仍建议先完成以下准备，不触碰生产库：
 

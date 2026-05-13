@@ -145,6 +145,15 @@ Quote Task 003C 增加了本地 CLI：`npm run quote-source:dry-run -- --file "/
 - 输出仍固定 `submittedByRole = "finance"`、`consumerDepartment = "export"`，并提示出口部不能上传或维护报价表。
 - CLI 用于本地 / staging dry-run，不能作为生产导入、正式报价或财务批准价格来源。
 
+Quote Task 005A 增加 Finance 侧浏览器本地 dry-run 页面：`/finance/quote-source-dry-run`。
+
+- 第一版仅 `super_admin` 可访问，不新增权限 key，不运行 `db:seed`。
+- 用户必须手动选择一个 `.xls` / `.xlsx` 文件，浏览器本地读取 workbook metadata，不上传服务器、不写数据库、不保存 dry-run 结果。
+- 页面构造 `QuoteSourceWorkbookMetadata` 后复用 `matchQuoteSourceAdapter` 和 `createQuoteSourceDryRunSummaryFromMetadata`，不在 UI 里重写 adapter 匹配逻辑。
+- 页面只显示文件名、文件类型、sheet 名称、表头候选、adapter 匹配结果、字段映射、warnings 和 unsupportedReasons。
+- 检测到成本 / 报价字段时只显示“检测到成本候选列：是 / 否”“检测到报价候选列：是 / 否”，不显示任何具体金额。
+- 页面继续强调报价表由财务提交和维护，出口部不能上传或维护价格表；dry-run 不生成报价草稿、不生成正式报价，价格候选不是财务批准价格。
+
 Quote Task 003E-R 固化了水箱 / 中冷器规则，详见 `docs/quote-draft-radiator-intercooler-rules.md`：
 
 - 水箱 / 中冷器可以进入 V1 KJ 批量报价草稿方向，但不能静默自动匹配。

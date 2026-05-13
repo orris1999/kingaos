@@ -7,6 +7,23 @@
 - `docs/CHANGELOG.md`：给团队阅读，记录背景和规则。
 - `lib/honoa/shared/release-notes.ts`：给管理员页面展示。
 
+## 2026.05.13-04 Quote Task 005A Finance 报价表 dry-run 页面
+
+- 类型：功能 / 数据
+- 影响范围：财务部、报价表 dry-run、报价草稿规划
+- Migration：无
+- 生产数据命令：未运行
+- 生产数据风险：无
+- Release note id：`2026-05-13-04-finance-quote-source-dry-run-page`
+- Commit：待填写
+
+主要变化：
+
+- 新增 `/finance/quote-source-dry-run`，仅 `super_admin` 可访问，用于 Finance 侧在浏览器本地选择 Excel 文件做结构识别。
+- 页面复用报价表 adapter matcher，展示 sheet、表头候选、字段映射、warnings 和 submittedByRole / consumerDepartment 边界。
+- 文件不上传服务器、不写数据库、不保存 dry-run 结果；检测到价格字段时只显示结构布尔信号，不显示真实价格明细。
+- 页面继续强调报价表由财务提交和维护，出口部不能上传或维护价格表；dry-run 不生成报价草稿或正式报价。
+
 ## 2026.05.12-06 Quote Task 002B KJ 报价草稿 Workbench 可读性优化
 
 - 类型：UI
