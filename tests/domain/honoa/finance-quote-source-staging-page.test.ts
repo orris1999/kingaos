@@ -48,10 +48,12 @@ describe("Quote Task 007A Finance quote source staging 只读页面", () => {
   });
 
   it("详情页展示只读确认区域和 disabled 按钮", () => {
-    const component = readRepoFile("components/finance-quote-source-staging-detail.tsx");
+    const component =
+      readRepoFile("components/finance-quote-source-staging-detail.tsx") +
+      readRepoFile("components/finance-quote-source-staging-confirm-form.tsx");
 
-    expect(component).toContain("本轮只读，不执行任何确认动作");
-    expect(component).toContain("确认进入草稿候选（下一阶段开放）");
+    expect(component).toContain("当前确认功能未启用。本页仅展示 staging 批次，不执行写入");
+    expect(component).toContain("确认进入草稿候选（暂未开放）");
     expect(component).toContain("退回修正（下一阶段开放）");
     expect(component).toContain("取消批次（下一阶段开放）");
     expect(component).toContain("<button type=\"button\" disabled>");
@@ -67,7 +69,7 @@ describe("Quote Task 007A Finance quote source staging 只读页面", () => {
     expect(component).toContain("addon_only / blocked / ignored 不会给出口部消费");
   });
 
-  it("页面只读查询 staging 数据，不调用 confirm / create / update / delete", () => {
+  it("页面只读查询 staging 数据，写入只通过 feature-gated confirm form", () => {
     const listPage = readRepoFile("app/finance/quote-source-staging/page.tsx");
     const detailPage = readRepoFile("app/finance/quote-source-staging/[batchId]/page.tsx");
     const source = listPage + detailPage;
@@ -75,19 +77,23 @@ describe("Quote Task 007A Finance quote source staging 只读页面", () => {
     expect(source).toContain("findMany");
     expect(source).toContain("findUnique");
     expect(source).not.toContain("confirmQuoteSourceStagingBatchForDraftCandidates");
+    expect(source).toContain("isFinanceStagingConfirmEnabled");
     expect(source).not.toMatch(/quoteSourceStagingBatch\.(create|update|delete|deleteMany|upsert)/);
     expect(source).not.toMatch(/quoteSourceStagingRow\.(create|update|delete|deleteMany|upsert)/);
     expect(source).not.toContain('"use server"');
     expect(source).not.toContain("'use server'");
   });
 
-  it("页面没有新增 API route、server action 或 staging 表单提交", () => {
+  it("页面没有新增 API route，确认表单由服务端 feature flag 控制", () => {
     const listComponent = readRepoFile("components/finance-quote-source-staging-list.tsx");
-    const detailComponent = readRepoFile("components/finance-quote-source-staging-detail.tsx");
+    const detailComponent =
+      readRepoFile("components/finance-quote-source-staging-detail.tsx") +
+      readRepoFile("components/finance-quote-source-staging-confirm-form.tsx");
 
     expect(existsSync(path.join(root, "app/api/finance/quote-source-staging"))).toBe(false);
-    expect(listComponent + detailComponent).not.toContain("<form");
-    expect(listComponent + detailComponent).not.toContain("form action");
+    expect(detailComponent).toContain("enabled: boolean");
+    expect(detailComponent).toContain("rowVisibilityPolicy");
+    expect(detailComponent).toContain("strict_candidate_only");
     expect(listComponent + detailComponent).not.toContain("fetch(");
   });
 

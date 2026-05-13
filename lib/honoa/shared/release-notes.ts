@@ -25,6 +25,23 @@ export const RELEASE_CATEGORY_LABELS: Record<ReleaseNoteCategory, string> = {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-05-13-16-finance-staging-confirm-ui-wiring",
+    date: "2026-05-13",
+    version: "2026.05.13-16",
+    title: "Quote Task 007C Finance staging 确认 UI wiring",
+    category: "security",
+    summary: [
+      "新增服务端 feature flag KINGA_ENABLE_FINANCE_STAGING_CONFIRM，缺失或 false 时默认关闭，不使用 NEXT_PUBLIC_。",
+      "将 /finance/quote-source-staging/[batchId] 的确认区域接入 007B confirm action，但只有 feature flag 开启时才渲染可提交确认表单。",
+      "确认表单固定 strict_candidate_only，不提供 include_manual_review；退回修正 / 取消仍 disabled，ECS 默认不启用该功能。"
+    ],
+    affectedAreas: ["财务部", "报价表 staging", "确认流程", "feature flag"],
+    migration: "none",
+    productionDataCommand: "none",
+    productionDataRisk: "low",
+    commitHash: "待填写"
+  },
+  {
     id: "2026-05-13-15-finance-staging-confirm-action",
     date: "2026-05-13",
     version: "2026.05.13-15",

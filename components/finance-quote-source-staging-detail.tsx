@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FinanceQuoteSourceStagingConfirmForm } from "./finance-quote-source-staging-confirm-form";
 
 export type QuoteSourceStagingDetailRow = {
   id: string;
@@ -74,9 +75,11 @@ function canBecomeExportDraftCandidate(row: QuoteSourceStagingDetailRow) {
 }
 
 export function FinanceQuoteSourceStagingDetail({
-  batch
+  batch,
+  confirmationEnabled = false
 }: {
   batch: QuoteSourceStagingDetailData | null;
+  confirmationEnabled?: boolean;
 }) {
   if (!batch) {
     return (
@@ -160,12 +163,14 @@ export function FinanceQuoteSourceStagingDetail({
 
       <section className="panel stack">
         <h2>财务确认区域</h2>
-        <p className="muted">本轮只读，不执行任何确认动作。确认、退回和取消将在下一阶段开放。</p>
-        <div className="actions">
-          <button type="button" disabled>确认进入草稿候选（下一阶段开放）</button>
-          <button type="button" disabled>退回修正（下一阶段开放）</button>
-          <button type="button" disabled>取消批次（下一阶段开放）</button>
-        </div>
+        <p className="muted">
+          确认功能受服务端 feature flag 控制。默认生产关闭，不启用时本页不执行写入。
+        </p>
+        <FinanceQuoteSourceStagingConfirmForm
+          batchId={batch.id}
+          batchStatus={batch.status}
+          enabled={confirmationEnabled}
+        />
       </section>
 
       <section className="panel stack">

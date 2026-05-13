@@ -7,6 +7,24 @@
 - `docs/CHANGELOG.md`：给团队阅读，记录背景和规则。
 - `lib/honoa/shared/release-notes.ts`：给管理员页面展示。
 
+## 2026.05.13-16 Quote Task 007C Finance staging 确认 UI wiring
+
+- 类型：功能 / 安全
+- 影响范围：财务部、报价表 staging、确认流程、feature flag
+- Migration：无
+- 生产数据命令：未运行
+- 生产数据风险：低
+- Release note id：`2026-05-13-16-finance-staging-confirm-ui-wiring`
+- Commit：待填写
+
+主要变化：
+
+- 新增服务端 feature flag `KINGA_ENABLE_FINANCE_STAGING_CONFIRM`，缺失或 `false` 时默认关闭，不使用 `NEXT_PUBLIC_`。
+- 将 `/finance/quote-source-staging/[batchId]` 的确认区域接入 007B `confirmQuoteSourceStagingBatchAction`，但只有 feature flag 开启时才渲染可提交确认表单。
+- feature flag 关闭时按钮继续 disabled，并显示“确认功能暂未开放”；ECS 默认不修改 `.env`，不启用该功能。
+- 表单固定 `rowVisibilityPolicy = strict_candidate_only`，不提供 `include_manual_review` 选项；退回修正 / 取消仍 disabled。
+- 继续明确 `finance_confirmed` 不等于财务批准价格，`export_draft_candidate` 仍不是正式报价。
+
 ## 2026.05.13-15 Quote Task 007B Finance staging 确认 server action
 
 - 类型：安全 / 数据

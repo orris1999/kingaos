@@ -578,6 +578,52 @@ Action 规则：
 - 价格审批。
 - 正式报价。
 
+## 007C feature-gated confirmation UI
+
+Quote Task 007C 将确认表单接入 `/finance/quote-source-staging/[batchId]`，但默认生产不可用。
+
+Feature flag：
+
+- `KINGA_ENABLE_FINANCE_STAGING_CONFIRM`
+- 缺失或 `false` 时关闭。
+- `true` 时开启。
+- 不使用 `NEXT_PUBLIC_`，不暴露给前端。
+- ECS 部署不自动修改 `.env`，不自动启用。
+
+关闭时：
+
+1. 页面仍按只读方式展示 staging batch / rows。
+2. “确认进入草稿候选（暂未开放）”按钮 disabled。
+3. 不渲染可提交 form。
+4. 不调用 server action。
+5. 不写数据库。
+
+开启时：
+
+1. 详情页显示确认说明输入框。
+2. 用户必须勾选风险确认 checkbox。
+3. 表单固定提交 `rowVisibilityPolicy = strict_candidate_only`。
+4. 不允许选择 `include_manual_review`。
+5. 调用 `confirmQuoteSourceStagingBatchAction`，由 action 再校验 `super_admin` 并写入 AuditLog。
+6. 确认成功后刷新详情页，可显示 `status = finance_confirmed`、`confirmedBy`、`confirmedAt`。
+
+继续不开放：
+
+- 退回修正。
+- 取消批次。
+- API route。
+- Prisma schema / migration。
+- 报价表导入。
+- 报价草稿生成。
+- 正式报价。
+
+安全边界：
+
+- `finance_confirmed` 不等于 `FinanceApprovedPrice`。
+- `export_draft_candidate` 仍不是正式报价。
+- `not_finance_approved` 可以作为报价草稿候选，但不能作为正式报价。
+- `needs_manual_review` / `addon_only` / `blocked` / `ignored` 不会自动给出口部消费。
+
 ## 下一步
 
 如果后续进入实现，需要另立任务并重新评审：

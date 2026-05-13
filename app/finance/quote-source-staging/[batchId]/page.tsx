@@ -6,6 +6,7 @@ import {
 import { Forbidden, KingaShell } from "@/components/kinga-shell";
 import { requireCurrentUser } from "@/lib/honoa/server/auth";
 import { prisma } from "@/lib/honoa/server/db";
+import { isFinanceStagingConfirmEnabled } from "@/lib/honoa/server/feature-flags";
 import type { Prisma } from "@prisma/client";
 
 type QuoteSourceStagingBatchWithRows = Prisma.QuoteSourceStagingBatchGetPayload<{
@@ -92,6 +93,7 @@ export default async function FinanceQuoteSourceStagingDetailPage({
       }
     }
   });
+  const confirmationEnabled = isFinanceStagingConfirmEnabled();
 
   return (
     <KingaShell user={user}>
@@ -100,12 +102,17 @@ export default async function FinanceQuoteSourceStagingDetailPage({
           <div>
             <div className="breadcrumbs">KingaOS / 财务部 / 报价表 staging / 批次详情</div>
             <h1>报价表 staging 批次详情</h1>
-            <p className="muted">当前页面只读，不执行确认，不修改 batch status 或 row visibility。</p>
+            <p className="muted">
+              确认功能受服务端开关控制；默认生产关闭，不生成正式报价。
+            </p>
           </div>
           <span className="tag warn">只读预览</span>
         </div>
 
-        <FinanceQuoteSourceStagingDetail batch={mapBatch(batch)} />
+        <FinanceQuoteSourceStagingDetail
+          batch={mapBatch(batch)}
+          confirmationEnabled={confirmationEnabled}
+        />
       </div>
     </KingaShell>
   );
