@@ -153,6 +153,15 @@ Export 看到的仍然只是脱敏候选：
 - `not_finance_approved` 可以作为草稿候选，但必须继续提示不是正式报价。
 - 正式报价仍必须后续接 FinancePricing。
 
+Quote Task 008B 新增 Export 侧内部 repository：`findExportQuoteDraftSourceCandidates`。该 repository 仍只读，不新增 UI / API / server action，不写 production 数据：
+
+- 只查询 `finance_confirmed + export_draft_candidate + candidate` rows。
+- 只允许 `cost_candidate_available` / `quote_candidate_available` / `not_finance_approved` 作为草稿候选状态。
+- 支持按 `standardKjCode`、`baseKjCode`、`oldKjNo` 查询。
+- 支持 `category`、`tradeMode` 和 `limit` 过滤，`limit` 默认 20、最大 50。
+- 查询结果必须经过 008A 的暴露判断和脱敏 mapping。
+- OEM 自动匹配、鼎捷编码查询、孚盟编码查询和包装附加项消费仍暂缓。
+
 ## V2｜KJ / OEM 混合匹配
 
 目标：在 KJ 精确匹配稳定后，把 OEM / OE 作为候选匹配能力接入。

@@ -149,6 +149,54 @@ type FindExportQuoteDraftSourceCandidatesInput = {
 6. OEM / OE 输入应返回 `oem_matching_not_supported` 或 `requiresTechnicalReview`，不查询 staging。
 7. 008A 不实现 API route 或 server action。
 
+## Quote Task 008B｜Export staging consumption repository
+
+008B 在 008A 的 read-only contract 基础上新增内部 repository：
+
+```ts
+findExportQuoteDraftSourceCandidates(input): Promise<ExportQuoteDraftSourceCandidate[]>
+```
+
+repository 只读取 staging metadata，不写数据库、不生成报价草稿、不生成正式报价、不开放 UI / API / server action。
+
+查询条件必须同时满足：
+
+1. `batch.status = finance_confirmed`
+2. `row.visibility = export_draft_candidate`
+3. `row.rowStatus = candidate`
+4. `row.priceCandidateStatus` 是 `cost_candidate_available`、`quote_candidate_available` 或 `not_finance_approved`
+5. KJ 命中 `standardKjCode`、`baseKjCode` 或 `oldKjNo`
+
+排除：
+
+1. `batch.status != finance_confirmed`
+2. `finance_only`
+3. `internal_risk_only`
+4. `needs_manual_review`
+5. `addon_only`
+6. `blocked`
+7. `ignored`
+8. `missing`
+9. `requires_finance_review`
+
+repository 会先调用 `canExposeStagingRowToExportDraft` 再调用 `mapStagingRowToExportQuoteDraftSourceCandidate`，避免查询条件和脱敏 mapping 分叉。
+
+008B 支持：
+
+1. `kjCode` 或 `normalizedKjCode`，至少提供一个。
+2. `category` 过滤。
+3. `tradeMode` 过滤；指定 `export_usd` 或 `domestic_cny` 时，也允许返回 `unknown` tradeMode 候选供人工核对。
+4. `limit` 默认 20，最大 50。
+
+008B 暂不支持：
+
+1. OEM / OE 自动匹配。
+2. 鼎捷编码查询。
+3. 孚盟编码查询。
+4. 包装附加项候选消费。
+
+说明：`oldKjNo` 仅作为历史旧 KJ 引用查询；鼎捷 / 孚盟查询后续再做独立规则，避免把 ERP / CRM 历史码静默当作产品报价主键。
+
 ## 水箱 / 中冷器规则
 
 如果 category 是水箱或中冷器，且 row 已经满足 `export_draft_candidate` 条件，可以给 Export 作为草稿候选。
