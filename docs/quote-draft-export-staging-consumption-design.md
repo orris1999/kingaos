@@ -257,3 +257,79 @@ type ExportQuoteDraftAddonCandidate = ...
 8. 正式报价。
 9. 价格审批。
 10. production 写入。
+
+## Quote Task 008C｜Workbench feature-gated staging candidates
+
+008C 将内部 `/export/quote-draft-workbench` 接入两种数据源：
+
+1. `mock catalog`：默认数据源，继续不读取真实报价表。
+2. `finance_confirmed staging candidates`：只读查询财务确认后的 staging 候选。
+
+staging candidates 模式必须受服务端 feature flag 控制：
+
+```text
+KINGA_ENABLE_EXPORT_STAGING_QUOTE_DRAFT=false
+```
+
+规则：
+
+1. 环境变量缺失或不是 `true` 时，视为关闭。
+2. 不使用 `NEXT_PUBLIC_`，不把环境变量暴露到前端。
+3. production 默认关闭，本轮不修改 ECS `.env`。
+4. flag 关闭时，Workbench 只能使用 mock catalog，staging 数据源 disabled。
+5. flag 开启时，第一版仅 `super_admin` 可以通过只读 action 查询 staging candidates。
+
+只读 action：
+
+```ts
+findExportQuoteDraftSourceCandidatesAction(input)
+```
+
+该 action：
+
+1. 必须 `requireCurrentUser`。
+2. 第一版只允许 `super_admin`。
+3. 调用 `findExportQuoteDraftSourceCandidates`。
+4. 不写数据库。
+5. 不修改 batch / rows。
+6. 不创建报价草稿。
+7. 不生成正式报价。
+8. 返回脱敏 `ExportQuoteDraftSourceCandidate[]`。
+
+Workbench staging 模式显示：
+
+1. 行号、原始输入、KJ。
+2. 产品名称候选、品类、`tradeMode`。
+3. 数量。
+4. `priceCandidateStatus`。
+5. `hasCostCandidate` / `hasQuoteCandidate`。
+6. warnings。
+
+Workbench staging 模式不得显示：
+
+1. 具体价格。
+2. 底价。
+3. 毛利。
+4. `FinanceApprovedPrice`。
+5. 正式报价状态。
+6. 可发客户状态。
+
+如果查询无结果，显示：
+
+```text
+未找到财务确认的 staging 候选。
+```
+
+OEM / OE 输入仍显示：
+
+```text
+OEM 自动匹配暂未开放。
+```
+
+`not_finance_approved` 可以作为草稿候选，但必须显示：
+
+```text
+非财务批准价格，仅草稿候选。
+```
+
+008C 仍不保存输入、不保存输出、不导出 Excel / PDF、不生成报价草稿、不生成正式报价。

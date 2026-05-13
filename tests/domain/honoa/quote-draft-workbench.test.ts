@@ -33,6 +33,9 @@ describe("Quote Task 002C 出口部 KJ 报价草稿 Workbench", () => {
     expect(page).toContain("QuoteDraftWorkbench");
     expect(page).toContain('user.role !== "super_admin"');
     expect(page).toContain("当前账号不能查看报价草稿解析器 Workbench");
+    expect(page).toContain("isExportStagingQuoteDraftEnabled");
+    expect(page).toContain("findExportQuoteDraftSourceCandidatesAction");
+    expect(page).toContain("stagingCandidatesEnabled ? findExportQuoteDraftSourceCandidatesAction : undefined");
   });
 
   it("旧 /admin/quote-draft-workbench 重定向到出口部 canonical route", () => {
@@ -92,6 +95,9 @@ describe("Quote Task 002C 出口部 KJ 报价草稿 Workbench", () => {
     expect(component).toContain("填入示例");
     expect(component).toContain("清空");
     expect(component).toContain("复制结果 JSON");
+    expect(component).toContain("Mock 数据");
+    expect(component).toContain("财务确认 staging 候选");
+    expect(component).toContain("该模式暂未开放");
     expect(mockCatalog).toContain("KJMOCK-COND-001 100pcs");
     expect(mockCatalog).toContain("KJMOCK-RAD-PA16-A 80");
     expect(mockCatalog).toContain("KJMOCK-RAD-BASE-001 50");
@@ -159,14 +165,19 @@ describe("Quote Task 002C 出口部 KJ 报价草稿 Workbench", () => {
     expect(candidate.warnings).toContain("OEM / OE 自动匹配暂未开放，请提供 KJ 或进入人工匹配。");
   });
 
-  it("workbench 不保存数据、不读取真实报价表、不接 API 或 server action", () => {
+  it("workbench 不保存数据、不读取真实报价表，staging 查询只通过 feature-gated 只读 action", () => {
     const component = readRepoFile("components/quote-draft-workbench.tsx");
     const page = readRepoFile("app/export/quote-draft-workbench/page.tsx");
     const mockCatalog = readRepoFile("lib/honoa/quote-draft/mock-catalog.ts");
+    const action = readRepoFile("lib/honoa/quote-draft/export-staging-consumption-actions.ts");
 
     expect(component).not.toContain("fetch(");
     expect(component).not.toContain("action=");
     expect(page).not.toContain("PrismaClient");
+    expect(page).toContain("stagingCandidatesEnabled ? findExportQuoteDraftSourceCandidatesAction : undefined");
+    expect(action).toContain("requireCurrentUser");
+    expect(action).toContain('actor.role !== "super_admin"');
+    expect(action).toContain("findExportQuoteDraftSourceCandidates(prisma, input)");
     expect(mockCatalog).not.toContain(".xlsx");
     expect(mockCatalog).not.toContain(".xls");
     expect(mockCatalog).toContain("KJMOCK-COND-001");
@@ -181,5 +192,20 @@ describe("Quote Task 002C 出口部 KJ 报价草稿 Workbench", () => {
     expect(serialized).not.toContain("finance" + "Approved" + "Price");
     expect(serialized).not.toContain("official" + "Quote");
     expect(serialized).not.toContain(["sent", "to", "customer"].join("_"));
+  });
+
+  it("staging 数据源关闭时 disabled，开启后仅查询脱敏候选并保留业务警示", () => {
+    const component = readRepoFile("components/quote-draft-workbench.tsx");
+    const flagHelper = readRepoFile("lib/honoa/server/feature-flags.ts");
+
+    expect(flagHelper).toContain("KINGA_ENABLE_EXPORT_STAGING_QUOTE_DRAFT");
+    expect(flagHelper).not.toContain("NEXT_PUBLIC_");
+    expect(component).toContain('disabled={!stagingCandidatesEnabled}');
+    expect(component).toContain("该模式暂未开放。默认只使用 Mock 数据");
+    expect(component).toContain("未找到财务确认的 staging 候选");
+    expect(component).toContain("OEM 自动匹配暂未开放");
+    expect(component).toContain("非财务批准价格，仅草稿候选");
+    expect(component).toContain("finance_confirmed staging");
+    expect(component).toContain("finance_confirmed 不等于 FinanceApprovedPrice");
   });
 });

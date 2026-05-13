@@ -162,6 +162,16 @@ Quote Task 008B 新增 Export 侧内部 repository：`findExportQuoteDraftSource
 - 查询结果必须经过 008A 的暴露判断和脱敏 mapping。
 - OEM 自动匹配、鼎捷编码查询、孚盟编码查询和包装附加项消费仍暂缓。
 
+Quote Task 008C 将 `/export/quote-draft-workbench` 接入 feature-gated staging candidates 模式：
+
+- 新增服务端 flag `KINGA_ENABLE_EXPORT_STAGING_QUOTE_DRAFT`，缺失 / false 默认关闭。
+- 不使用 `NEXT_PUBLIC_`，不自动修改 ECS `.env`。
+- flag 关闭时，Workbench 仍只能使用 mock catalog。
+- flag 开启时，第一版仅 `super_admin` 可以通过只读 action 查询 `finance_confirmed + export_draft_candidate + candidate` rows。
+- 查询结果仍是脱敏草稿候选，不显示具体价格、底价、毛利或财务批准价格。
+- Workbench 不保存输入、不保存输出、不导出 Excel / PDF、不生成报价草稿、不生成正式报价。
+- OEM 自动匹配仍暂不支持。
+
 ## V2｜KJ / OEM 混合匹配
 
 目标：在 KJ 精确匹配稳定后，把 OEM / OE 作为候选匹配能力接入。
