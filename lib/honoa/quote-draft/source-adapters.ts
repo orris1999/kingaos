@@ -124,8 +124,12 @@ export const QUOTE_SOURCE_WORKBOOK_CONFIGS: QuoteSourceWorkbookConfig[] = [
         priceFieldStrategy: "cost_candidate",
         riskNotes: [
           ...STANDARD_RISK_NOTES,
-          "水箱结构复杂，包含多个辅助 sheet、状态列、包装方案和公式列。",
-          "嵌入图片不是稳定主图来源。"
+          "complex_multi_code_mapping：水箱存在基础编码、标准 KJ、旧 KJ.NO、孚盟编码、鼎捷编码等多编码来源。",
+          "complex_packaging_or_spec_mapping：水箱存在多规格、多包装、纸箱内尺寸、PA/BA、A/B、AT/MT、主板/水室等字段，需要人工确认。",
+          "manual_confirmation_required：水箱可以进入 V1 KJ 草稿方向，但不能静默自动匹配，必须带人工确认提示。",
+          "oem_matching_deferred：水箱 OEM / OE 多在辅助 sheet，V1 不做 OEM 自动匹配。",
+          "embedded_excel_image_not_stable：水箱 Excel 嵌入图片不是稳定产品主图来源。",
+          "水箱主 sheet 可作为 V1 KJ 草稿候选；不能生产、只做报价不公布、不保质漏水等 sheet 不进入 V1 主草稿。"
         ]
       }
     ],
@@ -161,7 +165,12 @@ export const QUOTE_SOURCE_WORKBOOK_CONFIGS: QuoteSourceWorkbookConfig[] = [
         riskNotes: ["内部参考 sheet 不直接开放给出口部或客户。"]
       }
     ],
-    notes: ["水箱 adapter 必须优先做 dry-run，不能直接导入。"]
+    notes: [
+      "水箱 adapter 必须优先做 dry-run，不能直接导入。",
+      "V1 以 KJ-编码（标准编码）为标准 KJ；旧 KJ.NO / 孚盟编码和鼎捷编码保留为别名或生产下单参考。",
+      "基础 KJ 多候选时不得静默选择第一行；必须输出人工确认 warning。",
+      "最新外销成本候选列和最新出口部内销成本候选列都只是成本候选，不是财务批准价格。"
+    ]
   },
   {
     id: "evaporator-cost-2026",
@@ -205,8 +214,12 @@ export const QUOTE_SOURCE_WORKBOOK_CONFIGS: QuoteSourceWorkbookConfig[] = [
         priceFieldStrategy: "cost_candidate",
         riskNotes: [
           ...STANDARD_RISK_NOTES,
-          "中冷器结构与水箱相近但数据量和辅助 sheet 不一致，需要单独配置。",
-          "嵌入图片不是稳定主图来源。"
+          "complex_multi_code_mapping：中冷器存在基础编码、标准 KJ、旧 KJ.NO、孚盟编码、鼎捷品号等多编码来源。",
+          "complex_packaging_or_spec_mapping：中冷器存在多规格、多包装、纸箱内尺寸、PA/BA、A/B、AT/MT、主板/水室等字段，需要人工确认。",
+          "manual_confirmation_required：中冷器可以进入 V1 KJ 草稿方向，但不能静默自动匹配，必须带人工确认提示。",
+          "oem_matching_deferred：中冷器 OEM / OE 多在辅助 sheet，V1 不做 OEM 自动匹配。",
+          "embedded_excel_image_not_stable：中冷器 Excel 嵌入图片不是稳定产品主图来源。",
+          "中冷器主 sheet 可作为 V1 KJ 草稿候选；不能生产、只做报价不公布、不保质漏水等 sheet 不进入 V1 主草稿。"
         ]
       }
     ],
@@ -227,7 +240,12 @@ export const QUOTE_SOURCE_WORKBOOK_CONFIGS: QuoteSourceWorkbookConfig[] = [
         riskNotes: ["不能生产 sheet 只作为风险拦截参考。"]
       }
     ],
-    notes: ["中冷器 adapter 必须单独验收，不能简单复用水箱导入结果。"]
+    notes: [
+      "中冷器 adapter 必须单独验收，不能简单复用水箱导入结果。",
+      "V1 以 KJ-编码（标准编码）为标准 KJ；旧 KJ.NO / 孚盟编码和鼎捷品号保留为别名或生产下单参考。",
+      "基础 KJ 多候选时不得静默选择第一行；必须输出人工确认 warning。",
+      "最新外销成本候选列和最新出口部内销成本候选列都只是成本候选，不是财务批准价格。"
+    ]
   },
   {
     id: "water-chamber-cost-2026",
@@ -283,12 +301,18 @@ export const QUOTE_SOURCE_WORKBOOK_CONFIGS: QuoteSourceWorkbookConfig[] = [
         priceFieldStrategy: "quote_candidate",
         riskNotes: [
           ...STANDARD_RISK_NOTES,
+          "packaging_addon_not_product_line：特殊包装及其他不属于产品标准报价主线。",
+          "addon_only：特殊包装及其他只能作为包装 / 附加项候选。",
+          "not_product_standard_quote：特殊包装及其他不能作为产品标准报价。",
           "特殊包装及其他不能直接视为产品标准报价，只能作为包装附加项候选。",
           "该表没有稳定 KJ / OEM 主键，不适合产品自动匹配。"
         ]
       }
     ],
-    notes: ["特殊包装 adapter 不生成产品报价候选，只生成附加项结构提示。"]
+    notes: [
+      "特殊包装 adapter 不生成产品报价候选，只生成附加项结构提示。",
+      "特殊包装及其他不进入 V1 产品 KJ 草稿，只能在未来作为包装 / 附加项候选。"
+    ]
   },
   {
     id: "all-aluminum-oil-cooler-cost-2026",

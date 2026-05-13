@@ -51,15 +51,35 @@ describe("Quote Task 003A 报价表 adapter 配置", () => {
     const radiator = QUOTE_SOURCE_WORKBOOK_CONFIGS.find((config) => config.category === "水箱");
     const intercooler = QUOTE_SOURCE_WORKBOOK_CONFIGS.find((config) => config.category === "中冷器");
 
-    expect(JSON.stringify(radiator)).toContain("结构复杂");
-    expect(JSON.stringify(intercooler)).toContain("结构与水箱相近");
-    expect(JSON.stringify(intercooler)).toContain("单独配置");
+    const radiatorText = JSON.stringify(radiator);
+    const intercoolerText = JSON.stringify(intercooler);
+
+    for (const text of [radiatorText, intercoolerText]) {
+      expect(text).toContain("complex_multi_code_mapping");
+      expect(text).toContain("complex_packaging_or_spec_mapping");
+      expect(text).toContain("manual_confirmation_required");
+      expect(text).toContain("oem_matching_deferred");
+      expect(text).toContain("embedded_excel_image_not_stable");
+      expect(text).toContain("不能静默自动匹配");
+      expect(text).toContain("基础 KJ 多候选");
+      expect(text).toContain("成本候选");
+    }
+
+    expect(radiatorText).toContain("KJ-编码（标准编码）");
+    expect(radiatorText).toContain("旧 KJ.NO");
+    expect(radiatorText).toContain("鼎捷编码");
+    expect(intercoolerText).toContain("KJ-编码（标准编码）");
+    expect(intercoolerText).toContain("旧 KJ.NO");
+    expect(intercoolerText).toContain("鼎捷品号");
   });
 
   it("特殊包装 adapter 标记不能直接视为产品标准报价", () => {
     const specialPackaging = QUOTE_SOURCE_WORKBOOK_CONFIGS.find((config) => config.category === "特殊包装及其他");
     const text = JSON.stringify(specialPackaging);
 
+    expect(text).toContain("packaging_addon_not_product_line");
+    expect(text).toContain("addon_only");
+    expect(text).toContain("not_product_standard_quote");
     expect(text).toContain("不能直接视为产品标准报价");
     expect(text).toContain("包装附加项候选");
     expect(text).toContain("没有稳定 KJ / OEM 主键");

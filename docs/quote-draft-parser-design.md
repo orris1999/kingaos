@@ -145,6 +145,17 @@ Quote Task 003C 增加了本地 CLI：`npm run quote-source:dry-run -- --file "/
 - 输出仍固定 `submittedByRole = "finance"`、`consumerDepartment = "export"`，并提示出口部不能上传或维护报价表。
 - CLI 用于本地 / staging dry-run，不能作为生产导入、正式报价或财务批准价格来源。
 
+Quote Task 003E-R 固化了水箱 / 中冷器规则，详见 `docs/quote-draft-radiator-intercooler-rules.md`：
+
+- 水箱 / 中冷器可以进入 V1 KJ 批量报价草稿方向，但不能静默自动匹配。
+- 主 sheet 可作为 V1 主草稿候选；`不能生产`、`只做报价，不公布的报价表`、不保质漏水等辅助 sheet 不进入 V1 主草稿。
+- `KJ-编码（标准编码）` 是 V1 标准 KJ；旧 KJ.NO / 孚盟编码、鼎捷编码（带水箱盖 / 不带水箱盖）必须保留。
+- 基础 KJ 多候选时不能静默选择第一行。
+- OEM / OE 输入在 V1 仍输出 `oem_not_supported_yet` 或 `requires_technical_review`。
+- 水箱 / 中冷器的外销 / 内销成本列都只是 `priceCandidate` / `costCandidate`，历史日期价格列不作为 V1 默认候选。
+- Excel 嵌入图片只产生 `embedded_only` 或 `missing` 状态，不导入 OSS，不作为稳定主图。
+- 数量字段必须保留，数量缺失时输出 warning。
+
 ```ts
 type QuoteSourceWorkbookConfig = {
   id: string;

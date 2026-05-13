@@ -174,6 +174,46 @@ describe("Quote Task 003B 报价表 adapter matcher", () => {
     expect(warnings).toContain("出口部不能上传或维护报价表");
   });
 
+  it("水箱 / 中冷器 dry-run warnings 固化人工确认和 OEM 暂缓规则", () => {
+    const radiator = createQuoteSourceDryRunSummaryFromMetadata({
+      sourceFileName: "mock-水箱成本报价表.xlsx",
+      fileType: "xlsx",
+      detectedSheets: ["2026年 水箱成本报价表"]
+    });
+    const intercooler = createQuoteSourceDryRunSummaryFromMetadata({
+      sourceFileName: "mock-中冷器成本报价表.xlsx",
+      fileType: "xlsx",
+      detectedSheets: ["2026年 中冷器成本报价表"]
+    });
+
+    for (const summary of [radiator, intercooler]) {
+      const warnings = summary.warnings.join(" ");
+      expect(warnings).toContain("报价表由财务提交和维护");
+      expect(warnings).toContain("出口部不能上传或维护报价表");
+      expect(warnings).toContain("成本价不是财务批准价格");
+      expect(warnings).toContain("manual_confirmation_required");
+      expect(warnings).toContain("complex_multi_code_mapping");
+      expect(warnings).toContain("complex_packaging_or_spec_mapping");
+      expect(warnings).toContain("oem_matching_deferred");
+      expect(warnings).toContain("embedded_excel_image_not_stable");
+      expect(warnings).toContain("不能静默自动匹配");
+    }
+  });
+
+  it("特殊包装 dry-run warnings 标记只能作为包装附加项候选", () => {
+    const summary = createQuoteSourceDryRunSummaryFromMetadata({
+      sourceFileName: "mock-特殊包装及其他成本报价表.xls",
+      fileType: "xls",
+      detectedSheets: ["2026年5月特殊包装及其他成本报价表"]
+    });
+
+    const warnings = summary.warnings.join(" ");
+    expect(warnings).toContain("packaging_addon_not_product_line");
+    expect(warnings).toContain("addon_only");
+    expect(warnings).toContain("not_product_standard_quote");
+    expect(warnings).toContain("不能作为产品标准报价");
+  });
+
   it("代码业务类型不引入正式报价误导字段", () => {
     const text = sourceText();
 

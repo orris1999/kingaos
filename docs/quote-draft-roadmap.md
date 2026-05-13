@@ -16,6 +16,29 @@
 
 目标：让业务员上传或粘贴一批 KJ 编号，系统生成“报价草稿候选”，供人工核对。
 
+### V1 数据源准入范围
+
+Quote Task 003E 已根据 003D 的脱敏 dry-run 报告锁定 V1 数据源准入范围，详见 `docs/quote-draft-v1-source-readiness.md`。
+
+V1 产品 KJ 草稿候选优先纳入：
+
+- 冷凝器
+- 暖风
+- 蒸发器
+- 水室
+- 全铝自产机冷
+
+水箱和中冷器可以进入 V1，但必须带人工确认和风险提示，因为它们包含多编码、OEM / OE、包装方案、限销 / 不能生产等复杂结构。会议确认后的详细规则见 `docs/quote-draft-radiator-intercooler-rules.md`：
+
+- 主 sheet 可作为 V1 KJ 草稿候选来源。
+- `不能生产`、`只做报价，不公布的报价表`、不保质漏水等辅助 sheet 不进入 V1 主草稿。
+- `KJ-编码（标准编码）` 是 V1 标准 KJ；旧 KJ.NO / 孚盟编码和鼎捷编码保留。
+- 基础 KJ 多候选时不能静默选择第一行。
+- OEM / OE 自动匹配暂不开放。
+- Excel 嵌入图片不是稳定主图来源。
+
+特殊包装及其他不进入产品 KJ 报价草稿 V1，只作为包装 / 附加项候选。
+
 建议范围：
 
 1. 只支持 KJ 精确匹配。
@@ -33,6 +56,8 @@ V1 必须先做的数据准备：
 - 建立 KJ 规范化规则。
 - 对重复 KJ 输出冲突候选，不自动取第一条。
 - 对不能生产 / 限销 / 风险备注输出明显提醒。
+- 对水箱 / 中冷器区分产品规格字段、包装 / 体积字段、价格影响字段。
+- V1 默认只取财务确认的最新有效日期价格列，历史日期价格列不作为默认候选。
 
 ## V2｜KJ / OEM 混合匹配
 
@@ -86,10 +111,13 @@ V2 暂不做：
 
 ## 下一步建议
 
-Quote Task 003A 已建立报价表 workbook / sheet adapter 的结构配置和 dry-run summary 类型。Quote Task 003B 进一步补充了基于 mock workbook metadata 的 adapter matcher：先用文件名、文件类型、sheet 名称和 mock 表头做结构化匹配，不读取真实 Excel、不提取价格、不写生产库。Quote Task 003C 增加本地只读 CLI，用于显式指定单个 Excel 文件并输出结构摘要，不输出真实价格明细、不写数据库、不导入报价表。下一步进入真实 Excel 读取前，仍建议先做本地 / staging 的只读 dry-run，不触碰生产库：
+Quote Task 003A 已建立报价表 workbook / sheet adapter 的结构配置和 dry-run summary 类型。Quote Task 003B 进一步补充了基于 mock workbook metadata 的 adapter matcher：先用文件名、文件类型、sheet 名称和 mock 表头做结构化匹配，不读取真实 Excel、不提取价格、不写生产库。Quote Task 003C 增加本地只读 CLI，用于显式指定单个 Excel 文件并输出结构摘要，不输出真实价格明细、不写数据库、不导入报价表。Quote Task 003D 对 8 份财务报价表执行本地 dry-run 并生成脱敏结构报告。Quote Task 003E 锁定了 V1 数据源准入范围和 adapter 修正清单。Quote Task 003E-R 固化了水箱 / 中冷器的会议确认规则。
+
+下一步进入 V1 开发前，仍建议先完成以下准备，不触碰生产库：
 
 1. 在 Finance / FinancePricing 域设计未来报价表提交入口，例如 `/finance/quote-source-tables`，先只做 dry-run。
 2. dry-run 只读取 Excel 结构，不导入价格，不写生产 PostgreSQL。
 3. 输出 adapter 匹配、sheet 检测、表头行、字段映射、缺失字段和风险提示。
 4. 出口部继续只使用 dry-run / staging 结果生成报价草稿，不维护报价表。
 5. 继续不做正式报价、财务批准价格、订单或合同。
+6. 按 `docs/quote-draft-v1-source-readiness.md` 的 checklist 由财务、出口部、产品资料负责人分别确认 V1 数据源、价格字段含义、KJ 标准化和图片来源策略。
