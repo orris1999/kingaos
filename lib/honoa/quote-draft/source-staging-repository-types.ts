@@ -63,6 +63,9 @@ export type QuoteSourceStagingRowFilter = {
 export type QuoteSourceStagingStatusActor = {
   userId?: string;
   name?: string;
+  reason?: string;
+  notes?: string;
+  warnings?: string[];
 };
 
 export type QuoteSourceStagingRepositoryOptions = {

@@ -15,6 +15,7 @@ import type {
   QuoteSourceStagingRowStatus,
   QuoteSourceStagingVisibility
 } from "./source-staging-types";
+import { assertQuoteSourceStagingBatchTransition } from "./source-staging-status";
 
 type QuoteSourceStagingPrisma = Pick<
   PrismaClient,
@@ -283,13 +284,29 @@ export async function updateQuoteSourceStagingBatchStatus(
   assertNoSensitivePriceFields(actor);
   assertAllowed(nextStatus, BATCH_STATUSES, "invalid quote source staging batch status");
 
+  const currentBatch = await prisma.quoteSourceStagingBatch.findUnique({
+    where: { id: batchId }
+  });
+
+  if (!currentBatch) {
+    throw new Error("quote source staging batch not found");
+  }
+
+  const currentStatus = currentBatch.status as QuoteSourceStagingBatchStatus;
+  assertQuoteSourceStagingBatchTransition(currentStatus, nextStatus);
+
   const batch = await prisma.quoteSourceStagingBatch.update({
     where: { id: batchId },
     data: {
       status: nextStatus,
       confirmedByUserId: nextStatus === "finance_confirmed" ? actor.userId : undefined,
       confirmedByName: nextStatus === "finance_confirmed" ? actor.name : undefined,
-      confirmedAt: nextStatus === "finance_confirmed" ? new Date() : undefined
+      confirmedAt: nextStatus === "finance_confirmed" ? new Date() : undefined,
+      notes: nextStatus === "cancelled" ? actor.notes ?? actor.reason ?? currentBatch.notes : undefined,
+      warnings:
+        nextStatus === "cancelled" && actor.warnings
+          ? [...asStringArray(currentBatch.warnings), ...actor.warnings]
+          : undefined
     }
   });
 

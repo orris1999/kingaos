@@ -108,6 +108,64 @@ repository 默认值和校验：
 4. `addon_only + export_draft_candidate` 拒绝。
 5. `blocked / ignored + export_draft_candidate` 拒绝。
 
+## Quote Task 006D repository 状态流转和审计设计
+
+006D 在 repository 层补充 batch 状态机。状态变更仍然只服务 staging metadata，不开放 UI、API route 或 server action，不接真实 AuditLog action，不导入报价表。
+
+允许流转：
+
+| 当前状态 | 下一状态 |
+|---|---|
+| `draft` | `dry_run_passed` |
+| `dry_run_passed` | `finance_confirmed` / `adapter_fix_required` / `finance_table_fix_required` / `cancelled` |
+| `adapter_fix_required` | `dry_run_passed` |
+| `finance_table_fix_required` | `dry_run_passed` |
+| `finance_confirmed` | `cancelled` |
+
+禁止流转：
+
+| 当前状态 | 禁止下一状态 |
+|---|---|
+| `finance_confirmed` | `draft` / `dry_run_passed` |
+| `cancelled` | `finance_confirmed` / `dry_run_passed` / `adapter_fix_required` / `finance_table_fix_required` |
+
+repository 状态更新规则：
+
+1. `updateQuoteSourceStagingBatchStatus` 必须先读取当前 batch status。
+2. 状态更新必须调用 `assertQuoteSourceStagingBatchTransition`。
+3. 非法流转必须抛错，不静默忽略。
+4. `finance_confirmed` 只写确认人和确认时间，不创建任何正式价格字段。
+5. `finance_confirmed` 仍然不等于 FinanceApprovedPrice。
+6. `cancelled` 可以写 notes / warnings，但不删除 batch 或 rows。
+7. 状态更新不会改变 row visibility。
+8. `addon_only` / `blocked` / `ignored` 行仍不能成为 `export_draft_candidate`。
+
+未来 AuditLog metadata 设计：
+
+```ts
+type QuoteSourceStagingAuditMetadata = {
+  batchId: string;
+  sourceFileName?: string;
+  adapterId?: string;
+  category?: string;
+  previousStatus: string;
+  nextStatus: string;
+  actorUserId?: string;
+  actorName?: string;
+  reason?: string;
+};
+```
+
+未来 AuditLog action 建议：
+
+- `quote_source_staging.status_change`
+- `quote_source_staging.finance_confirmed`
+- `quote_source_staging.cancelled`
+- `quote_source_staging.adapter_fix_required`
+- `quote_source_staging.finance_table_fix_required`
+
+006D 不接真实 AuditLog 写入。后续如果要接入，必须由服务端权限校验和 AuditLog domain action 统一处理。
+
 ## Batch 设计
 
 ```ts

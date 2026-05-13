@@ -333,6 +333,13 @@ describeWithDb("Quote source staging repository local/test DB writes", () => {
       repositoryOptions()
     );
 
+    await updateQuoteSourceStagingBatchStatus(
+      prisma,
+      batch.id,
+      "dry_run_passed",
+      { userId: "finance-mock", name: "Finance Mock" },
+      repositoryOptions()
+    );
     const updated = await updateQuoteSourceStagingBatchStatus(
       prisma,
       batch.id,
@@ -343,9 +350,185 @@ describeWithDb("Quote source staging repository local/test DB writes", () => {
     const serialized = JSON.stringify(updated);
 
     expect(updated.status).toBe("finance_confirmed");
+    expect(updated.confirmedByUserId).toBe("finance-mock");
+    expect(updated.confirmedAt).toBeTruthy();
     expect(serialized).not.toContain("financeApprovedPrice");
     expect(serialized).not.toContain("officialQuote");
     expect(serialized).not.toContain("sentToCustomer");
+  });
+
+  it("rejects invalid status transitions through the repository", async () => {
+    const batch = await createQuoteSourceStagingBatch(
+      prisma,
+      makeBatchInput({ sourceFileName: `${sourcePrefix}-invalid-transition.xlsx` }),
+      repositoryOptions()
+    );
+
+    await expect(
+      updateQuoteSourceStagingBatchStatus(
+        prisma,
+        batch.id,
+        "finance_confirmed",
+        { userId: "finance-mock", name: "Finance Mock" },
+        repositoryOptions()
+      )
+    ).rejects.toThrow("Invalid quote source staging status transition: draft -> finance_confirmed");
+  });
+
+  it("allows fix-required statuses to return to dry_run_passed", async () => {
+    const adapterBatch = await createQuoteSourceStagingBatch(
+      prisma,
+      makeBatchInput({ sourceFileName: `${sourcePrefix}-adapter-fix.xlsx`, status: "dry_run_passed" }),
+      repositoryOptions()
+    );
+    const tableBatch = await createQuoteSourceStagingBatch(
+      prisma,
+      makeBatchInput({ sourceFileName: `${sourcePrefix}-table-fix.xlsx`, status: "dry_run_passed" }),
+      repositoryOptions()
+    );
+
+    const adapterFix = await updateQuoteSourceStagingBatchStatus(
+      prisma,
+      adapterBatch.id,
+      "adapter_fix_required",
+      { userId: "tech-mock", name: "Tech Mock" },
+      repositoryOptions()
+    );
+    const tableFix = await updateQuoteSourceStagingBatchStatus(
+      prisma,
+      tableBatch.id,
+      "finance_table_fix_required",
+      { userId: "finance-mock", name: "Finance Mock" },
+      repositoryOptions()
+    );
+
+    expect(adapterFix.status).toBe("adapter_fix_required");
+    expect(tableFix.status).toBe("finance_table_fix_required");
+
+    await expect(
+      updateQuoteSourceStagingBatchStatus(
+        prisma,
+        adapterBatch.id,
+        "dry_run_passed",
+        { userId: "tech-mock", name: "Tech Mock" },
+        repositoryOptions()
+      )
+    ).resolves.toMatchObject({ status: "dry_run_passed" });
+    await expect(
+      updateQuoteSourceStagingBatchStatus(
+        prisma,
+        tableBatch.id,
+        "dry_run_passed",
+        { userId: "finance-mock", name: "Finance Mock" },
+        repositoryOptions()
+      )
+    ).resolves.toMatchObject({ status: "dry_run_passed" });
+  });
+
+  it("allows cancellation without deleting batch or rows", async () => {
+    const batch = await createQuoteSourceStagingBatch(
+      prisma,
+      makeBatchInput({ sourceFileName: `${sourcePrefix}-cancel.xlsx`, status: "dry_run_passed" }),
+      repositoryOptions()
+    );
+    await createQuoteSourceStagingRows(
+      prisma,
+      batch.id,
+      [
+        makeRowInput(batch.id, { rowStatus: "candidate", visibility: "export_draft_candidate" }),
+        makeRowInput(batch.id, { rowStatus: "addon_only", visibility: "finance_only", sourceRowNumber: 2 }),
+        makeRowInput(batch.id, { rowStatus: "blocked", visibility: "internal_risk_only", sourceRowNumber: 3 }),
+        makeRowInput(batch.id, { rowStatus: "ignored", visibility: "finance_only", sourceRowNumber: 4 })
+      ],
+      repositoryOptions()
+    );
+
+    const cancelled = await updateQuoteSourceStagingBatchStatus(
+      prisma,
+      batch.id,
+      "cancelled",
+      {
+        userId: "finance-mock",
+        name: "Finance Mock",
+        reason: "财务取消 staging 候选",
+        warnings: ["取消后仍保留审计可查的 metadata。"]
+      },
+      repositoryOptions()
+    );
+    const found = await getQuoteSourceStagingBatchById(prisma, batch.id, repositoryOptions());
+
+    expect(cancelled.status).toBe("cancelled");
+    expect(cancelled.notes).toContain("财务取消");
+    expect(cancelled.warnings.join(" ")).toContain("取消后仍保留");
+    expect(found?.rows).toHaveLength(4);
+    expect(found?.rows.find((row) => row.rowStatus === "addon_only")?.visibility).not.toBe(
+      "export_draft_candidate"
+    );
+    expect(found?.rows.find((row) => row.rowStatus === "blocked")?.visibility).not.toBe(
+      "export_draft_candidate"
+    );
+    expect(found?.rows.find((row) => row.rowStatus === "ignored")?.visibility).not.toBe(
+      "export_draft_candidate"
+    );
+  });
+
+  it("allows finance_confirmed to move only to cancelled, not backwards", async () => {
+    const batch = await createQuoteSourceStagingBatch(
+      prisma,
+      makeBatchInput({ sourceFileName: `${sourcePrefix}-confirmed-cancel.xlsx`, status: "dry_run_passed" }),
+      repositoryOptions()
+    );
+    await updateQuoteSourceStagingBatchStatus(
+      prisma,
+      batch.id,
+      "finance_confirmed",
+      { userId: "finance-mock", name: "Finance Mock" },
+      repositoryOptions()
+    );
+
+    await expect(
+      updateQuoteSourceStagingBatchStatus(
+        prisma,
+        batch.id,
+        "dry_run_passed",
+        { userId: "finance-mock", name: "Finance Mock" },
+        repositoryOptions()
+      )
+    ).rejects.toThrow("Invalid quote source staging status transition: finance_confirmed -> dry_run_passed");
+    await expect(
+      updateQuoteSourceStagingBatchStatus(
+        prisma,
+        batch.id,
+        "cancelled",
+        { userId: "finance-mock", name: "Finance Mock" },
+        repositoryOptions()
+      )
+    ).resolves.toMatchObject({ status: "cancelled" });
+  });
+
+  it("does not reactivate cancelled batches", async () => {
+    const batch = await createQuoteSourceStagingBatch(
+      prisma,
+      makeBatchInput({ sourceFileName: `${sourcePrefix}-cancelled-terminal.xlsx`, status: "dry_run_passed" }),
+      repositoryOptions()
+    );
+    await updateQuoteSourceStagingBatchStatus(
+      prisma,
+      batch.id,
+      "cancelled",
+      { userId: "finance-mock", name: "Finance Mock" },
+      repositoryOptions()
+    );
+
+    await expect(
+      updateQuoteSourceStagingBatchStatus(
+        prisma,
+        batch.id,
+        "finance_confirmed",
+        { userId: "finance-mock", name: "Finance Mock" },
+        repositoryOptions()
+      )
+    ).rejects.toThrow("Invalid quote source staging status transition: cancelled -> finance_confirmed");
   });
 
   it("export_draft_candidate row remains a draft candidate, not a formal quote", async () => {

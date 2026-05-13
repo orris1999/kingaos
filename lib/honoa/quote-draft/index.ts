@@ -8,6 +8,7 @@ export * from "./source-adapters";
 export * from "./source-dry-run-decision";
 export * from "./source-staging-repository";
 export * from "./source-staging-repository-types";
+export * from "./source-staging-status";
 export * from "./source-staging-types";
 export * from "./types";
 export * from "./v1-draft-rules";
