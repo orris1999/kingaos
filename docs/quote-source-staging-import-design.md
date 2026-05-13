@@ -166,6 +166,54 @@ type QuoteSourceStagingAuditMetadata = {
 
 006D 不接真实 AuditLog 写入。后续如果要接入，必须由服务端权限校验和 AuditLog domain action 统一处理。
 
+## Quote Task 006E dry-run 到 staging input mapper
+
+006E 增加纯 domain mapper，将脱敏 dry-run summary / decision 结果转换为 repository input。mapper 只是把已经识别出的结构 metadata 整理成 `CreateQuoteSourceStagingBatchInput` 和 row input，不读取 Excel、不导入报价表、不写生产数据库、不生成报价草稿或正式报价。
+
+decision 到 batch status 的映射：
+
+| dry-run decision | staging batch status |
+|---|---|
+| `ready_for_staging_design` | `dry_run_passed` |
+| `needs_finance_table_fix` | `finance_table_fix_required` |
+| `needs_adapter_fix` | `adapter_fix_required` |
+| `addon_only` | `dry_run_passed`，但 row 必须是 `addon_only` 且不能给出口部消费 |
+| `blocked` | `cancelled`，表示该 dry-run 结果不进入后续 staging 候选 |
+| `manual_review_required` | `dry_run_passed`，但 row 必须进入人工确认路径 |
+
+mapper 规则：
+
+1. `submittedByRole` 默认 `finance`。
+2. `consumerDepartment` 默认 `export`。
+3. mapper 不会自动生成 `finance_confirmed`。
+4. candidate 行在 dry-run 阶段默认 `visibility = finance_only`。
+5. `export_draft_candidate` 必须等待后续财务确认 action，mapper 本身不提升 visibility。
+6. `addon_only` / `blocked` / `ignored` 行不能映射为 `export_draft_candidate`。
+7. `needs_manual_review` 行默认只进入 `finance_only` 或 `internal_risk_only`。
+8. mapper 递归拒绝敏感价格字段，包括具体金额、底价、毛利、财务批准价格和可发客户状态。
+9. mapper 输出仍只是 staging metadata，不等于正式价格导入。
+
+未来 AuditLog metadata 建议：
+
+```ts
+type QuoteSourceStagingMappedFromDryRunAuditMetadata = {
+  sourceFileName: string;
+  adapterId: string;
+  category?: string;
+  dryRunDecisionStatus: QuoteSourceDryRunDecisionStatus;
+  batchStatus: QuoteSourceStagingBatchStatus;
+  rowCount: number;
+  actorUserId?: string;
+  actorName?: string;
+};
+```
+
+未来 AuditLog action 可命名为：
+
+- `quote_source_staging.mapped_from_dry_run`
+
+006E 不接真实 AuditLog 写入，不开放 UI / API / server action。
+
 ## Batch 设计
 
 ```ts
