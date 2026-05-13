@@ -214,6 +214,71 @@ type QuoteSourceStagingMappedFromDryRunAuditMetadata = {
 
 006E 不接真实 AuditLog 写入，不开放 UI / API / server action。
 
+## Quote Task 006F finance confirmation domain action
+
+006F 增加 Finance staging confirmation domain action。该 action 仍然只服务 staging metadata，只允许在 local / test DB 中测试，不开放 UI、API route 或 server action，不读取真实 Excel，不导入报价表，不写 production 数据。
+
+Finance confirmation 的含义：
+
+1. 将 `dry_run_passed` batch 推进到 `finance_confirmed`。
+2. 写入 `confirmedByUserId`、`confirmedByName`、`confirmedAt`。
+3. 按行级规则把少量安全候选行从 `finance_only` 提升为 `export_draft_candidate`。
+4. 继续保留所有 warnings 和价格边界。
+
+Finance confirmation 不表示：
+
+1. 形成 FinanceApprovedPrice。
+2. 形成正式价格表。
+3. 生成正式报价。
+4. 可以直接发客户。
+5. 批准底价、毛利或特殊价格。
+
+确认前置条件：
+
+- 只有 batch 当前状态为 `dry_run_passed` 时，才能进入 `finance_confirmed`。
+- `draft`、`adapter_fix_required`、`finance_table_fix_required`、`cancelled`、已经 `finance_confirmed` 的 batch 都不能直接确认。
+- 确认必须调用 staging batch 状态机；非法流转必须抛错。
+
+默认行级提升策略为 `strict_candidate_only`：
+
+| rowStatus | priceCandidateStatus | 原 visibility | 确认后 visibility |
+|---|---|---|---|
+| `candidate` | `cost_candidate_available` / `quote_candidate_available` / `not_finance_approved` | `finance_only` | `export_draft_candidate` |
+| `candidate` | `missing` / `requires_finance_review` | `finance_only` | `finance_only` |
+| `needs_manual_review` | 任意 | `finance_only` | `finance_only` |
+| `addon_only` | 任意 | `finance_only` / `internal_risk_only` | 不得为 `export_draft_candidate` |
+| `blocked` / `ignored` | 任意 | `finance_only` / `internal_risk_only` | 不得为 `export_draft_candidate` |
+
+`not_finance_approved` 可以作为报价草稿候选行被出口部消费，但仍然只是价格候选边界标签，不是正式报价，不是财务批准价格，不能直接发客户。
+
+未来 AuditLog metadata 建议：
+
+```ts
+type QuoteSourceStagingFinanceConfirmedAuditMetadata = {
+  batchId: string;
+  sourceFileName?: string;
+  adapterId?: string;
+  category?: string;
+  previousStatus: string;
+  nextStatus: "finance_confirmed";
+  actorUserId: string;
+  actorName?: string;
+  exportDraftCandidateRows: number;
+  financeOnlyRows: number;
+  internalRiskOnlyRows: number;
+  addonOnlyRows: number;
+  blockedRows: number;
+  ignoredRows: number;
+  confirmationNote?: string;
+};
+```
+
+未来 AuditLog action 可命名为：
+
+- `quote_source_staging.finance_confirmed`
+
+006F 不接真实 AuditLog 写入，不开放确认按钮，不开放 server action。后续如果要开放给 Finance 页面，必须先补服务端权限校验、AuditLog 写入和只读 / 写入边界验证。
+
 ## Batch 设计
 
 ```ts
