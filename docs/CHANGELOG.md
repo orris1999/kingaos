@@ -7,6 +7,23 @@
 - `docs/CHANGELOG.md`：给团队阅读，记录背景和规则。
 - `lib/honoa/shared/release-notes.ts`：给管理员页面展示。
 
+## 2026.05.13-14 Quote Task 007A Finance staging 只读页面
+
+- 类型：功能 / UI
+- 影响范围：财务部、报价表 staging、确认流程预览
+- Migration：无
+- 生产数据命令：未运行
+- 生产数据风险：无
+- Release note id：`2026-05-13-14-finance-staging-readonly-page`
+- Commit：待填写
+
+主要变化：
+
+- 新增 `/finance/quote-source-staging` 和 `/finance/quote-source-staging/[batchId]`，仅 `super_admin` 可访问，用于只读查看 Finance 报价表 staging 批次和行级 metadata。
+- 页面展示 batch 基本信息、row 统计、出口部可消费预览、风险提示和禁用的确认 / 退回 / 取消按钮。
+- 本轮不实现 server action / API route，不写数据库、不修改 batch status 或 row visibility，不展示具体金额、底价、毛利或财务批准价格字段。
+- 继续明确 `finance_confirmed` 不等于财务批准价格，`export_draft_candidate` 仍不是正式报价。
+
 ## 2026.05.13-08 Quote Task 006B Finance quote source staging metadata schema
 
 - 类型：数据 / 文档

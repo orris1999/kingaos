@@ -2,7 +2,7 @@
 
 日期：2026-05-13
 
-本文件只设计 Finance staging confirmation 的未来页面和 action contract。不实现 UI 页面、不实现 API route、不实现 server action、不写数据库、不读取 Excel、不导入报价表。
+本文件设计 Finance staging confirmation 的页面和 action contract。Quote Task 006G 只设计 contract；Quote Task 007A 已实现只读页面，但仍不实现 API route、不实现 server action、不写数据库、不读取 Excel、不导入报价表。
 
 ## 业务边界
 
@@ -14,9 +14,9 @@
 6. `export_draft_candidate` 仍然不是正式报价，不能直接发客户。
 7. 正式报价必须后续接 FinancePricing。
 
-## 未来页面位置
+## 页面位置
 
-未来页面归属 Finance：
+Quote Task 007A 已实现只读页面，归属 Finance：
 
 - `/finance/quote-source-staging`
 - `/finance/quote-source-staging/[batchId]`
@@ -31,6 +31,23 @@
 1. 报价表由财务提交和维护。
 2. 出口部只能消费财务确认后的 staging 候选数据。
 3. 当前 confirmation 是财务侧数据源确认，不是销售侧报价动作。
+
+## 007A 只读页面边界
+
+007A 只读页面规则：
+
+1. 仅 `super_admin` 可访问。
+2. 不新增 permission key，不更新 seed，不运行 `db:seed`。
+3. 只读取 `QuoteSourceStagingBatch` / `QuoteSourceStagingRow` metadata。
+4. 不执行确认动作。
+5. 不执行退回修正动作。
+6. 不执行取消动作。
+7. 不新增 server action / API route / POST action。
+8. 不修改 batch status。
+9. 不修改 row visibility。
+10. 不展示具体金额、底价、毛利或财务批准价格字段。
+
+确认、退回修正和取消按钮在 007A 页面中必须 disabled，并显示“下一阶段开放”。
 
 ## 页面信息结构
 
@@ -88,7 +105,13 @@
 - 退回 adapter 修正按钮
 - 退回财务表修正按钮
 
-本轮不实现这些按钮。
+007A 页面只展示 disabled 按钮：
+
+- 确认进入草稿候选（下一阶段开放）
+- 退回修正（下一阶段开放）
+- 取消批次（下一阶段开放）
+
+本轮不实现真实操作。未来 007B 才能实现 server action，并且必须接服务端权限校验和 AuditLog。
 
 ## 未来权限设计
 
@@ -99,7 +122,7 @@
 - `finance.quote_source_staging.cancel`
 - `finance.quote_source_staging.request_fix`
 
-本轮不新增 permission key，不更新 seed，不运行 `db:seed`。
+007A 不新增 permission key，不更新 seed，不运行 `db:seed`。后续开放给财务角色时，必须单独新增 permission key、seed 和生产权限部署计划。
 
 权限边界：
 

@@ -36,13 +36,13 @@ const forbiddenBusinessFields = [
 ];
 
 describe("quote source staging confirmation UI/action contract", () => {
-  it("documents the future Finance-only routes without creating UI pages", () => {
+  it("documents the Finance-only routes now backed by read-only pages", () => {
     expect(QUOTE_SOURCE_STAGING_CONFIRMATION_ROUTES.list).toBe("/finance/quote-source-staging");
     expect(QUOTE_SOURCE_STAGING_CONFIRMATION_ROUTES.detailPattern).toBe(
       "/finance/quote-source-staging/[batchId]"
     );
-    expect(existsSync(join(root, "app/finance/quote-source-staging/page.tsx"))).toBe(false);
-    expect(existsSync(join(root, "app/finance/quote-source-staging/[batchId]/page.tsx"))).toBe(false);
+    expect(existsSync(join(root, "app/finance/quote-source-staging/page.tsx"))).toBe(true);
+    expect(existsSync(join(root, "app/finance/quote-source-staging/[batchId]/page.tsx"))).toBe(true);
   });
 
   it("confirm action input only allows strict_candidate_only", () => {

@@ -6,6 +6,7 @@ export default async function FinancePage() {
   const user = await requireCurrentUser();
   const canReceiptAccounts = hasAnyServerPermission(user, ["finance.receipt_accounts.view", "finance.receipt_accounts.manage"]);
   const canUseQuoteSourceDryRun = user.role === "super_admin";
+  const canViewQuoteSourceStaging = user.role === "super_admin";
   return (
     <KingaShell user={user}>
       <div className="stack">
@@ -13,7 +14,7 @@ export default async function FinancePage() {
           <div className="breadcrumbs">KingaOS / 财务部</div>
           <h1>财务部</h1>
           <p className="muted">
-            本阶段开放官方收款账号管理，并提供 super_admin 内部报价表 dry-run 结构识别。财务价格管理、报价核价等功能仍暂未开放。
+            本阶段开放官方收款账号管理，并提供 super_admin 内部报价表 dry-run 和 staging 只读预览。财务价格管理、报价核价等功能仍暂未开放。
           </p>
         </div>
         <section className="grid">
@@ -35,6 +36,13 @@ export default async function FinancePage() {
               <h2>报价表 dry-run</h2>
               <p>本地识别财务报价表结构，不上传、不入库、不生成正式报价。</p>
               <span className="tag warn">内部测试</span>
+            </Link>
+          ) : null}
+          {canViewQuoteSourceStaging ? (
+            <Link className="card open" href="/finance/quote-source-staging">
+              <h2>报价表 staging</h2>
+              <p>查看财务报价表 staging 批次与确认流程。当前只读，不执行确认。</p>
+              <span className="tag warn">只读预览</span>
             </Link>
           ) : null}
           {["价格表设置", "上传价格表", "统一改价", "报价核价"].map((module) => (

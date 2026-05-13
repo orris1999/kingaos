@@ -308,6 +308,34 @@ type QuoteSourceStagingFinanceConfirmedAuditMetadata = {
 
 未来 action 必须接 AuditLog，但 006G 只设计 metadata，不接真实 AuditLog 写入。
 
+## Quote Task 007A Finance staging 只读页面
+
+007A 已实现 Finance staging confirmation 的只读页面：
+
+- `/finance/quote-source-staging`
+- `/finance/quote-source-staging/[batchId]`
+
+007A 页面边界：
+
+1. 仅 `super_admin` 可访问。
+2. 只读展示 staging batch / rows。
+3. 列表页展示批次 ID、文件名、adapterId、品类、dry-run decision、当前 status、`submittedByRole`、`consumerDepartment` 和创建时间。
+4. 详情页展示 batch 基本信息、row 统计、出口部可消费预览、风险提示和只读确认区域。
+5. 确认 / 退回修正 / 取消按钮 disabled，并标记“下一阶段开放”。
+6. 页面不实现 server action、API route、POST action 或写库逻辑。
+7. 页面不修改 batch status，不修改 row visibility。
+8. 页面不创建测试 batch / row，不读取真实 Excel，不导入报价表。
+9. 页面不展示具体金额、底价、毛利或财务批准价格字段。
+
+007A 继续强调：
+
+- `finance_confirmed` 不等于 FinanceApprovedPrice。
+- `export_draft_candidate` 不是正式报价。
+- `needs_manual_review` 默认不会给出口部消费。
+- `addon_only` / `blocked` / `ignored` 不会给出口部消费。
+
+未来 007B 若要实现 confirmation server action，必须基于 006F 的 domain action，并补齐服务端权限校验、AuditLog 写入、错误回滚和生产数据安全验证。
+
 ## Batch 设计
 
 ```ts

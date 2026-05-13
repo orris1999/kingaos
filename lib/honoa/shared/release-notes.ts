@@ -25,6 +25,23 @@ export const RELEASE_CATEGORY_LABELS: Record<ReleaseNoteCategory, string> = {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-05-13-14-finance-staging-readonly-page",
+    date: "2026-05-13",
+    version: "2026.05.13-14",
+    title: "Quote Task 007A Finance staging 只读页面",
+    category: "feature",
+    summary: [
+      "新增 super_admin-only 的 /finance/quote-source-staging 和 /finance/quote-source-staging/[batchId]，用于只读查看 Finance 报价表 staging 批次和行级 metadata。",
+      "页面展示 batch 基本信息、row 统计、出口部可消费预览、风险提示，以及禁用的确认 / 退回 / 取消按钮。",
+      "本轮不实现 server action / API route，不写数据库、不修改 batch status 或 row visibility，不展示具体金额、底价、毛利或财务批准价格字段。"
+    ],
+    affectedAreas: ["财务部", "报价表 staging", "确认流程预览"],
+    migration: "none",
+    productionDataCommand: "none",
+    productionDataRisk: "none",
+    commitHash: "待填写"
+  },
+  {
     id: "2026-05-13-08-quote-source-staging-metadata-schema",
     date: "2026-05-13",
     version: "2026.05.13-08",
