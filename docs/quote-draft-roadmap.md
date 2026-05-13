@@ -59,6 +59,17 @@ V1 必须先做的数据准备：
 - 对水箱 / 中冷器区分产品规格字段、包装 / 体积字段、价格影响字段。
 - V1 默认只取财务确认的最新有效日期价格列，历史日期价格列不作为默认候选。
 
+### V1 source readiness gate
+
+Quote Task 004A 将 003E-R 的准入结论固化为纯 domain 规则：
+
+- `v1_auto_eligible`：冷凝器、暖风、蒸发器、水室、全铝自产机冷。可作为 V1 产品 KJ 草稿候选，但仍必须提示“价格候选不是财务批准价格，不能直接发客户”。
+- `v1_manual_confirmation_required`：水箱、中冷器。可以生成草稿候选，但必须默认带人工确认 warning；多编码、多规格、多包装、基础 KJ 多候选和辅助 sheet 风险不能静默自动选择。
+- `addon_only`：特殊包装及其他。只能作为包装 / 附加项候选，不能作为产品标准报价行。
+- `deferred`：OEM 自动匹配、Excel 嵌入图片作为稳定主图、正式报价、价格审批、底价 / 毛利、自动发客户、历史日期价格列默认候选、风险 sheet 进入主草稿。
+
+V1 草稿生成必须先经过 readiness gate，再输出草稿候选。这个 gate 只改变内部候选状态和 warnings，不生成正式报价、不保存数据库、不自动批准价格。
+
 ## V2｜KJ / OEM 混合匹配
 
 目标：在 KJ 精确匹配稳定后，把 OEM / OE 作为候选匹配能力接入。
@@ -111,7 +122,7 @@ V2 暂不做：
 
 ## 下一步建议
 
-Quote Task 003A 已建立报价表 workbook / sheet adapter 的结构配置和 dry-run summary 类型。Quote Task 003B 进一步补充了基于 mock workbook metadata 的 adapter matcher：先用文件名、文件类型、sheet 名称和 mock 表头做结构化匹配，不读取真实 Excel、不提取价格、不写生产库。Quote Task 003C 增加本地只读 CLI，用于显式指定单个 Excel 文件并输出结构摘要，不输出真实价格明细、不写数据库、不导入报价表。Quote Task 003D 对 8 份财务报价表执行本地 dry-run 并生成脱敏结构报告。Quote Task 003E 锁定了 V1 数据源准入范围和 adapter 修正清单。Quote Task 003E-R 固化了水箱 / 中冷器的会议确认规则。
+Quote Task 003A 已建立报价表 workbook / sheet adapter 的结构配置和 dry-run summary 类型。Quote Task 003B 进一步补充了基于 mock workbook metadata 的 adapter matcher：先用文件名、文件类型、sheet 名称和 mock 表头做结构化匹配，不读取真实 Excel、不提取价格、不写生产库。Quote Task 003C 增加本地只读 CLI，用于显式指定单个 Excel 文件并输出结构摘要，不输出真实价格明细、不写数据库、不导入报价表。Quote Task 003D 对 8 份财务报价表执行本地 dry-run 并生成脱敏结构报告。Quote Task 003E 锁定了 V1 数据源准入范围和 adapter 修正清单。Quote Task 003E-R 固化了水箱 / 中冷器的会议确认规则。Quote Task 004A 将 V1 source readiness gate 编码为纯 domain 规则，供后续 V1 草稿生成复用。
 
 下一步进入 V1 开发前，仍建议先完成以下准备，不触碰生产库：
 

@@ -41,6 +41,25 @@ V1 不验收：
 
 ## 功能验收
 
+### Source Readiness Gate
+
+V1 草稿生成必须先执行 source readiness gate。gate 结果只用于内部草稿候选和 warnings，不代表正式报价资格：
+
+| readiness | 品类 / 能力 | V1 行为 |
+|---|---|---|
+| `v1_auto_eligible` | 冷凝器、暖风、蒸发器、水室、全铝自产机冷 | 可作为 V1 产品 KJ 草稿候选，但仍提示价格候选不是财务批准价格，不能直接发客户。 |
+| `v1_manual_confirmation_required` | 水箱、中冷器 | 可生成草稿候选，但必须带人工确认 warning；多编码、多规格、多包装、基础 KJ 多候选不能静默自动选择。 |
+| `addon_only` | 特殊包装及其他 | 只作为包装 / 附加项候选，不能作为产品标准报价行。 |
+| `deferred` | OEM 自动匹配、Excel 嵌入图片主图、正式报价、价格审批、底价 / 毛利、自动发客户、历史日期价格列默认候选、风险 sheet 进入主草稿 | V1 暂缓；必须提示人工确认或另立任务。 |
+
+验收要求：
+
+1. 冷凝器、暖风、蒸发器、水室、全铝自产机冷输出 `v1Readiness = "v1_auto_eligible"`。
+2. 水箱、中冷器输出 `v1Readiness = "v1_manual_confirmation_required"`，且 `requiresManualConfirmation = true`。
+3. 特殊包装及其他输出 `v1Readiness = "addon_only"`，且不能作为 V1 产品标准报价行。
+4. 未知品类输出 `deferred` 或 `requires_technical_review` warning。
+5. readiness gate 不写数据库、不读取 Excel、不导入报价表、不生成正式报价。
+
 1. 用户输入 `KJ-80002` 这类标准 KJ 时，系统能按规范化后的 KJ 查找候选。
 2. 用户输入含前后空格、全角字符、大小写差异或无意义空格的 KJ 时，系统能归一为同一 `standardKjCode`。
 3. 找到唯一 KJ 时，输出 `matchStatus = "matched_by_kj"`。

@@ -1,3 +1,5 @@
+import type { QuoteV1SourceReadiness } from "./v1-source-readiness";
+
 export type SourceCodeType = "standard_kj" | "old_code" | "erp_code" | "fumacrm_code" | "unknown_code";
 
 export type QuoteDraftRequestedCodeType = "kj" | "oem" | "oe" | "customer_part_no" | "unknown";
@@ -77,5 +79,9 @@ export type QuoteDraftLineCandidate = {
   unit?: string;
   priceStatus: QuoteDraftPriceStatus;
   priceCandidate?: QuoteDraftPriceCandidate;
+  v1Readiness?: QuoteV1SourceReadiness;
+  v1ReadinessWarnings?: string[];
+  requiresManualConfirmation?: boolean;
+  isAddonOnly?: boolean;
   warnings: string[];
 };
