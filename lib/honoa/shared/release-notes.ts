@@ -25,6 +25,23 @@ export const RELEASE_CATEGORY_LABELS: Record<ReleaseNoteCategory, string> = {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-05-13-15-finance-staging-confirm-action",
+    date: "2026-05-13",
+    version: "2026.05.13-15",
+    title: "Quote Task 007B Finance staging 确认 server action",
+    category: "security",
+    summary: [
+      "新增 super_admin-only 的 confirmQuoteSourceStagingBatchAction，为后续 Finance staging 确认流程提供服务端写入动作。",
+      "action 只允许 strict_candidate_only，拒绝 include_manual_review，不会把 needs_manual_review / addon_only / blocked / ignored 行自动给出口部消费。",
+      "确认动作写入 quote_source_staging.finance_confirmed AuditLog；页面按钮仍未启用，不新增 API route / Prisma schema / migration，也不读取或导入报价表。"
+    ],
+    affectedAreas: ["财务部", "报价表 staging", "确认流程", "AuditLog"],
+    migration: "none",
+    productionDataCommand: "none",
+    productionDataRisk: "low",
+    commitHash: "待填写"
+  },
+  {
     id: "2026-05-13-14-finance-staging-readonly-page",
     date: "2026-05-13",
     version: "2026.05.13-14",

@@ -239,12 +239,42 @@ type QuoteSourceStagingConfirmationActionAuditMetadata = {
 
 未来 action：
 
+- `quote_source_staging.finance_confirmed`（007B server action 实际写入）
 - `quote_source_staging.confirm`
 - `quote_source_staging.request_adapter_fix`
 - `quote_source_staging.request_finance_table_fix`
 - `quote_source_staging.cancel`
 
-本轮不接真实 AuditLog。
+006G 只设计 metadata，不接真实 AuditLog。007B 新增的确认 server action 必须写入 `quote_source_staging.finance_confirmed` AuditLog，metadata 不包含具体价格、底价、毛利、`financeApprovedPrice`、`officialQuote` 或 `sentToCustomer`。
+
+## 007B super_admin-only confirmation action
+
+Quote Task 007B 已实现 server action contract 的确认动作，但页面按钮仍保持 disabled，不接 UI。
+
+已实现：
+
+- `confirmQuoteSourceStagingBatchAction(input)`
+- 仅 `super_admin` 可调用。
+- `rowVisibilityPolicy` 只允许 `strict_candidate_only`。
+- 拒绝 `include_manual_review`。
+- 调用 `confirmQuoteSourceStagingBatchForDraftCandidates`。
+- 成功后写入 `AuditLog.action = quote_source_staging.finance_confirmed`。
+
+仍未实现：
+
+- UI 按钮 wiring。
+- `request_adapter_fix` server action。
+- `request_finance_table_fix` server action。
+- `cancel` server action。
+- 新增权限 key / seed。
+
+007B 的生产边界：
+
+1. `finance_confirmed` 仍不等于 `FinanceApprovedPrice`。
+2. `export_draft_candidate` 仍不是正式报价。
+3. `not_finance_approved` 可以作为报价草稿候选，但不能作为正式报价。
+4. action result 不返回具体价格、底价、毛利或正式报价字段。
+5. `/finance/quote-source-staging/[batchId]` 的确认 / 退回 / 取消按钮仍显示“下一阶段开放”。
 
 ## 错误状态
 
@@ -284,7 +314,7 @@ type QuoteSourceStagingConfirmationActionAuditMetadata = {
 
 ## 明确不做
 
-本轮不做：
+006G 不做：
 
 - UI 页面。
 - API route。
@@ -296,3 +326,5 @@ type QuoteSourceStagingConfirmationActionAuditMetadata = {
 - 价格审批。
 - 正式报价。
 - AuditLog 写入。
+
+007B 只实现 super_admin-only confirmation server action 和 AuditLog 写入，仍不做 UI wiring、API route、Prisma schema / migration、Excel 导入、真实价格保存、价格审批或正式报价。

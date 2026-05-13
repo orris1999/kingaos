@@ -7,6 +7,24 @@
 - `docs/CHANGELOG.md`：给团队阅读，记录背景和规则。
 - `lib/honoa/shared/release-notes.ts`：给管理员页面展示。
 
+## 2026.05.13-15 Quote Task 007B Finance staging 确认 server action
+
+- 类型：安全 / 数据
+- 影响范围：财务部、报价表 staging、确认流程、AuditLog
+- Migration：无
+- 生产数据命令：未运行
+- 生产数据风险：低
+- Release note id：`2026-05-13-15-finance-staging-confirm-action`
+- Commit：待填写
+
+主要变化：
+
+- 新增 `confirmQuoteSourceStagingBatchAction`，只允许 `super_admin` 调用，用于后续 Finance staging 确认流程。
+- action 只允许 `strict_candidate_only`，拒绝 `include_manual_review`，不会把 `needs_manual_review` / `addon_only` / `blocked` / `ignored` 行自动给出口部消费。
+- action 调用 existing staging confirmation domain，并写入 `AuditLog.action = quote_source_staging.finance_confirmed`。
+- 本轮不启用 `/finance/quote-source-staging/[batchId]` 页面确认按钮，不新增 API route / Prisma schema / migration，不读取或导入报价表。
+- 继续明确 `finance_confirmed` 不等于财务批准价格，`export_draft_candidate` 仍不是正式报价。
+
 ## 2026.05.13-14 Quote Task 007A Finance staging 只读页面
 
 - 类型：功能 / UI

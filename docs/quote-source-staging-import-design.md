@@ -544,6 +544,40 @@ Export 不能消费：
 4. `addon_only` row 作为产品标准报价行。
 5. 任何具体底价、毛利或未经 FinancePricing 批准的价格事实。
 
+## 007B Finance confirmation server action
+
+Quote Task 007B 新增 `confirmQuoteSourceStagingBatchAction`，作为未来 Finance staging 确认页面的 server action contract 实现。页面按钮仍未启用，真实 UI 调用后续 007C 再接。
+
+Action 规则：
+
+1. 仅 `super_admin` 可调用；普通 admin、普通财务、出口部账号暂不开放。
+2. 不新增权限 key，不运行 seed。
+3. 只允许 `rowVisibilityPolicy = strict_candidate_only`。
+4. 拒绝 `include_manual_review`，因此 `needs_manual_review` 行不会自动给出口部消费。
+5. 只调用已有 `confirmQuoteSourceStagingBatchForDraftCandidates`，不新建正式报价状态机。
+6. 写入 `AuditLog.action = quote_source_staging.finance_confirmed`。
+7. AuditLog metadata 只保存 batch、status、actor、row count 和确认说明，不保存具体价格、底价、毛利或正式报价字段。
+
+确认后语义：
+
+- `finance_confirmed` 只表示财务确认该 staging batch 可作为报价草稿候选数据源。
+- `finance_confirmed` 不等于 `FinanceApprovedPrice`。
+- `export_draft_candidate` 仍不是正式报价，不能直接发客户。
+- `not_finance_approved` 行可以成为报价草稿候选，但必须继续提示“不是财务批准价格”。
+- `missing` / `requires_finance_review` 价格状态不能自动给出口部消费。
+- `addon_only` / `blocked` / `ignored` / `needs_manual_review` 默认不能变成 `export_draft_candidate`。
+
+007B 仍然不做：
+
+- UI 按钮 wiring。
+- API route。
+- Prisma schema / migration。
+- Excel 导入。
+- 报价表上传。
+- 真实价格保存。
+- 价格审批。
+- 正式报价。
+
 ## 下一步
 
 如果后续进入实现，需要另立任务并重新评审：

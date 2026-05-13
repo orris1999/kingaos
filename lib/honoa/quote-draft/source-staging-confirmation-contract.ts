@@ -15,6 +15,7 @@ export const QUOTE_SOURCE_STAGING_CONFIRMATION_ROW_VISIBILITY_POLICIES = [
 ] as const;
 
 export const QUOTE_SOURCE_STAGING_CONFIRMATION_AUDIT_ACTIONS = [
+  "quote_source_staging.finance_confirmed",
   "quote_source_staging.confirm",
   "quote_source_staging.request_adapter_fix",
   "quote_source_staging.request_finance_table_fix",

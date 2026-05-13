@@ -138,6 +138,9 @@ describe("quote source staging confirmation UI/action contract", () => {
     expect(metadata.exportDraftCandidateRows).toBe(3);
     expect(metadata.addonOnlyRows).toBe(1);
     expect(QUOTE_SOURCE_STAGING_CONFIRMATION_AUDIT_ACTIONS).toContain(
+      "quote_source_staging.finance_confirmed"
+    );
+    expect(QUOTE_SOURCE_STAGING_CONFIRMATION_AUDIT_ACTIONS).toContain(
       "quote_source_staging.confirm"
     );
   });
@@ -156,10 +159,26 @@ describe("quote source staging confirmation UI/action contract", () => {
     }
   });
 
-  it("does not add API routes, server actions, or executable action code", () => {
+  it("keeps confirmation action separate from UI wiring and API routes", () => {
+    const actionSource = readFileSync(
+      join(root, "lib/honoa/quote-draft/source-staging-actions.ts"),
+      "utf8"
+    );
+    const listPage = readFileSync(join(root, "app/finance/quote-source-staging/page.tsx"), "utf8");
+    const detailPage = readFileSync(
+      join(root, "app/finance/quote-source-staging/[batchId]/page.tsx"),
+      "utf8"
+    );
+
     expect(contractSource).not.toContain('"use server"');
     expect(contractSource).not.toContain("'use server'");
     expect(contractSource).not.toMatch(/export\s+async\s+function/);
+    expect(actionSource).toContain("confirmQuoteSourceStagingBatchAction");
+    expect(actionSource).toContain("quote_source_staging.finance_confirmed");
+    expect(listPage).not.toContain("confirmQuoteSourceStagingBatchAction");
+    expect(detailPage).not.toContain("confirmQuoteSourceStagingBatchAction");
+    expect(listPage).not.toContain("form action");
+    expect(detailPage).not.toContain("form action");
     expect(existsSync(join(root, "app/api/finance/quote-source-staging"))).toBe(false);
   });
 });
