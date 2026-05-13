@@ -89,6 +89,24 @@ dry-run 决策状态：
 7. dry-run 决策不能包含真实价格、真实 KJ 行、真实 OEM 行或完整 Excel 内容。
 8. dry-run 决策不能出现正式报价、发送客户或财务批准价状态。
 
+### Finance staging 数据源候选
+
+Quote Task 006A 定义了 staging 导入模型设计，详见 `docs/quote-source-staging-import-design.md`。staging 是 dry-run 和 Export 草稿消费之间的中间层，不是正式价格表。
+
+验收要求：
+
+1. staging batch 的 `submittedByRole` 必须是 `finance`。
+2. staging batch 的 `consumerDepartment` 可以是 `export`。
+3. `finance_confirmed` 只表示财务确认这份表可作为草稿数据源候选，不等于财务批准价格。
+4. staging row 只保留编码、产品候选信息、状态、visibility 和 warnings。
+5. staging row 本阶段不包含具体金额字段。
+6. `finance_only` 只给财务 / 管理层查看。
+7. `export_draft_candidate` 可以作为出口部报价草稿候选，但仍然不是正式报价。
+8. `internal_risk_only` 只能作为风险提示，不能进入报价草稿行。
+9. 水箱 / 中冷器完整标准 KJ 唯一匹配可以是 `candidate`；基础 KJ 多候选、旧码 / 孚盟 / 鼎捷码、OEM 或特殊 sheet 命中必须是 `needs_manual_review` 或更严格状态。
+10. 特殊包装及其他只能是 `addon_only`，不能作为产品标准报价行。
+11. 任何 staging 数据进入正式报价前都必须后续接 FinancePricing。
+
 1. 用户输入 `KJ-80002` 这类标准 KJ 时，系统能按规范化后的 KJ 查找候选。
 2. 用户输入含前后空格、全角字符、大小写差异或无意义空格的 KJ 时，系统能归一为同一 `standardKjCode`。
 3. 找到唯一 KJ 时，输出 `matchStatus = "matched_by_kj"`。
