@@ -5,6 +5,7 @@ export * from "./normalize";
 export * from "./source-adapter-matcher";
 export * from "./source-adapter-types";
 export * from "./source-adapters";
+export * from "./source-dry-run-decision";
 export * from "./types";
 export * from "./v1-draft-rules";
 export * from "./v1-source-readiness";

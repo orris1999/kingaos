@@ -12,6 +12,7 @@
 - Workbench 当前只使用 mock catalog，不读取真实报价表、不接数据库、不保存数据。
 - Quote Task 005A 新增 Finance 侧 `/finance/quote-source-dry-run` 内部页面，只在浏览器本地读取单个 Excel 文件的结构 metadata，并复用 adapter matcher 输出 sheet、表头候选、字段映射和风险提示。
 - Finance dry-run 页面不上传文件、不写数据库、不保存结果、不生成报价草稿、不生成正式报价；检测到成本 / 报价列时只显示布尔信号，不显示具体价格金额。
+- Quote Task 005C 定义 Finance dry-run 结果确认流程，详见 `docs/quote-source-dry-run-confirmation-flow.md`。dry-run 结果只能进入后续 staging 导入模型设计判断，不能直接给出口部消费；所有 dry-run 决策的 `canBeUsedByExportDraft` 都必须为 `false`。
 - 正式价格必须后续接入 FinancePricing，报价草稿不能绕过财务确认。
 
 ## V1｜KJ 批量报价草稿
@@ -73,6 +74,19 @@ Quote Task 004A 将 003E-R 的准入结论固化为纯 domain 规则：
 
 V1 草稿生成必须先经过 readiness gate，再输出草稿候选。这个 gate 只改变内部候选状态和 warnings，不生成正式报价、不保存数据库、不自动批准价格。
 
+### Finance dry-run confirmation flow
+
+Quote Task 005C 将 Finance dry-run 之后的确认流程固化为纯 domain 决策：
+
+- `ready_for_staging_design`：结构满足 V1 条件，可以进入后续 staging 导入模型设计。
+- `needs_finance_table_fix`：财务报价表缺 KJ、产品名称或当前有效价格候选列，需要财务修表后重新 dry-run。
+- `needs_adapter_fix`：字段看起来齐全但 adapter 匹配置信度不足，需要技术补充 `fileNamePattern`、`sheetNameHint` 或 `columnMapping`。
+- `addon_only`：特殊包装及其他只能作为包装 / 附加项候选，不能进入产品 KJ 报价草稿 V1。
+- `blocked`：无法识别结构、文件类型不支持或存在阻断问题，不能进入下一步。
+- `manual_review_required`：结构可能可继续，但需要财务 / 技术 / 产品资料人员人工确认。
+
+无论 dry-run 决策状态如何，当前 dry-run 结果都不能直接给出口部生成报价草稿，因为还没有 staging 导入、财务确认和 FinancePricing 链路。
+
 ## V2｜KJ / OEM 混合匹配
 
 目标：在 KJ 精确匹配稳定后，把 OEM / OE 作为候选匹配能力接入。
@@ -125,7 +139,7 @@ V2 暂不做：
 
 ## 下一步建议
 
-Quote Task 003A 已建立报价表 workbook / sheet adapter 的结构配置和 dry-run summary 类型。Quote Task 003B 进一步补充了基于 mock workbook metadata 的 adapter matcher：先用文件名、文件类型、sheet 名称和 mock 表头做结构化匹配，不读取真实 Excel、不提取价格、不写生产库。Quote Task 003C 增加本地只读 CLI，用于显式指定单个 Excel 文件并输出结构摘要，不输出真实价格明细、不写数据库、不导入报价表。Quote Task 003D 对 8 份财务报价表执行本地 dry-run 并生成脱敏结构报告。Quote Task 003E 锁定了 V1 数据源准入范围和 adapter 修正清单。Quote Task 003E-R 固化了水箱 / 中冷器的会议确认规则。Quote Task 004A 将 V1 source readiness gate 编码为纯 domain 规则。Quote Task 004B-R 修正水箱 / 中冷器口径：品类是 `v1_eligible_with_conditions`，人工确认下沉到具体草稿行。Quote Task 005A 将 dry-run 能力放到 Finance 侧浏览器本地页面，继续不上传、不入库、不展示真实价格明细。
+Quote Task 003A 已建立报价表 workbook / sheet adapter 的结构配置和 dry-run summary 类型。Quote Task 003B 进一步补充了基于 mock workbook metadata 的 adapter matcher：先用文件名、文件类型、sheet 名称和 mock 表头做结构化匹配，不读取真实 Excel、不提取价格、不写生产库。Quote Task 003C 增加本地只读 CLI，用于显式指定单个 Excel 文件并输出结构摘要，不输出真实价格明细、不写数据库、不导入报价表。Quote Task 003D 对 8 份财务报价表执行本地 dry-run 并生成脱敏结构报告。Quote Task 003E 锁定了 V1 数据源准入范围和 adapter 修正清单。Quote Task 003E-R 固化了水箱 / 中冷器的会议确认规则。Quote Task 004A 将 V1 source readiness gate 编码为纯 domain 规则。Quote Task 004B-R 修正水箱 / 中冷器口径：品类是 `v1_eligible_with_conditions`，人工确认下沉到具体草稿行。Quote Task 005A 将 dry-run 能力放到 Finance 侧浏览器本地页面，继续不上传、不入库、不展示真实价格明细。Quote Task 005C 定义 dry-run 结果确认流程，明确哪些结果可进入 staging 设计、哪些需要财务修表、哪些需要 adapter 修正、哪些只能作为附加项，以及所有 dry-run 结果都不能直接给出口部消费。
 
 下一步进入 V1 开发前，仍建议先完成以下准备，不触碰生产库：
 
