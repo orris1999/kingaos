@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -31,7 +32,7 @@ describe("Quote Task 005A Finance 报价表 dry-run 页面", () => {
     const component = readRepoFile("components/finance-quote-source-dry-run.tsx");
 
     expect(component).toContain("Finance 报价表 dry-run");
-    expect(component).toContain("本页面只做本地结构识别，不上传文件，不写数据库");
+    expect(component).toContain("本页面只做本地结构识别，不上传文件，不写数据库，不保存 dry-run 结果");
     expect(component).toContain("报价表 / 成本表 / 价格候选数据由财务提交和维护");
     expect(component).toContain("出口部不能上传或维护价格表");
     expect(component).toContain("dry-run 不生成报价草稿，不生成正式报价");
@@ -55,6 +56,12 @@ describe("Quote Task 005A Finance 报价表 dry-run 页面", () => {
   it("页面展示 finance 提交 / export 消费边界和结构化字段检测", () => {
     const component = readRepoFile("components/finance-quote-source-dry-run.tsx");
 
+    expect(component).toContain("文件基本信息");
+    expect(component).toContain("Adapter 匹配结果");
+    expect(component).toContain("字段检测结果");
+    expect(component).toContain("Sheet 结构摘要");
+    expect(component).toContain("风险提示");
+    expect(component).toContain("不支持 / 需后续处理项");
     expect(component).toContain("submittedByRole");
     expect(component).toContain("consumerDepartment");
     expect(component).toContain("检测到 KJ 列");
@@ -63,6 +70,17 @@ describe("Quote Task 005A Finance 报价表 dry-run 页面", () => {
     expect(component).toContain("检测到成本候选列");
     expect(component).toContain("检测到报价候选列");
     expect(component).toContain("检测到包装列");
+  });
+
+  it("页面把 adapter confidence 和字段映射显示为财务可读文案", () => {
+    const component = readRepoFile("components/finance-quote-source-dry-run.tsx");
+
+    expect(component).toContain("该报价表结构匹配不充分，暂不建议进入后续导入");
+    expect(component).toContain("KJ 编号");
+    expect(component).toContain("OEM / OE 编号");
+    expect(component).toContain("成本候选列");
+    expect(component).toContain("报价候选列");
+    expect(component).toContain("CONFIDENCE_LABELS");
   });
 
   it("页面不显示真实价格明细，也不引入正式报价误导字段", () => {
@@ -77,5 +95,18 @@ describe("Quote Task 005A Finance 报价表 dry-run 页面", () => {
     expect(text).not.toContain("gross" + "Margin");
     expect(component).not.toContain("amount");
     expect(component).not.toContain("rowSample");
+  });
+
+  it("本轮新增脱敏验收报告，不记录价格明细", () => {
+    const reportPath = path.join(root, "docs/quote-source-dry-run-page-validation-2026-05-13.md");
+    const report = readRepoFile("docs/quote-source-dry-run-page-validation-2026-05-13.md");
+
+    expect(existsSync(reportPath)).toBe(true);
+    expect(report).toContain("Finance 报价表 dry-run 页面验收报告");
+    expect(report).toContain("不上传文件、不写数据库、不保存 dry-run 结果");
+    expect(report).toContain("水箱 / 中冷器存在多编码、多规格、多包装字段");
+    expect(report).toContain("特殊包装及其他只能作为包装 / 附加项候选");
+    expect(report).not.toContain("底价");
+    expect(report).not.toContain("毛利");
   });
 });

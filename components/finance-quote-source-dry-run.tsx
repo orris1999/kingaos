@@ -20,6 +20,32 @@ type DryRunResult = {
 
 const PRICE_BOUNDARY_NOTICE = "检测到的价格字段只作为 priceCandidate / costCandidate 候选，不是财务批准价格。";
 
+const FIELD_LABELS: Record<string, string> = {
+  kjCode: "KJ 编号",
+  oldCode: "旧 KJ / 历史编码",
+  erpCode: "ERP / 鼎捷编码",
+  fumacrmCode: "孚盟编码",
+  oemCode: "OEM / OE 编号",
+  productName: "产品名称",
+  model: "车型 / 车系",
+  specification: "规格",
+  category: "品类 / 分类",
+  costPrice: "成本候选列",
+  quotePrice: "报价候选列",
+  currency: "币种",
+  packaging: "包装",
+  unit: "单位",
+  moq: "MOQ",
+  notes: "备注 / 风险说明"
+};
+
+const CONFIDENCE_LABELS: Record<QuoteSourceAdapterMatchResult["confidence"], string> = {
+  high: "高",
+  medium: "中",
+  low: "低",
+  none: "未匹配"
+};
+
 function getFileType(fileName: string): QuoteSourceWorkbookMetadataFileType {
   const normalized = fileName.normalize("NFKC").toLowerCase();
   if (normalized.endsWith(".xlsx")) {
@@ -108,9 +134,13 @@ function BooleanSignal({ label, value }: { label: string; value: boolean }) {
   return (
     <div className="card">
       <span className="muted">{label}</span>
-      <strong>{value ? "是" : "否"}</strong>
+      <strong className={value ? "tag ok" : "tag warn"}>{value ? "是" : "否"}</strong>
     </div>
   );
+}
+
+function formatWarningForFinance(warning: string) {
+  return warning.replace(/^[a-z_]+：/, "");
 }
 
 export function FinanceQuoteSourceDryRun() {
@@ -159,7 +189,7 @@ export function FinanceQuoteSourceDryRun() {
     <section className="stack" data-testid="finance-quote-source-dry-run">
       <div className="notice warn-notice stack">
         <h2>Finance 报价表 dry-run</h2>
-        <p>本页面只做本地结构识别，不上传文件，不写数据库。</p>
+        <p>本页面只做本地结构识别，不上传文件，不写数据库，不保存 dry-run 结果。</p>
         <p>报价表 / 成本表 / 价格候选数据由财务提交和维护。</p>
         <p>出口部不能上传或维护价格表。</p>
         <p>dry-run 不生成报价草稿，不生成正式报价。</p>
@@ -188,21 +218,9 @@ export function FinanceQuoteSourceDryRun() {
         <div className="stack" data-testid="quote-source-dry-run-summary">
           <div className="panel stack">
             <div>
-              <h2>结构识别摘要</h2>
-              <p className="muted">以下仅为结构和字段映射结果，不包含任何具体价格金额或产品行明细。</p>
+              <h2>文件基本信息</h2>
+              <p className="muted">以下仅为结构识别结果，不包含任何具体价格金额、KJ 行或产品行明细。</p>
             </div>
-            <div className="grid">
-              <BooleanSignal label="检测到 KJ 列" value={detectedSignals.kj} />
-              <BooleanSignal label="检测到 OEM / OE 列" value={detectedSignals.oem} />
-              <BooleanSignal label="检测到产品名称列" value={detectedSignals.productName} />
-              <BooleanSignal label="检测到成本候选列" value={detectedSignals.costPrice} />
-              <BooleanSignal label="检测到报价候选列" value={detectedSignals.quotePrice} />
-              <BooleanSignal label="检测到包装列" value={detectedSignals.packaging} />
-            </div>
-          </div>
-
-          <div className="panel stack">
-            <h2>Adapter 匹配结果</h2>
             <div className="table-wrap">
               <table>
                 <tbody>
@@ -222,13 +240,36 @@ export function FinanceQuoteSourceDryRun() {
                     <th>Sheet 名称</th>
                     <td>{result.summary.detectedSheets.join(" / ") || "未识别"}</td>
                   </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="panel stack">
+            <h2>Adapter 匹配结果</h2>
+            {result.matchResult.confidence !== "high" ? (
+              <div className="notice warn-notice">
+                该报价表结构匹配不充分，暂不建议进入后续导入。
+              </div>
+            ) : null}
+            <div className="table-wrap">
+              <table>
+                <tbody>
                   <tr>
                     <th>adapterId</th>
                     <td>{result.summary.adapterId}</td>
                   </tr>
                   <tr>
+                    <th>品类</th>
+                    <td>{result.matchResult.category ?? "未识别"}</td>
+                  </tr>
+                  <tr>
                     <th>匹配置信度</th>
-                    <td>{result.matchResult.confidence}</td>
+                    <td>
+                      <span className={result.matchResult.confidence === "high" ? "tag ok" : "tag warn"}>
+                        {CONFIDENCE_LABELS[result.matchResult.confidence]} / {result.matchResult.confidence}
+                      </span>
+                    </td>
                   </tr>
                   <tr>
                     <th>submittedByRole</th>
@@ -240,6 +281,21 @@ export function FinanceQuoteSourceDryRun() {
                   </tr>
                 </tbody>
               </table>
+            </div>
+          </div>
+
+          <div className="panel stack">
+            <div>
+              <h2>字段检测结果</h2>
+              <p className="muted">只显示是否检测到对应结构列，不显示任何具体金额或产品行内容。</p>
+            </div>
+            <div className="grid">
+              <BooleanSignal label="检测到 KJ 列" value={detectedSignals.kj} />
+              <BooleanSignal label="检测到 OEM / OE 列" value={detectedSignals.oem} />
+              <BooleanSignal label="检测到产品名称列" value={detectedSignals.productName} />
+              <BooleanSignal label="检测到成本候选列" value={detectedSignals.costPrice} />
+              <BooleanSignal label="检测到报价候选列" value={detectedSignals.quotePrice} />
+              <BooleanSignal label="检测到包装列" value={detectedSignals.packaging} />
             </div>
           </div>
 
@@ -257,7 +313,7 @@ export function FinanceQuoteSourceDryRun() {
                   <tbody>
                     {Object.entries(result.summary.mappedColumns).map(([fieldKey, headers]) => (
                       <tr key={fieldKey}>
-                        <td>{fieldKey}</td>
+                        <td>{FIELD_LABELS[fieldKey] ?? fieldKey}</td>
                         <td>{headers.join(" / ")}</td>
                       </tr>
                     ))}
@@ -270,7 +326,7 @@ export function FinanceQuoteSourceDryRun() {
           </div>
 
           <div className="panel stack">
-            <h2>表头候选</h2>
+            <h2>Sheet 结构摘要</h2>
             <div className="table-wrap">
               <table>
                 <thead>
@@ -292,17 +348,17 @@ export function FinanceQuoteSourceDryRun() {
           </div>
 
           <div className="panel stack">
-            <h2>Warnings</h2>
+            <h2>风险提示</h2>
             <ul>
               {result.summary.warnings.map((warning) => (
-                <li key={warning}>{warning}</li>
+                <li key={warning}>{formatWarningForFinance(warning)}</li>
               ))}
             </ul>
           </div>
 
           {result.summary.unsupportedReasons.length > 0 ? (
             <div className="panel stack">
-              <h2>Unsupported Reasons</h2>
+              <h2>不支持 / 需后续处理项</h2>
               <ul>
                 {result.summary.unsupportedReasons.map((reason) => (
                   <li key={reason}>{reason}</li>

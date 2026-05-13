@@ -10,6 +10,7 @@ import type {
 } from "./source-adapter-types";
 
 const FINANCE_SOURCE_WARNING = "报价表 / 成本表 / 价格候选数据必须由财务提交和维护，出口部不能上传或维护报价表。";
+const FINANCE_SOURCE_PLAIN_WARNING = "报价表由财务提交和维护，出口部不能上传或维护报价表。";
 const PRICE_BOUNDARY_WARNING = "成本价不是财务批准价格，只能作为 priceCandidate，不能直接生成正式报价。";
 const EXPORT_CONSUMER_WARNING = "Export 只能消费 dry-run / staging 结果生成报价草稿，不能维护价格表。";
 const NO_AUTO_APPROVAL_WARNING = "dry-run 不导入生产数据库，不自动批准价格，不生成正式报价。";
@@ -92,14 +93,19 @@ function getBaseWarnings(config?: QuoteSourceWorkbookConfig) {
   const sheetRiskNotes = config
     ? getAllSheetConfigs(config).flatMap((sheetConfig) => sheetConfig.riskNotes ?? [])
     : [];
+  const categorySpecificWarnings = config?.category === "水箱" || config?.category === "中冷器"
+    ? ["水箱 / 中冷器存在多编码、多规格、多包装字段，V1 需要行级人工确认。"]
+    : [];
 
   return unique([
     PRICE_BOUNDARY_WARNING,
     FINANCE_SOURCE_WARNING,
+    FINANCE_SOURCE_PLAIN_WARNING,
     EXPORT_CONSUMER_WARNING,
     NO_AUTO_APPROVAL_WARNING,
     "Excel 嵌入图片不是稳定主图来源，后续需要 KJ 主图库。",
     "OEM / OE 可能一对多，本阶段不做自动匹配。",
+    ...categorySpecificWarnings,
     ...sheetRiskNotes
   ]);
 }
