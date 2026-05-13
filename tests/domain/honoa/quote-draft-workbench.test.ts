@@ -57,44 +57,41 @@ describe("Quote Task 002C 出口部 KJ 报价草稿 Workbench", () => {
     expect(component).toContain("不能发客户");
   });
 
-  it("状态显示为业务可读中文标签", () => {
+  it("预览状态和销售模式显示为业务可读中文标签", () => {
     const component = readRepoFile("components/quote-draft-workbench.tsx");
 
-    expect(component).toContain("KJ 已匹配");
-    expect(component).toContain("KJ 未找到");
-    expect(component).toContain("KJ 多候选");
-    expect(component).toContain("OEM 暂未开放");
-    expect(component).toContain("需技术确认");
-    expect(component).toContain("有图片");
-    expect(component).toContain("缺图片");
-    expect(component).toContain("仅 Excel 嵌入图");
-    expect(component).toContain("无价格");
-    expect(component).toContain("需财务核价");
-    expect(component).toContain("非财务批准价格");
-    expect(component).toContain("可进入 V1 草稿");
-    expect(component).toContain("可进入 V1，复杂规则");
+    expect(component).toContain("可生成草稿预览");
+    expect(component).toContain("未找到候选");
+    expect(component).toContain("多候选，需选择");
     expect(component).toContain("需人工确认");
-    expect(component).toContain("仅附加项候选");
-    expect(component).toContain("暂缓");
+    expect(component).toContain("OEM 暂未开放");
+    expect(component).toContain("缺少数量");
+    expect(component).toContain("staging 数据源未开放");
+    expect(component).toContain("错误");
+    expect(component).toContain("外销 USD / export_usd");
+    expect(component).toContain("内销 CNY / domestic_cny");
+    expect(component).toContain("未指定 / unknown");
+    expect(component).toContain("非财务批准价格");
   });
 
-  it("页面提供结果汇总、V1 汇总、填入示例、清空和复制 mock JSON", () => {
+  it("页面提供草稿预览汇总、输入体验、数据源选择和复制预览 JSON", () => {
     const component = readRepoFile("components/quote-draft-workbench.tsx");
     const mockCatalog = readRepoFile("lib/honoa/quote-draft/mock-catalog.ts");
 
     expect(component).toContain('data-testid="quote-draft-summary"');
+    expect(component).toContain('data-testid="quote-draft-preview-table"');
     expect(component).toContain("总行数");
-    expect(component).toContain("KJ 已匹配");
-    expect(component).toContain("KJ 未找到");
+    expect(component).toContain("可生成草稿预览");
+    expect(component).toContain("未找到候选");
+    expect(component).toContain("多候选，需选择");
     expect(component).toContain("OEM 暂未开放");
-    expect(component).toContain("可进入 V1 草稿");
-    expect(component).toContain("可进入 V1，复杂规则");
-    expect(component).toContain("需人工确认");
-    expect(component).toContain("仅附加项候选");
-    expect(component).toContain("暂缓");
+    expect(component).toContain("缺少数量");
+    expect(component).toContain("销售模式");
+    expect(component).toContain("备注");
     expect(component).toContain("填入示例");
     expect(component).toContain("清空");
-    expect(component).toContain("复制结果 JSON");
+    expect(component).toContain("复制预览 JSON");
+    expect(component).toContain("生成草稿预览");
     expect(component).toContain("Mock 数据");
     expect(component).toContain("财务确认 staging 候选");
     expect(component).toContain("该模式暂未开放");
@@ -202,10 +199,11 @@ describe("Quote Task 002C 出口部 KJ 报价草稿 Workbench", () => {
     expect(flagHelper).not.toContain("NEXT_PUBLIC_");
     expect(component).toContain('disabled={!stagingCandidatesEnabled}');
     expect(component).toContain("该模式暂未开放。默认只使用 Mock 数据");
-    expect(component).toContain("未找到财务确认的 staging 候选");
-    expect(component).toContain("OEM 自动匹配暂未开放");
+    expect(component).toContain("未找到候选");
+    expect(component).toContain("OEM 暂未开放");
     expect(component).toContain("非财务批准价格，仅草稿候选");
     expect(component).toContain("finance_confirmed staging");
     expect(component).toContain("finance_confirmed 不等于 FinanceApprovedPrice");
+    expect(component).toContain('data-testid="quote-draft-trade-mode"');
   });
 });

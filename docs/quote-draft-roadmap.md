@@ -172,6 +172,16 @@ Quote Task 008C 将 `/export/quote-draft-workbench` 接入 feature-gated staging
 - Workbench 不保存输入、不保存输出、不导出 Excel / PDF、不生成报价草稿、不生成正式报价。
 - OEM 自动匹配仍暂不支持。
 
+Quote Task 008D 继续优化内部 Workbench 的输入体验和草稿候选预览：
+
+- 支持业务员常见输入：`KJ + 数量 + 备注`，包括 `100pcs`、`100 pcs`、`*100`、`x 100`、`,` 和 `，` 等数量写法。
+- 支持 `tradeMode = export_usd / domestic_cny / unknown`。
+- Mock 模式继续可用；staging 模式继续受 `KINGA_ENABLE_EXPORT_STAGING_QUOTE_DRAFT` 控制，production 默认关闭。
+- 预览表格显示行号、原始输入、识别编码、数量、备注、销售模式、数据源、预览状态、KJ、产品名称、品类、价格候选状态和风险提示。
+- 缺少数量、未找到、多候选、OEM 暂不支持、非财务批准价格等状态都只作为草稿预览提示。
+- Workbench 仍不保存输入、不保存输出、不创建 `QuoteDraft` / `QuoteDraftLine`、不导出 Excel / PDF、不生成正式报价。
+- Workbench 仍不显示具体价格、底价、毛利或财务批准价格。
+
 ## V2｜KJ / OEM 混合匹配
 
 目标：在 KJ 精确匹配稳定后，把 OEM / OE 作为候选匹配能力接入。

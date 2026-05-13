@@ -2,20 +2,18 @@
 
 import { useMemo, useState } from "react";
 import {
-  generateV1QuoteDraftCandidates,
+  buildExportQuoteDraftPreviewLines,
   parseQuoteDraftInput,
-  QUOTE_DRAFT_MOCK_CATALOG,
   QUOTE_DRAFT_WORKBENCH_SAMPLE_INPUT
 } from "@/lib/honoa/quote-draft";
 import type {
+  ExportQuoteDraftPreviewLine,
+  ExportQuoteDraftPreviewSourceMode,
+  ExportQuoteDraftPreviewStatus,
+  ExportQuoteDraftPreviewTradeMode,
   ExportQuoteDraftSourceCandidate,
   FindExportQuoteDraftSourceCandidatesInput,
-  QuoteDraftImageStatus,
-  QuoteDraftLineCandidate,
-  QuoteDraftMatchStatus,
-  QuoteDraftPriceStatus,
-  QuoteDraftRequestedCodeType,
-  QuoteV1SourceReadiness
+  QuoteDraftRequestedCodeType
 } from "@/lib/honoa/quote-draft";
 
 const CODE_TYPE_LABELS: Record<QuoteDraftRequestedCodeType, string> = {
@@ -26,46 +24,35 @@ const CODE_TYPE_LABELS: Record<QuoteDraftRequestedCodeType, string> = {
   unknown: "未知"
 };
 
-const MATCH_STATUS_LABELS: Record<QuoteDraftMatchStatus, string> = {
-  matched_by_kj: "KJ 已匹配",
-  kj_not_found: "KJ 未找到",
-  ambiguous_kj: "KJ 多候选",
-  matched_by_oem_candidate: "OEM 候选命中",
-  oem_not_supported_yet: "OEM 暂未开放",
-  requires_technical_review: "需技术确认"
+const TRADE_MODE_LABELS: Record<ExportQuoteDraftPreviewTradeMode, string> = {
+  export_usd: "外销 USD",
+  domestic_cny: "内销 CNY",
+  unknown: "未指定"
 };
 
-const IMAGE_STATUS_LABELS: Record<QuoteDraftImageStatus, string> = {
-  available: "有图片",
-  missing: "缺图片",
-  embedded_only: "仅 Excel 嵌入图",
-  not_supported_yet: "暂不支持"
+const SOURCE_MODE_LABELS: Record<ExportQuoteDraftPreviewSourceMode, string> = {
+  mock: "Mock 数据",
+  finance_confirmed_staging: "财务确认 staging 候选"
 };
 
-const PRICE_STATUS_LABELS: Record<QuoteDraftPriceStatus, string> = {
-  candidate_cost_available: "成本候选",
-  candidate_quote_available: "报价候选",
-  missing: "无价格",
-  expired: "已过期",
-  requires_finance_review: "需财务核价",
-  not_finance_approved: "非财务批准价格"
+const PREVIEW_STATUS_LABELS: Record<ExportQuoteDraftPreviewStatus, string> = {
+  ready_for_draft_preview: "可生成草稿预览",
+  not_found: "未找到候选",
+  multiple_candidates: "多候选，需选择",
+  manual_review_required: "需人工确认",
+  unsupported_oem: "OEM 暂未开放",
+  missing_quantity: "缺少数量",
+  staging_disabled: "staging 数据源未开放",
+  error: "错误"
 };
 
-const V1_READINESS_LABELS: Record<QuoteV1SourceReadiness, string> = {
-  v1_auto_eligible: "可进入 V1 草稿",
-  v1_eligible_with_conditions: "可进入 V1，复杂规则",
-  v1_manual_confirmation_required: "需人工确认",
-  addon_only: "仅附加项候选",
-  deferred: "暂缓"
-};
-
-const STAGING_PRICE_STATUS_LABELS: Record<ExportQuoteDraftSourceCandidate["priceCandidateStatus"], string> = {
+const PRICE_CANDIDATE_STATUS_LABELS: Record<string, string> = {
   cost_candidate_available: "成本候选",
   quote_candidate_available: "报价候选",
-  not_finance_approved: "非财务批准价格，仅草稿候选"
+  not_finance_approved: "非财务批准价格，仅草稿候选",
+  missing: "无价格候选",
+  requires_finance_review: "需财务确认"
 };
-
-type QuoteDraftWorkbenchSource = "mock" | "finance_confirmed_staging";
 
 type FindStagingCandidatesAction = (
   input: FindExportQuoteDraftSourceCandidatesInput
@@ -76,61 +63,42 @@ type QuoteDraftWorkbenchProps = {
   findStagingCandidatesAction?: FindStagingCandidatesAction;
 };
 
-type StagingWorkbenchStatus =
-  | "matched"
-  | "not_found"
-  | "oem_not_supported_yet"
-  | "requires_technical_review";
+const INITIAL_TRADE_MODE: ExportQuoteDraftPreviewTradeMode = "unknown";
 
-type StagingWorkbenchRow = {
-  lineNo: number;
-  rawInput: string;
-  requestedCode: string;
-  requestedCodeType: QuoteDraftRequestedCodeType;
-  quantity?: number;
-  status: StagingWorkbenchStatus;
-  candidate?: ExportQuoteDraftSourceCandidate;
-  warnings: string[];
-};
-
-function statusClass(candidate: QuoteDraftLineCandidate) {
-  if (candidate.matchStatus === "matched_by_kj" && candidate.priceStatus !== "not_finance_approved") return "tag ok";
-  if (candidate.matchStatus === "matched_by_kj") return "tag warn";
-  if (candidate.matchStatus === "kj_not_found" || candidate.matchStatus === "ambiguous_kj") return "tag danger";
-  return "tag warn";
+function buildInitialPreviewLines() {
+  return buildExportQuoteDraftPreviewLines({
+    inputText: QUOTE_DRAFT_WORKBENCH_SAMPLE_INPUT,
+    tradeMode: INITIAL_TRADE_MODE,
+    sourceMode: "mock"
+  });
 }
 
-function v1StatusClass(candidate: QuoteDraftLineCandidate) {
-  if (candidate.isAddonOnly) return "tag warn";
-  if (candidate.v1Readiness === "deferred") return "tag danger";
-  if (candidate.requiresManualConfirmation) return "tag warn";
-  return "tag ok";
+function isStagingSource(source: ExportQuoteDraftPreviewSourceMode) {
+  return source === "finance_confirmed_staging";
 }
 
-function hasForbiddenQuoteFields(candidate: QuoteDraftLineCandidate) {
-  const serialized = JSON.stringify(candidate);
-  return (
-    serialized.includes(["sent", "to", "customer"].join("_")) ||
-    serialized.includes("official" + "Quote") ||
-    serialized.includes("finance" + "Approved" + "Price")
-  );
-}
-
-function stagingStatusLabel(status: StagingWorkbenchStatus) {
-  if (status === "matched") return "已找到 staging 候选";
-  if (status === "not_found") return "未找到财务确认的 staging 候选";
-  if (status === "oem_not_supported_yet") return "OEM 暂未开放";
-  return "需技术确认";
-}
-
-function stagingStatusClass(status: StagingWorkbenchStatus) {
-  if (status === "matched") return "tag ok";
-  if (status === "not_found") return "tag warn";
+function previewStatusClass(status: ExportQuoteDraftPreviewStatus) {
+  if (status === "ready_for_draft_preview") return "tag ok";
+  if (status === "not_found" || status === "missing_quantity" || status === "multiple_candidates") return "tag warn";
   return "tag danger";
 }
 
-function isStagingSource(source: QuoteDraftWorkbenchSource) {
-  return source === "finance_confirmed_staging";
+function priceCandidateStatusLabel(status?: string) {
+  if (!status) return "-";
+  return PRICE_CANDIDATE_STATUS_LABELS[status] ?? status;
+}
+
+function getSummary(previewLines: ExportQuoteDraftPreviewLine[]) {
+  return {
+    total: previewLines.length,
+    ready: previewLines.filter((line) => line.previewStatus === "ready_for_draft_preview").length,
+    notFound: previewLines.filter((line) => line.previewStatus === "not_found").length,
+    multipleCandidates: previewLines.filter((line) => line.previewStatus === "multiple_candidates").length,
+    manualReview: previewLines.filter((line) => line.previewStatus === "manual_review_required").length,
+    unsupportedOem: previewLines.filter((line) => line.previewStatus === "unsupported_oem").length,
+    missingQuantity: previewLines.filter((line) => line.previewStatus === "missing_quantity").length,
+    notFinanceApproved: previewLines.filter((line) => line.priceCandidateStatus === "not_finance_approved").length
+  };
 }
 
 export function QuoteDraftWorkbench({
@@ -139,172 +107,111 @@ export function QuoteDraftWorkbench({
 }: QuoteDraftWorkbenchProps) {
   const [input, setInput] = useState(QUOTE_DRAFT_WORKBENCH_SAMPLE_INPUT);
   const [submittedInput, setSubmittedInput] = useState(QUOTE_DRAFT_WORKBENCH_SAMPLE_INPUT);
-  const [dataSource, setDataSource] = useState<QuoteDraftWorkbenchSource>("mock");
-  const [stagingRows, setStagingRows] = useState<StagingWorkbenchRow[]>([]);
+  const [tradeMode, setTradeMode] = useState<ExportQuoteDraftPreviewTradeMode>(INITIAL_TRADE_MODE);
+  const [sourceMode, setSourceMode] = useState<ExportQuoteDraftPreviewSourceMode>("mock");
+  const [previewLines, setPreviewLines] = useState<ExportQuoteDraftPreviewLine[]>(buildInitialPreviewLines);
   const [isStagingLookupPending, setIsStagingLookupPending] = useState(false);
-  const [stagingLookupMessage, setStagingLookupMessage] = useState("");
+  const [previewMessage, setPreviewMessage] = useState("");
   const [copyMessage, setCopyMessage] = useState("");
 
-  const effectiveDataSource: QuoteDraftWorkbenchSource =
-    stagingCandidatesEnabled && dataSource === "finance_confirmed_staging"
+  const effectiveSourceMode: ExportQuoteDraftPreviewSourceMode =
+    stagingCandidatesEnabled && sourceMode === "finance_confirmed_staging"
       ? "finance_confirmed_staging"
       : "mock";
   const inputLines = useMemo(() => parseQuoteDraftInput(submittedInput), [submittedInput]);
-  const candidates = useMemo(
-    () => generateV1QuoteDraftCandidates(inputLines, QUOTE_DRAFT_MOCK_CATALOG),
-    [inputLines]
-  );
-  const summary = useMemo(() => ({
-    total: candidates.length,
-    matchedByKj: candidates.filter((candidate) => candidate.matchStatus === "matched_by_kj").length,
-    kjNotFound: candidates.filter((candidate) => candidate.matchStatus === "kj_not_found").length,
-    oemNotSupported: candidates.filter((candidate) => candidate.matchStatus === "oem_not_supported_yet").length,
-    missingImage: candidates.filter((candidate) => candidate.imageStatus === "missing").length,
-    missingPrice: candidates.filter((candidate) => candidate.priceStatus === "missing").length,
-    notFinanceApproved: candidates.filter((candidate) => candidate.priceStatus === "not_finance_approved").length,
-    technicalReview: candidates.filter((candidate) => candidate.matchStatus === "requires_technical_review").length,
-    v1DraftEligible: candidates.filter((candidate) =>
-      candidate.v1Readiness !== "deferred" && !candidate.requiresManualConfirmation && !candidate.isAddonOnly
-    ).length,
-    v1EligibleWithConditions: candidates.filter((candidate) => candidate.v1Readiness === "v1_eligible_with_conditions").length,
-    manualConfirmation: candidates.filter((candidate) => candidate.requiresManualConfirmation).length,
-    addonOnly: candidates.filter((candidate) => candidate.isAddonOnly).length,
-    deferred: candidates.filter((candidate) => candidate.v1Readiness === "deferred").length
-  }), [candidates]);
-  const forbiddenOutputDetected = candidates.some(hasForbiddenQuoteFields);
-  const stagingSummary = useMemo(() => ({
-    total: stagingRows.length,
-    matched: stagingRows.filter((row) => row.status === "matched").length,
-    notFound: stagingRows.filter((row) => row.status === "not_found").length,
-    oemNotSupported: stagingRows.filter((row) => row.status === "oem_not_supported_yet").length,
-    notFinanceApproved: stagingRows.filter(
-      (row) => row.candidate?.priceCandidateStatus === "not_finance_approved"
-    ).length
-  }), [stagingRows]);
+  const summary = useMemo(() => getSummary(previewLines), [previewLines]);
+
+  function buildMockPreview(nextInput: string, nextTradeMode = tradeMode) {
+    return buildExportQuoteDraftPreviewLines({
+      inputText: nextInput,
+      tradeMode: nextTradeMode,
+      sourceMode: "mock"
+    });
+  }
+
+  async function buildStagingPreview(nextInput: string) {
+    const lines = parseQuoteDraftInput(nextInput);
+    const stagingCandidatesByLine: Record<number, ExportQuoteDraftSourceCandidate[]> = {};
+
+    if (!stagingCandidatesEnabled || !findStagingCandidatesAction) {
+      return buildExportQuoteDraftPreviewLines({
+        inputText: nextInput,
+        tradeMode,
+        sourceMode: "finance_confirmed_staging",
+        stagingEnabled: false
+      });
+    }
+
+    for (const [index, line] of lines.entries()) {
+      if (line.requestedCodeType !== "kj" || !line.requestedCode) {
+        continue;
+      }
+
+      stagingCandidatesByLine[index + 1] = await findStagingCandidatesAction({
+        kjCode: line.requestedCode,
+        normalizedKjCode: line.requestedCode,
+        tradeMode,
+        limit: 20
+      });
+    }
+
+    return buildExportQuoteDraftPreviewLines({
+      inputText: nextInput,
+      tradeMode,
+      sourceMode: "finance_confirmed_staging",
+      stagingEnabled: true,
+      stagingCandidatesByLine
+    });
+  }
 
   function fillSampleInput() {
     setInput(QUOTE_DRAFT_WORKBENCH_SAMPLE_INPUT);
     setSubmittedInput(QUOTE_DRAFT_WORKBENCH_SAMPLE_INPUT);
-    setStagingRows([]);
-    setStagingLookupMessage("");
+    setTradeMode(INITIAL_TRADE_MODE);
+    setSourceMode("mock");
+    setPreviewLines(buildInitialPreviewLines());
+    setPreviewMessage("");
     setCopyMessage("");
   }
 
-  async function runStagingLookup() {
-    const lines = parseQuoteDraftInput(input);
+  async function runPreview() {
     setSubmittedInput(input);
-    setStagingRows([]);
     setCopyMessage("");
 
-    if (!stagingCandidatesEnabled || !findStagingCandidatesAction) {
-      setStagingLookupMessage("该模式暂未开放。");
-      return;
-    }
-
-    setIsStagingLookupPending(true);
-    try {
-      const nextRows: StagingWorkbenchRow[] = [];
-      for (const [index, line] of lines.entries()) {
-        const lineNo = index + 1;
-        if (line.requestedCodeType === "oem" || line.requestedCodeType === "oe") {
-          nextRows.push({
-            lineNo,
-            rawInput: line.rawInput,
-            requestedCode: line.requestedCode,
-            requestedCodeType: line.requestedCodeType,
-            quantity: line.quantity,
-            status: "oem_not_supported_yet",
-            warnings: [...line.warnings, "OEM 自动匹配暂未开放。请使用 KJ 查询，或提交技术人工确认。"]
-          });
-          continue;
-        }
-
-        if (line.requestedCodeType !== "kj") {
-          nextRows.push({
-            lineNo,
-            rawInput: line.rawInput,
-            requestedCode: line.requestedCode,
-            requestedCodeType: line.requestedCodeType,
-            quantity: line.quantity,
-            status: "requires_technical_review",
-            warnings: [...line.warnings, "当前 staging 候选查询仅支持 KJ，不支持自动匹配其他编码。"]
-          });
-          continue;
-        }
-
-        const matches = await findStagingCandidatesAction({
-          kjCode: line.requestedCode,
-          normalizedKjCode: line.requestedCode,
-          limit: 20
-        });
-
-        if (matches.length === 0) {
-          nextRows.push({
-            lineNo,
-            rawInput: line.rawInput,
-            requestedCode: line.requestedCode,
-            requestedCodeType: line.requestedCodeType,
-            quantity: line.quantity,
-            status: "not_found",
-            warnings: [...line.warnings, "未找到财务确认的 staging 候选。"]
-          });
-          continue;
-        }
-
-        for (const candidate of matches) {
-          nextRows.push({
-            lineNo,
-            rawInput: line.rawInput,
-            requestedCode: line.requestedCode,
-            requestedCodeType: line.requestedCodeType,
-            quantity: line.quantity,
-            status: "matched",
-            candidate,
-            warnings: [...line.warnings, ...candidate.warnings]
-          });
-        }
+    if (isStagingSource(effectiveSourceMode)) {
+      setIsStagingLookupPending(true);
+      try {
+        const nextPreviewLines = await buildStagingPreview(input);
+        setPreviewLines(nextPreviewLines);
+        setPreviewMessage("已生成 finance_confirmed staging 草稿候选预览。");
+      } catch (error) {
+        setPreviewLines(
+          buildExportQuoteDraftPreviewLines({
+            inputText: input,
+            tradeMode,
+            sourceMode: "finance_confirmed_staging",
+            stagingCandidatesByLine: {}
+          })
+        );
+        setPreviewMessage(error instanceof Error ? error.message : "staging 候选查询失败。");
+      } finally {
+        setIsStagingLookupPending(false);
       }
-
-      setStagingRows(nextRows);
-      setStagingLookupMessage(
-        nextRows.length > 0
-          ? "已完成 finance_confirmed staging 候选只读查询。"
-          : "没有可查询的输入行。"
-      );
-    } catch (error) {
-      setStagingRows([]);
-      setStagingLookupMessage(error instanceof Error ? error.message : "staging 候选查询失败。");
-    } finally {
-      setIsStagingLookupPending(false);
-    }
-  }
-
-  async function runWorkbench() {
-    if (isStagingSource(effectiveDataSource)) {
-      await runStagingLookup();
       return;
     }
-    setSubmittedInput(input);
-    setStagingRows([]);
-    setStagingLookupMessage("");
-    setCopyMessage("");
+
+    setPreviewLines(buildMockPreview(input));
+    setPreviewMessage("已生成 Mock 草稿候选预览。");
   }
 
   async function copyResultJson() {
-    const payload = isStagingSource(effectiveDataSource)
-      ? {
-          notice:
-            "finance_confirmed staging 候选仅用于内部报价草稿 Workbench；不是正式报价，价格候选不是财务批准价格。",
-          inputLines,
-          candidates: stagingRows
-        }
-      : {
-          notice: "mock 数据，仅用于内部报价草稿解析器 workbench；不是正式报价，价格候选不是财务批准价格。",
-          inputLines,
-          candidates
-        };
+    const payload = {
+      notice: "报价草稿预览仅用于内部 Workbench；不是正式报价，价格候选不是财务批准价格。",
+      inputLines,
+      previewLines
+    };
     await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
-    setCopyMessage(isStagingSource(effectiveDataSource) ? "已复制 staging 候选 JSON。" : "已复制 mock 结果 JSON。");
+    setCopyMessage("已复制草稿预览 JSON。");
   }
 
   return (
@@ -321,70 +228,82 @@ export function QuoteDraftWorkbench({
       <section className="panel stack">
         <div className="split">
           <div>
-            <h2>粘贴 KJ / 数量 / 备注</h2>
-            <p className="muted">每行一条。OEM / OE 输入会被标记为暂不支持自动匹配。</p>
+            <h2>KJ / 数量 / 备注</h2>
+            <p className="muted">
+              每行一条，支持空格、逗号、星号或 x 连接数量。OEM / OE 输入会被标记为暂不支持自动匹配。
+            </p>
           </div>
           <span className="tag warn">
-            {isStagingSource(effectiveDataSource) ? "finance_confirmed staging" : "mock catalog only"}
+            {isStagingSource(effectiveSourceMode) ? "finance_confirmed staging" : "mock catalog only"}
           </span>
         </div>
-        <fieldset className="stack">
-          <legend>数据源</legend>
-          <label className="inline-stack">
-            <input
-              type="radio"
-              name="quote-draft-data-source"
-              value="mock"
-              checked={!isStagingSource(effectiveDataSource)}
-              onChange={() => {
-                setDataSource("mock");
-                setStagingRows([]);
-                setStagingLookupMessage("");
-              }}
-            />
-            Mock 数据
+
+        <div className="form-grid">
+          <label>
+            销售模式
+            <select
+              data-testid="quote-draft-trade-mode"
+              value={tradeMode}
+              onChange={(event) => setTradeMode(event.target.value as ExportQuoteDraftPreviewTradeMode)}
+            >
+              <option value="export_usd">外销 USD / export_usd</option>
+              <option value="domestic_cny">内销 CNY / domestic_cny</option>
+              <option value="unknown">未指定 / unknown</option>
+            </select>
           </label>
-          <label className="inline-stack">
-            <input
-              data-testid="quote-draft-staging-source-option"
-              type="radio"
-              name="quote-draft-data-source"
-              value="finance_confirmed_staging"
-              checked={isStagingSource(effectiveDataSource)}
-              disabled={!stagingCandidatesEnabled}
-              onChange={() => setDataSource("finance_confirmed_staging")}
-            />
-            财务确认 staging 候选
-          </label>
-          {!stagingCandidatesEnabled ? (
-            <p className="muted tiny">该模式暂未开放。默认只使用 Mock 数据。</p>
-          ) : (
-            <p className="muted tiny">仅 super_admin 可只读查询 finance_confirmed staging 候选。</p>
-          )}
-        </fieldset>
+          <fieldset className="stack">
+            <legend>数据源</legend>
+            <label className="inline-stack">
+              <input
+                type="radio"
+                name="quote-draft-data-source"
+                value="mock"
+                checked={!isStagingSource(effectiveSourceMode)}
+                onChange={() => setSourceMode("mock")}
+              />
+              Mock 数据
+            </label>
+            <label className="inline-stack">
+              <input
+                data-testid="quote-draft-staging-source-option"
+                type="radio"
+                name="quote-draft-data-source"
+                value="finance_confirmed_staging"
+                checked={isStagingSource(effectiveSourceMode)}
+                disabled={!stagingCandidatesEnabled}
+                onChange={() => setSourceMode("finance_confirmed_staging")}
+              />
+              财务确认 staging 候选
+            </label>
+            {!stagingCandidatesEnabled ? (
+              <p className="muted tiny">该模式暂未开放。默认只使用 Mock 数据。</p>
+            ) : (
+              <p className="muted tiny">仅 super_admin 可只读查询 finance_confirmed staging 候选。</p>
+            )}
+          </fieldset>
+        </div>
+
         <label>
           输入内容
           <textarea
             data-testid="quote-draft-input"
             value={input}
             onChange={(event) => setInput(event.target.value)}
-            rows={7}
+            rows={8}
           />
         </label>
+        <p className="muted tiny">
+          示例：KJ12345 100pcs、KJ12345*100、KJ12345 x 100、KJ12345,100、KJ-ABC-001, 50, 客户要中性包装。
+        </p>
         <div className="actions">
           <button className="ghost" type="button" onClick={fillSampleInput}>
             填入示例
           </button>
-          <button type="button" onClick={runWorkbench} disabled={isStagingLookupPending}>
-            {isStagingSource(effectiveDataSource) ? "查询 staging 候选" : "生成草稿候选"}
+          <button type="button" onClick={runPreview} disabled={isStagingLookupPending}>
+            生成草稿预览
           </button>
-          <button
-            className="secondary"
-            type="button"
-            onClick={copyResultJson}
-            disabled={isStagingSource(effectiveDataSource) ? stagingRows.length === 0 : candidates.length === 0}
-          >
-            复制结果 JSON
+          <button className="secondary" type="button" onClick={copyResultJson} disabled={previewLines.length === 0}>
+            复制预览 JSON
           </button>
           <button
             className="ghost"
@@ -392,24 +311,24 @@ export function QuoteDraftWorkbench({
             onClick={() => {
               setInput("");
               setSubmittedInput("");
-              setStagingRows([]);
-              setStagingLookupMessage("");
+              setPreviewLines([]);
+              setPreviewMessage("");
               setCopyMessage("");
             }}
           >
             清空
           </button>
         </div>
-        {stagingLookupMessage ? <p className="muted tiny">{stagingLookupMessage}</p> : null}
+        {previewMessage ? <p className="muted tiny">{previewMessage}</p> : null}
         {copyMessage ? <p className="ok-text tiny">{copyMessage}</p> : null}
       </section>
 
       <section className="panel stack">
         <div className="split">
           <div>
-            <h2>草稿候选结果</h2>
-            <p className="muted">输出仅用于解析器演示，不保存、不导出、不生成正式报价。</p>
-            {isStagingSource(effectiveDataSource) ? (
+            <h2>草稿候选预览</h2>
+            <p className="muted">输出仅用于内部预览，不保存、不导出、不生成正式报价。</p>
+            {isStagingSource(effectiveSourceMode) ? (
               <p className="muted tiny">
                 来源：finance_confirmed staging；finance_confirmed 不等于 FinanceApprovedPrice。
               </p>
@@ -417,162 +336,77 @@ export function QuoteDraftWorkbench({
           </div>
           <div className="inline-stack">
             <span className="tag">输入 {inputLines.length} 行</span>
-            <span className="tag">
-              候选 {isStagingSource(effectiveDataSource) ? stagingRows.length : candidates.length} 行
-            </span>
+            <span className="tag">预览 {previewLines.length} 行</span>
           </div>
         </div>
 
-        {isStagingSource(effectiveDataSource) ? (
-          <div className="quote-draft-summary-grid" data-testid="quote-draft-staging-summary">
-            <div className="quote-draft-summary-card"><span>总行数</span><strong>{stagingSummary.total}</strong></div>
-            <div className="quote-draft-summary-card"><span>已找到 staging 候选</span><strong>{stagingSummary.matched}</strong></div>
-            <div className="quote-draft-summary-card"><span>未找到财务确认的 staging 候选</span><strong>{stagingSummary.notFound}</strong></div>
-            <div className="quote-draft-summary-card"><span>OEM 暂未开放</span><strong>{stagingSummary.oemNotSupported}</strong></div>
-            <div className="quote-draft-summary-card"><span>非财务批准价格</span><strong>{stagingSummary.notFinanceApproved}</strong></div>
-          </div>
-        ) : (
-          <div className="quote-draft-summary-grid" data-testid="quote-draft-summary">
+        <div className="quote-draft-summary-grid" data-testid="quote-draft-summary">
           <div className="quote-draft-summary-card"><span>总行数</span><strong>{summary.total}</strong></div>
-          <div className="quote-draft-summary-card"><span>KJ 已匹配</span><strong>{summary.matchedByKj}</strong></div>
-          <div className="quote-draft-summary-card"><span>KJ 未找到</span><strong>{summary.kjNotFound}</strong></div>
-          <div className="quote-draft-summary-card"><span>OEM 暂未开放</span><strong>{summary.oemNotSupported}</strong></div>
-          <div className="quote-draft-summary-card"><span>缺图片</span><strong>{summary.missingImage}</strong></div>
-          <div className="quote-draft-summary-card"><span>无价格</span><strong>{summary.missingPrice}</strong></div>
+          <div className="quote-draft-summary-card"><span>可生成草稿预览</span><strong>{summary.ready}</strong></div>
+          <div className="quote-draft-summary-card"><span>未找到候选</span><strong>{summary.notFound}</strong></div>
+          <div className="quote-draft-summary-card"><span>多候选，需选择</span><strong>{summary.multipleCandidates}</strong></div>
+          <div className="quote-draft-summary-card"><span>需人工确认</span><strong>{summary.manualReview}</strong></div>
+          <div className="quote-draft-summary-card"><span>OEM 暂未开放</span><strong>{summary.unsupportedOem}</strong></div>
+          <div className="quote-draft-summary-card"><span>缺少数量</span><strong>{summary.missingQuantity}</strong></div>
           <div className="quote-draft-summary-card"><span>非财务批准价格</span><strong>{summary.notFinanceApproved}</strong></div>
-          <div className="quote-draft-summary-card"><span>需技术确认</span><strong>{summary.technicalReview}</strong></div>
-          <div className="quote-draft-summary-card"><span>可进入 V1 草稿</span><strong>{summary.v1DraftEligible}</strong></div>
-          <div className="quote-draft-summary-card"><span>可进入 V1，复杂规则</span><strong>{summary.v1EligibleWithConditions}</strong></div>
-          <div className="quote-draft-summary-card"><span>需人工确认</span><strong>{summary.manualConfirmation}</strong></div>
-          <div className="quote-draft-summary-card"><span>仅附加项候选</span><strong>{summary.addonOnly}</strong></div>
-          <div className="quote-draft-summary-card"><span>暂缓</span><strong>{summary.deferred}</strong></div>
-          </div>
-        )}
+        </div>
 
-        {forbiddenOutputDetected ? (
-          <p className="error">检测到不允许的正式报价字段，请停止使用本结果。</p>
-        ) : null}
-
-        {isStagingSource(effectiveDataSource) ? (
-          <div className="table-wrap">
-            <table className="quote-draft-table" data-testid="quote-draft-staging-result-table">
-              <thead>
-                <tr>
-                  <th>行号</th>
-                  <th>原始输入</th>
-                  <th>KJ</th>
-                  <th>产品名称候选</th>
-                  <th>品类</th>
-                  <th>tradeMode</th>
-                  <th>数量</th>
-                  <th>priceCandidateStatus</th>
-                  <th>hasCostCandidate</th>
-                  <th>hasQuoteCandidate</th>
-                  <th>来源 / 状态</th>
-                  <th>warnings</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stagingRows.length > 0 ? (
-                  stagingRows.map((row, index) => (
-                    <tr key={`${row.lineNo}-${row.rawInput}-${row.candidate?.stagingRowId ?? row.status}-${index}`}>
-                      <td>{row.lineNo}</td>
-                      <td className="quote-draft-raw-cell">{row.rawInput}</td>
-                      <td>{row.candidate?.standardKjCode || row.candidate?.baseKjCode || row.requestedCode || "-"}</td>
-                      <td>{row.candidate?.productNameCandidate || "-"}</td>
-                      <td>{row.candidate?.category || "-"}</td>
-                      <td>{row.candidate?.tradeMode || "-"}</td>
-                      <td>{row.quantity ?? "-"}</td>
-                      <td>
-                        {row.candidate
-                          ? STAGING_PRICE_STATUS_LABELS[row.candidate.priceCandidateStatus]
-                          : "-"}
-                      </td>
-                      <td>{row.candidate?.hasCostCandidate ? "是" : "否"}</td>
-                      <td>{row.candidate?.hasQuoteCandidate ? "是" : "否"}</td>
-                      <td>
-                        <span className={stagingStatusClass(row.status)}>{stagingStatusLabel(row.status)}</span>
-                        {row.candidate ? <span className="tag soft">finance_confirmed staging</span> : null}
-                      </td>
-                      <td className="quote-draft-warning-cell">
-                        {row.warnings.length > 0 ? (
-                          <ul>
-                            {row.warnings.map((warning) => <li key={warning}>{warning}</li>)}
-                          </ul>
-                        ) : (
-                          <span className="muted">-</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={12} className="muted">尚未查询 staging 候选。</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="table-wrap">
-          <table className="quote-draft-table" data-testid="quote-draft-result-table">
+        <div className="table-wrap">
+          <table className="quote-draft-table" data-testid="quote-draft-preview-table">
             <thead>
               <tr>
                 <th>行号</th>
                 <th>原始输入</th>
                 <th>识别编码</th>
                 <th>输入类型</th>
-                <th>匹配状态</th>
-                <th>V1 状态</th>
+                <th>数量</th>
+                <th>备注</th>
+                <th>销售模式</th>
+                <th>数据源</th>
+                <th>预览状态</th>
                 <th>KJ</th>
                 <th>产品名称</th>
                 <th>品类</th>
-                <th>数量</th>
-                <th>图片状态</th>
-                <th>价格状态</th>
+                <th>价格候选状态</th>
                 <th>风险提示</th>
               </tr>
             </thead>
             <tbody>
-              {candidates.map((candidate, index) => {
-                const inputLine = inputLines[index];
-                return (
-                  <tr key={`${candidate.lineNo}-${candidate.rawInput}`}>
-                    <td>{candidate.lineNo}</td>
-                    <td className="quote-draft-raw-cell">{candidate.rawInput}</td>
-                    <td>{inputLine?.requestedCode || "-"}</td>
-                    <td>{inputLine ? CODE_TYPE_LABELS[inputLine.requestedCodeType] : "-"}</td>
-                    <td><span className={statusClass(candidate)}>{MATCH_STATUS_LABELS[candidate.matchStatus]}</span></td>
-                    <td>
-                      <span className={v1StatusClass(candidate)}>
-                        {candidate.v1ReadinessLabel || (candidate.v1Readiness ? V1_READINESS_LABELS[candidate.v1Readiness] : "-")}
-                      </span>
-                      {candidate.v1Readiness === "v1_eligible_with_conditions" ? (
-                        <span className="tag soft">可进入 V1，复杂规则</span>
-                      ) : null}
-                    </td>
-                    <td>{candidate.kjCode || "-"}</td>
-                    <td>{candidate.productName || "-"}</td>
-                    <td>{candidate.category || "-"}</td>
-                    <td>{candidate.quantity ?? "-"}</td>
-                    <td>{IMAGE_STATUS_LABELS[candidate.imageStatus]}</td>
-                    <td>{PRICE_STATUS_LABELS[candidate.priceStatus]}</td>
+              {previewLines.length > 0 ? (
+                previewLines.map((line) => (
+                  <tr key={`${line.lineNo}-${line.rawInput}-${line.previewStatus}`}>
+                    <td>{line.lineNo}</td>
+                    <td className="quote-draft-raw-cell">{line.rawInput}</td>
+                    <td>{line.requestedCode || "-"}</td>
+                    <td>{CODE_TYPE_LABELS[line.requestedCodeType]}</td>
+                    <td>{line.quantity ?? "-"}</td>
+                    <td>{line.customerNote || "-"}</td>
+                    <td>{TRADE_MODE_LABELS[line.tradeMode]}</td>
+                    <td>{SOURCE_MODE_LABELS[line.sourceMode]}</td>
+                    <td><span className={previewStatusClass(line.previewStatus)}>{PREVIEW_STATUS_LABELS[line.previewStatus]}</span></td>
+                    <td>{line.kjCode || "-"}</td>
+                    <td>{line.productNameCandidate || "-"}</td>
+                    <td>{line.category || "-"}</td>
+                    <td>{priceCandidateStatusLabel(line.priceCandidateStatus)}</td>
                     <td className="quote-draft-warning-cell">
-                      {candidate.warnings.length > 0 ? (
+                      {line.warnings.length > 0 ? (
                         <ul>
-                          {candidate.warnings.map((warning) => <li key={warning}>{warning}</li>)}
+                          {line.warnings.map((warning) => <li key={warning}>{warning}</li>)}
                         </ul>
                       ) : (
                         <span className="muted">-</span>
                       )}
                     </td>
                   </tr>
-                );
-              })}
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={14} className="muted">暂无草稿预览。</td>
+                </tr>
+              )}
             </tbody>
           </table>
-          </div>
-        )}
+        </div>
       </section>
     </div>
   );

@@ -151,6 +151,29 @@ Quote Task 008C 允许内部 Workbench 在 feature flag 开启时只读查询 fi
 9. `not_finance_approved` 只能显示为非财务批准价格的草稿候选，不能作为正式报价。
 10. OEM 自动匹配仍暂不支持。
 
+Quote Task 008D 允许内部 Workbench 生成报价草稿候选预览，但仍不保存、不导出、不生成正式报价。
+
+验收要求：
+
+1. Workbench 支持 `KJ + 数量 + 备注` 多行输入。
+2. Workbench 支持 `100pcs`、`100 pcs`、`*100`、`x 100`、`,`、`，` 等数量写法。
+3. Workbench 支持 `tradeMode = export_usd / domestic_cny / unknown`。
+4. Mock 模式继续可用。
+5. Staging 模式继续受 `KINGA_ENABLE_EXPORT_STAGING_QUOTE_DRAFT` 控制，缺失 / false 默认关闭。
+6. feature flag 关闭时，staging 数据源 disabled，不能调用 staging candidate action。
+7. feature flag 开启时，仅 `super_admin` 可以只读查询 staging candidates。
+8. 缺少数量时必须生成 `missing_quantity` warning。
+9. OEM / OE 输入必须生成 `unsupported_oem`，仍不自动匹配。
+10. staging 未找到时显示 `not_found`。
+11. staging 多候选时显示 `multiple_candidates`，不能自动选择第一条。
+12. `not_finance_approved` 必须显示“非财务批准价格，仅草稿候选”，不能作为正式报价。
+13. 水箱 / 中冷器候选必须保留多编码、多规格、多包装 warning。
+14. Workbench 不保存输入、不保存输出。
+15. Workbench 不创建 `QuoteDraft` / `QuoteDraftLine`。
+16. Workbench 不导出 Excel / PDF。
+17. Workbench 不生成正式报价，仍不能发客户。
+18. Workbench 不显示具体价格、底价、毛利、财务批准价格或可发客户状态。
+
 1. 用户输入 `KJ-80002` 这类标准 KJ 时，系统能按规范化后的 KJ 查找候选。
 2. 用户输入含前后空格、全角字符、大小写差异或无意义空格的 KJ 时，系统能归一为同一 `standardKjCode`。
 3. 找到唯一 KJ 时，输出 `matchStatus = "matched_by_kj"`。

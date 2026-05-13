@@ -333,3 +333,53 @@ OEM 自动匹配暂未开放。
 ```
 
 008C 仍不保存输入、不保存输出、不导出 Excel / PDF、不生成报价草稿、不生成正式报价。
+
+## Quote Task 008D｜Workbench input UX and draft preview builder
+
+008D 将内部 `/export/quote-draft-workbench` 的输入体验调整为更接近业务员询价录入，但仍然只是 feature-gated 内部预览能力。
+
+Workbench 支持：
+
+1. 多行输入 `KJ + 数量 + 备注`。
+2. 数量写法：`100pcs`、`100 pcs`、`*100`、`x 100`、`,`、`，`。
+3. 缺少数量时保留预览行，并显示 `缺少数量` warning。
+4. `tradeMode` 选择：`export_usd`、`domestic_cny`、`unknown`。
+5. 数据源选择：`mock` 和 `finance_confirmed staging`。
+6. 草稿候选预览表格：行号、原始输入、识别编码、数量、备注、销售模式、数据源、预览状态、KJ、产品名称、品类、价格候选状态和风险提示。
+
+staging 模式继续受服务端 feature flag 控制：
+
+```text
+KINGA_ENABLE_EXPORT_STAGING_QUOTE_DRAFT=false
+```
+
+规则：
+
+1. 环境变量缺失或不是 `true` 时，视为关闭。
+2. 不使用 `NEXT_PUBLIC_`，不暴露到浏览器。
+3. production 默认关闭，本轮不修改 ECS `.env`。
+4. flag 关闭时，Workbench 只能使用 mock catalog，staging 数据源 disabled。
+5. flag 开启时，第一版仍仅 `super_admin` 可以只读查询 staging candidates。
+
+预览状态：
+
+1. `ready_for_draft_preview`：可生成草稿预览。
+2. `not_found`：未找到候选。
+3. `multiple_candidates`：多候选，需人工选择，不能自动取第一行。
+4. `manual_review_required`：需人工确认。
+5. `unsupported_oem`：OEM / OE 自动匹配暂未开放。
+6. `missing_quantity`：缺少数量。
+7. `staging_disabled`：staging 数据源未开放。
+8. `error`：查询或预览构建失败。
+
+价格和正式报价边界：
+
+1. Workbench 不保存输入。
+2. Workbench 不保存输出。
+3. Workbench 不创建 `QuoteDraft` / `QuoteDraftLine`。
+4. Workbench 不导出 Excel / PDF。
+5. Workbench 不生成正式报价。
+6. Workbench 不显示具体价格、底价或毛利。
+7. Workbench 不返回 `FinanceApprovedPrice`、`officialQuote` 或 `sentToCustomer`。
+8. `not_finance_approved` 只能显示为“非财务批准价格，仅草稿候选”，不能作为正式报价。
+9. 水箱 / 中冷器候选继续保留多编码、多规格、多包装人工确认 warning。
