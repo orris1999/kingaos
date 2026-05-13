@@ -77,6 +77,7 @@ describe("Quote Task 002C 出口部 KJ 报价草稿 Workbench", () => {
   it("页面提供草稿预览汇总、输入体验、数据源选择和复制预览 JSON", () => {
     const component = readRepoFile("components/quote-draft-workbench.tsx");
     const mockCatalog = readRepoFile("lib/honoa/quote-draft/mock-catalog.ts");
+    const summaryHelper = readRepoFile("lib/honoa/quote-draft/export-quote-draft-preview-summary.ts");
 
     expect(component).toContain('data-testid="quote-draft-summary"');
     expect(component).toContain('data-testid="quote-draft-preview-table"');
@@ -94,7 +95,14 @@ describe("Quote Task 002C 出口部 KJ 报价草稿 Workbench", () => {
     expect(component).toContain("生成草稿预览");
     expect(component).toContain("Mock 数据");
     expect(component).toContain("财务确认 staging 候选");
-    expect(component).toContain("该模式暂未开放");
+    expect(component).toContain("财务确认 staging 候选暂未开放");
+    expect(component).toContain('data-testid="quote-draft-action-items"');
+    expect(component).toContain("待处理事项");
+    expect(summaryHelper).toContain("缺少数量，请补充数量");
+    expect(summaryHelper).toContain("未找到财务确认 staging 候选");
+    expect(summaryHelper).toContain("多候选，需要选择正确 KJ");
+    expect(summaryHelper).toContain("OEM 暂未开放，请先通过技术确认找到 KJ");
+    expect(summaryHelper).toContain("价格候选不是财务批准价格，不能直接发客户");
     expect(mockCatalog).toContain("KJMOCK-COND-001 100pcs");
     expect(mockCatalog).toContain("KJMOCK-RAD-PA16-A 80");
     expect(mockCatalog).toContain("KJMOCK-RAD-BASE-001 50");
@@ -198,7 +206,7 @@ describe("Quote Task 002C 出口部 KJ 报价草稿 Workbench", () => {
     expect(flagHelper).toContain("KINGA_ENABLE_EXPORT_STAGING_QUOTE_DRAFT");
     expect(flagHelper).not.toContain("NEXT_PUBLIC_");
     expect(component).toContain('disabled={!stagingCandidatesEnabled}');
-    expect(component).toContain("该模式暂未开放。默认只使用 Mock 数据");
+    expect(component).toContain("财务确认 staging 候选暂未开放。默认只使用 Mock 数据");
     expect(component).toContain("未找到候选");
     expect(component).toContain("OEM 暂未开放");
     expect(component).toContain("非财务批准价格，仅草稿候选");

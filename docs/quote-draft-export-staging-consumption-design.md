@@ -383,3 +383,52 @@ KINGA_ENABLE_EXPORT_STAGING_QUOTE_DRAFT=false
 7. Workbench 不返回 `FinanceApprovedPrice`、`officialQuote` 或 `sentToCustomer`。
 8. `not_finance_approved` 只能显示为“非财务批准价格，仅草稿候选”，不能作为正式报价。
 9. 水箱 / 中冷器候选继续保留多编码、多规格、多包装人工确认 warning。
+
+## Quote Task 008E｜Workbench preview UI and exception states
+
+008E 对内部 `/export/quote-draft-workbench` 的草稿候选预览做可读性整理，目标是让业务员能快速看懂“哪些行可预览、哪些行需要先处理”。
+
+新增纯 domain helper：
+
+```ts
+summarizeExportQuoteDraftPreviewLines(lines)
+```
+
+该 helper 统计：
+
+1. 总行数。
+2. 可生成草稿预览。
+3. 未找到候选。
+4. 多候选，需选择。
+5. 需人工确认。
+6. 缺少数量。
+7. OEM 暂未开放。
+8. 非财务批准价格。
+
+Workbench 展示：
+
+1. 中文 preview status badge。
+2. 草稿预览汇总。
+3. 待处理事项。
+4. 行级 warnings 的短 badge 展示。
+5. 草稿预览表格继续展示行号、原始输入、识别编码、数量、备注、销售模式、数据源、预览状态、KJ、产品名称、品类、价格候选状态和风险提示。
+
+待处理事项包含：
+
+1. 有 N 行缺少数量，请补充数量。
+2. 有 N 行未找到财务确认 staging 候选，请核对 KJ 或联系财务 / 技术。
+3. 有 N 行多候选，需要选择正确 KJ。
+4. 有 N 行 OEM 暂未开放，请先通过技术确认找到 KJ。
+5. 有 N 行价格候选不是财务批准价格，不能直接发客户。
+
+008E 仍保持：
+
+1. Mock / staging 两种 sourceMode。
+2. staging mode 受 `KINGA_ENABLE_EXPORT_STAGING_QUOTE_DRAFT` 控制，production 默认关闭。
+3. feature flag 关闭时，staging 数据源 disabled，且不调用 staging candidate action。
+4. 不保存输入。
+5. 不保存输出。
+6. 不创建 `QuoteDraft` / `QuoteDraftLine`。
+7. 不导出 Excel / PDF。
+8. 不生成正式报价。
+9. 不显示具体价格、底价、毛利、财务批准价格或可发客户状态。

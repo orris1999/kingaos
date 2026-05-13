@@ -4,25 +4,18 @@ import { useMemo, useState } from "react";
 import {
   buildExportQuoteDraftPreviewLines,
   parseQuoteDraftInput,
-  QUOTE_DRAFT_WORKBENCH_SAMPLE_INPUT
+  QUOTE_DRAFT_WORKBENCH_SAMPLE_INPUT,
+  summarizeExportQuoteDraftPreviewLines
 } from "@/lib/honoa/quote-draft";
 import type {
   ExportQuoteDraftPreviewLine,
+  ExportQuoteDraftPreviewActionItem,
   ExportQuoteDraftPreviewSourceMode,
   ExportQuoteDraftPreviewStatus,
   ExportQuoteDraftPreviewTradeMode,
   ExportQuoteDraftSourceCandidate,
-  FindExportQuoteDraftSourceCandidatesInput,
-  QuoteDraftRequestedCodeType
+  FindExportQuoteDraftSourceCandidatesInput
 } from "@/lib/honoa/quote-draft";
-
-const CODE_TYPE_LABELS: Record<QuoteDraftRequestedCodeType, string> = {
-  kj: "KJ",
-  oem: "OEM",
-  oe: "OE",
-  customer_part_no: "客户料号",
-  unknown: "未知"
-};
 
 const TRADE_MODE_LABELS: Record<ExportQuoteDraftPreviewTradeMode, string> = {
   export_usd: "外销 USD",
@@ -79,8 +72,11 @@ function isStagingSource(source: ExportQuoteDraftPreviewSourceMode) {
 
 function previewStatusClass(status: ExportQuoteDraftPreviewStatus) {
   if (status === "ready_for_draft_preview") return "tag ok";
-  if (status === "not_found" || status === "missing_quantity" || status === "multiple_candidates") return "tag warn";
-  return "tag danger";
+  if (status === "not_found" || status === "error") return "tag danger";
+  if (status === "multiple_candidates" || status === "manual_review_required" || status === "missing_quantity") {
+    return "tag warn";
+  }
+  return "tag";
 }
 
 function priceCandidateStatusLabel(status?: string) {
@@ -88,17 +84,21 @@ function priceCandidateStatusLabel(status?: string) {
   return PRICE_CANDIDATE_STATUS_LABELS[status] ?? status;
 }
 
-function getSummary(previewLines: ExportQuoteDraftPreviewLine[]) {
-  return {
-    total: previewLines.length,
-    ready: previewLines.filter((line) => line.previewStatus === "ready_for_draft_preview").length,
-    notFound: previewLines.filter((line) => line.previewStatus === "not_found").length,
-    multipleCandidates: previewLines.filter((line) => line.previewStatus === "multiple_candidates").length,
-    manualReview: previewLines.filter((line) => line.previewStatus === "manual_review_required").length,
-    unsupportedOem: previewLines.filter((line) => line.previewStatus === "unsupported_oem").length,
-    missingQuantity: previewLines.filter((line) => line.previewStatus === "missing_quantity").length,
-    notFinanceApproved: previewLines.filter((line) => line.priceCandidateStatus === "not_finance_approved").length
-  };
+function actionItemClass(item: ExportQuoteDraftPreviewActionItem) {
+  if (item.severity === "danger") return "tag danger";
+  if (item.severity === "warning") return "tag warn";
+  return "tag";
+}
+
+function warningTagClass(warning: string) {
+  if (/未找到|错误|不能直接发客户/.test(warning)) return "tag danger";
+  if (/缺少数量|多候选|人工|财务批准|需|风险|确认/.test(warning)) return "tag warn";
+  return "tag";
+}
+
+function shortText(value?: string, maxLength = 32) {
+  if (!value) return "-";
+  return value.length > maxLength ? `${value.slice(0, maxLength - 1)}…` : value;
 }
 
 export function QuoteDraftWorkbench({
@@ -119,7 +119,7 @@ export function QuoteDraftWorkbench({
       ? "finance_confirmed_staging"
       : "mock";
   const inputLines = useMemo(() => parseQuoteDraftInput(submittedInput), [submittedInput]);
-  const summary = useMemo(() => getSummary(previewLines), [previewLines]);
+  const summary = useMemo(() => summarizeExportQuoteDraftPreviewLines(previewLines), [previewLines]);
 
   function buildMockPreview(nextInput: string, nextTradeMode = tradeMode) {
     return buildExportQuoteDraftPreviewLines({
@@ -276,7 +276,7 @@ export function QuoteDraftWorkbench({
               财务确认 staging 候选
             </label>
             {!stagingCandidatesEnabled ? (
-              <p className="muted tiny">该模式暂未开放。默认只使用 Mock 数据。</p>
+              <p className="muted tiny">财务确认 staging 候选暂未开放。默认只使用 Mock 数据。</p>
             ) : (
               <p className="muted tiny">仅 super_admin 可只读查询 finance_confirmed staging 候选。</p>
             )}
@@ -351,6 +351,29 @@ export function QuoteDraftWorkbench({
           <div className="quote-draft-summary-card"><span>非财务批准价格</span><strong>{summary.notFinanceApproved}</strong></div>
         </div>
 
+        <div className="notice stack" data-testid="quote-draft-action-items">
+          <div className="split">
+            <div>
+              <h3>待处理事项</h3>
+              <p className="muted">这些事项只用于整理草稿预览，不会保存、不导出，也不会生成正式报价。</p>
+            </div>
+            <span className={summary.actionItems.length > 0 ? "tag warn" : "tag ok"}>
+              {summary.actionItems.length > 0 ? `${summary.actionItems.length} 类待处理` : "暂无待处理异常"}
+            </span>
+          </div>
+          {summary.actionItems.length > 0 ? (
+            <div className="inline-stack">
+              {summary.actionItems.map((item) => (
+                <span className={actionItemClass(item)} key={item.type} title={item.message}>
+                  {item.message}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="muted">当前预览没有缺数量、未找到、多候选、OEM 暂未开放或非财务批准价格提醒。</p>
+          )}
+        </div>
+
         <div className="table-wrap">
           <table className="quote-draft-table" data-testid="quote-draft-preview-table">
             <thead>
@@ -358,7 +381,6 @@ export function QuoteDraftWorkbench({
                 <th>行号</th>
                 <th>原始输入</th>
                 <th>识别编码</th>
-                <th>输入类型</th>
                 <th>数量</th>
                 <th>备注</th>
                 <th>销售模式</th>
@@ -378,9 +400,8 @@ export function QuoteDraftWorkbench({
                     <td>{line.lineNo}</td>
                     <td className="quote-draft-raw-cell">{line.rawInput}</td>
                     <td>{line.requestedCode || "-"}</td>
-                    <td>{CODE_TYPE_LABELS[line.requestedCodeType]}</td>
                     <td>{line.quantity ?? "-"}</td>
-                    <td>{line.customerNote || "-"}</td>
+                    <td title={line.customerNote}>{shortText(line.customerNote)}</td>
                     <td>{TRADE_MODE_LABELS[line.tradeMode]}</td>
                     <td>{SOURCE_MODE_LABELS[line.sourceMode]}</td>
                     <td><span className={previewStatusClass(line.previewStatus)}>{PREVIEW_STATUS_LABELS[line.previewStatus]}</span></td>
@@ -390,9 +411,18 @@ export function QuoteDraftWorkbench({
                     <td>{priceCandidateStatusLabel(line.priceCandidateStatus)}</td>
                     <td className="quote-draft-warning-cell">
                       {line.warnings.length > 0 ? (
-                        <ul>
-                          {line.warnings.map((warning) => <li key={warning}>{warning}</li>)}
-                        </ul>
+                        <div className="inline-stack">
+                          {line.warnings.slice(0, 5).map((warning) => (
+                            <span className={warningTagClass(warning)} key={warning} title={warning}>
+                              {shortText(warning, 34)}
+                            </span>
+                          ))}
+                          {line.warnings.length > 5 ? (
+                            <span className="tag" title={line.warnings.slice(5).join("\n")}>
+                              +{line.warnings.length - 5}
+                            </span>
+                          ) : null}
+                        </div>
                       ) : (
                         <span className="muted">-</span>
                       )}
@@ -401,7 +431,7 @@ export function QuoteDraftWorkbench({
                 ))
               ) : (
                 <tr>
-                  <td colSpan={14} className="muted">暂无草稿预览。</td>
+                  <td colSpan={13} className="muted">暂无草稿预览。</td>
                 </tr>
               )}
             </tbody>
