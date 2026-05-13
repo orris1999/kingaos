@@ -15,6 +15,7 @@
 - Quote Task 005C 定义 Finance dry-run 结果确认流程，详见 `docs/quote-source-dry-run-confirmation-flow.md`。dry-run 结果只能进入后续 staging 导入模型设计判断，不能直接给出口部消费；所有 dry-run 决策的 `canBeUsedByExportDraft` 都必须为 `false`。
 - Quote Task 006A 设计 Finance 报价表 staging 导入模型，详见 `docs/quote-source-staging-import-design.md`。staging batch / row 只表示财务确认后的草稿数据源候选，不是正式价格表；本阶段不设计具体金额字段，仍不得绕过 FinancePricing。
 - Quote Task 006B 将 staging 设计落到 metadata-only Prisma schema：只新增 `QuoteSourceStagingBatch` / `QuoteSourceStagingRow` 元数据表，不保存具体金额、不新增导入动作、不生成报价草稿、不生成正式报价。
+- Quote Task 006G 只设计 Finance staging confirmation 的未来页面和 action contract，详见 `docs/quote-source-staging-confirmation-ui-contract.md`。未来页面归属 Finance，不放 Admin / Export；本轮不实现 UI、API route、server action，也不新增权限 seed。
 - 正式价格必须后续接入 FinancePricing，报价草稿不能绕过财务确认。
 
 ## V1｜KJ 批量报价草稿
@@ -111,6 +112,15 @@ Quote Task 006B 只新增 staging metadata schema：
 - `QuoteSourceStagingBatch` 保存来源文件、adapter、dry-run 决策、batch 状态、财务确认信息和 warnings。
 - `QuoteSourceStagingRow` 保存编码候选、产品候选信息、结构布尔值、visibility、rowStatus 和 warnings。
 - 006B 不保存具体金额，不保存底价 / 毛利，不保存财务批准价格，不新增 API / server action / UI，也不导入任何报价表。
+
+Quote Task 006G 设计未来 Finance staging confirmation 页面和 action contract：
+
+- 页面路径草案：`/finance/quote-source-staging` 和 `/finance/quote-source-staging/[batchId]`。
+- 未来权限草案：`finance.quote_source_staging.view`、`finance.quote_source_staging.confirm`、`finance.quote_source_staging.cancel`、`finance.quote_source_staging.request_fix`。
+- 本轮不新增 permission seed，不运行 `db:seed`。
+- 未来 confirmation action 只允许 `strict_candidate_only`，不允许把 `needs_manual_review` 自动给出口部消费。
+- confirmation result 不返回具体价格、底价、毛利或财务批准价格。
+- 该 contract 仍不等于正式报价，也不绕过 FinancePricing。
 
 ## V2｜KJ / OEM 混合匹配
 

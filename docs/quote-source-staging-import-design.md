@@ -279,6 +279,35 @@ type QuoteSourceStagingFinanceConfirmedAuditMetadata = {
 
 006F 不接真实 AuditLog 写入，不开放确认按钮，不开放 server action。后续如果要开放给 Finance 页面，必须先补服务端权限校验、AuditLog 写入和只读 / 写入边界验证。
 
+## Quote Task 006G confirmation UI / action contract
+
+006G 只设计未来 Finance staging confirmation 页面和 action contract，详见 `docs/quote-source-staging-confirmation-ui-contract.md`。本轮不实现 UI 页面，不实现 API route，不实现 server action，不写 production 数据。
+
+未来页面归属 Finance：
+
+- `/finance/quote-source-staging`
+- `/finance/quote-source-staging/[batchId]`
+
+未来权限 key 草案：
+
+- `finance.quote_source_staging.view`
+- `finance.quote_source_staging.confirm`
+- `finance.quote_source_staging.cancel`
+- `finance.quote_source_staging.request_fix`
+
+本轮不把这些权限写入 seed，不运行 `db:seed`。
+
+未来确认 action contract 只允许 `rowVisibilityPolicy = strict_candidate_only`。这意味着：
+
+1. 只有符合条件的 `candidate` 行能成为 `export_draft_candidate`。
+2. `needs_manual_review` 默认不自动给出口部消费。
+3. `addon_only` / `blocked` / `ignored` 永远不自动给出口部消费。
+4. action result 不返回具体价格、底价、毛利或财务批准价格。
+5. `finance_confirmed` 仍然不等于 FinanceApprovedPrice。
+6. `export_draft_candidate` 仍然不是正式报价。
+
+未来 action 必须接 AuditLog，但 006G 只设计 metadata，不接真实 AuditLog 写入。
+
 ## Batch 设计
 
 ```ts
