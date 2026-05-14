@@ -44,8 +44,10 @@ export function FinanceQuoteSourceStagingList({
       <div className="notice warn-notice stack">
         <h2>报价表 staging</h2>
         <p>当前页面只读，不执行确认，不生成正式报价。</p>
+        <p>QuoteSourceStagingBatch 只是 staging metadata，不等于 staging rows，也不等于导入价格。</p>
         <p>staging 不是正式价格表，finance_confirmed 不等于 FinanceApprovedPrice。</p>
         <p>export_draft_candidate 仍然不是正式报价，不能直接发客户。</p>
+        <p>manual_review_required 不代表失败，只表示进入行级导入设计前需要人工确认。</p>
       </div>
 
       <section className="panel table-wrap">

@@ -262,6 +262,46 @@ AuditLog：
 - metadata 只包含 uploadId、stagingBatchId、sourceFileName、adapterId、category、dryRunStatus、dryRunDecisionStatus、batch status、actor 和 warnings。
 - metadata 不得包含具体价格、底价、毛利、完整 Excel 行、KJ 明细、OEM 明细、signed URL 或 AccessKey。
 
+## Quote Task 009G staging batch review and row import precheck
+
+009G 在 009E 创建 `QuoteSourceStagingBatch` metadata 之后，补充 Finance staging 页面说明和纯 domain row import precheck。
+
+边界：
+
+1. 只展示 staging batch metadata。
+2. 不创建 `QuoteSourceStagingRow`。
+3. 不读取新的真实报价表。
+4. 不解析 Excel 行。
+5. 不保存具体价格、KJ 行或 OEM 行。
+6. 不生成报价草稿。
+7. 不生成正式报价。
+
+`manual_review_required` 不代表失败。它表示 dry-run 结构识别已完成，但进入行级导入前需要人工确认：
+
+1. 当前 adapter 是否正确。
+2. 当前 category 是否正确。
+3. dry-run warnings 是否可接受。
+4. 是否允许后续解析行级 KJ / 产品候选。
+5. 是否允许后续进入候选金额设计。
+
+新增 `precheckQuoteSourceStagingRowImport` 纯函数，只回答是否可以进入行级导入设计：
+
+1. `dry_run_passed + ready_for_staging_design + adapter/category` 可进入设计。
+2. `dry_run_passed + manual_review_required + adapter/category` 可进入设计，但需要财务人工确认。
+3. adapterId 或 category 缺失必须 blocked。
+4. cancelled / 非 `dry_run_passed` batch 必须 blocked。
+5. rowCount > 0 时提示已有 rows，避免重复导入。
+6. `canImportRowsNow` 永远为 `false`。
+
+页面必须明确：
+
+- 当前只有 staging batch metadata。
+- 当前还没有 staging rows。
+- 当前还没有导入价格。
+- 当前还不能给出口部使用。
+- 当前不能生成报价草稿。
+- 当前不能生成正式报价。
+
 ## Quote Task 006F finance confirmation domain action
 
 006F 增加 Finance staging confirmation domain action。该 action 仍然只服务 staging metadata，只允许在 local / test DB 中测试，不开放 UI、API route 或 server action，不读取真实 Excel，不导入报价表，不写 production 数据。

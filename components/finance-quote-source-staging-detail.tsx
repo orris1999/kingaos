@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { precheckQuoteSourceStagingRowImport } from "@/lib/honoa/quote-draft/source-staging-row-import-precheck";
 import { FinanceQuoteSourceStagingConfirmForm } from "./finance-quote-source-staging-confirm-form";
 
 export type QuoteSourceStagingDetailRow = {
@@ -102,12 +103,25 @@ export function FinanceQuoteSourceStagingDetail({
   const exportDraftCandidatePreviewRows = batch.rows.filter(canBecomeExportDraftCandidate).length;
   const financeOnlyRows = countRows(batch.rows, "visibility", "finance_only");
   const internalRiskOnlyRows = countRows(batch.rows, "visibility", "internal_risk_only");
+  const rowImportPrecheck = precheckQuoteSourceStagingRowImport({
+    batchId: batch.id,
+    adapterId: batch.adapterId,
+    category: batch.category,
+    status: batch.status,
+    dryRunDecisionStatus: batch.dryRunDecisionStatus,
+    rowCount: totalRows,
+    uploadDryRunWarnings: batch.warnings
+  });
 
   return (
     <section className="stack" data-testid="finance-quote-source-staging-detail">
       <div className="notice warn-notice stack">
-        <h2>只读确认预览</h2>
+        <h2>staging batch metadata 只读预览</h2>
         <p>本轮只读，不执行任何确认动作。</p>
+        <p>当前只有 staging batch metadata，当前还没有 staging rows。</p>
+        <p>当前还没有导入价格，当前还不能给出口部使用。</p>
+        <p>当前不能生成报价草稿，当前不能生成正式报价。</p>
+        <p>manual_review_required 不代表失败；它表示 dry-run 结构识别已完成，但进入行级导入前需要人工确认。</p>
         <p>成本价不是财务批准价格。</p>
         <p>finance_confirmed 不等于 FinanceApprovedPrice。</p>
         <p>export_draft_candidate 不是正式报价。</p>
@@ -148,6 +162,46 @@ export function FinanceQuoteSourceStagingDetail({
           <SummaryCard label="addon_only 行" value={addonOnlyRows} />
           <SummaryCard label="blocked 行" value={blockedRows} />
           <SummaryCard label="ignored 行" value={ignoredRows} />
+        </div>
+        {totalRows === 0 ? (
+          <p className="warn-text">尚未导入行级候选数据。请先完成行级导入前检查。</p>
+        ) : null}
+      </section>
+
+      <section className="panel stack">
+        <h2>行级导入前检查</h2>
+        <p className="muted">
+          该检查只回答是否可以进入行级导入设计；不会执行行级导入，不会创建 staging rows，不会保存价格。
+        </p>
+        <div className="detail-grid">
+          <div className="kv"><b>precheck status</b><span>{rowImportPrecheck.status}</span></div>
+          <div className="kv"><b>可进入行级导入设计</b><span>{rowImportPrecheck.canDesignRowImport ? "是" : "否"}</span></div>
+          <div className="kv"><b>现在可导入 rows</b><span>否</span></div>
+        </div>
+        {batch.dryRunDecisionStatus === "manual_review_required" ? (
+          <div className="notice stack">
+            <strong>manual_review_required 需要人工确认，不是失败。</strong>
+            <p>请确认当前 adapter 是否正确、category 是否正确、dry-run warnings 是否可接受。</p>
+            <p>该批次可以进入行级导入前检查，但还不能直接导入 rows。</p>
+          </div>
+        ) : null}
+        <div className="split">
+          <div className="stack">
+            <h3>原因</h3>
+            <ul>
+              {rowImportPrecheck.reasons.map((reason) => (
+                <li key={reason}>{reason}</li>
+              ))}
+            </ul>
+          </div>
+          <div className="stack">
+            <h3>下一步</h3>
+            <ul>
+              {rowImportPrecheck.nextActions.map((action) => (
+                <li key={action}>{action}</li>
+              ))}
+            </ul>
+          </div>
         </div>
       </section>
 
@@ -207,7 +261,7 @@ export function FinanceQuoteSourceStagingDetail({
             </thead>
             <tbody>
               {batch.rows.length === 0 ? (
-                <tr><td colSpan={8}>暂无 staging row。</td></tr>
+                <tr><td colSpan={8}>尚未导入行级候选数据。请先完成行级导入前检查。</td></tr>
               ) : (
                 batch.rows.map((row) => (
                   <tr key={row.id}>

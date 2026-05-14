@@ -244,6 +244,15 @@ Quote Task 009E 在 009C 的 uploaded file dry-run metadata 基础上新增 feat
 - 确认不创建 `QuoteSourceStagingRow`，不读取 Excel 行，不保存具体价格、KJ 行、OEM 行，不生成报价草稿或正式报价。
 - production 默认关闭，后续行级导入 / staging rows 仍必须单独设计和验收。
 
+Quote Task 009G 补充 Finance staging batch 后续查看和 row import precheck 设计：
+
+- `/finance/quote-source-staging/[batchId]` 明确展示当前只有 staging batch metadata，尚未导入 staging rows。
+- 页面解释 `manual_review_required` 不代表失败，而是进入行级导入设计前需要人工确认 adapter、category 和 dry-run warnings。
+- 新增纯 domain precheck：`precheckQuoteSourceStagingRowImport`。
+- precheck 只判断是否可以进入行级导入设计，`canImportRowsNow` 永远为 `false`。
+- 本轮不新增 API route、server action、Prisma schema 或 migration。
+- 本轮不创建 `QuoteSourceStagingRow`，不解析 Excel 行，不保存具体价格、KJ 行、OEM 行，不生成报价草稿或正式报价。
+
 ## V2｜KJ / OEM 混合匹配
 
 目标：在 KJ 精确匹配稳定后，把 OEM / OE 作为候选匹配能力接入。
