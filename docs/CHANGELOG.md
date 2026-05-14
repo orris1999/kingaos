@@ -7,6 +7,24 @@
 - `docs/CHANGELOG.md`：给团队阅读，记录背景和规则。
 - `lib/honoa/shared/release-notes.ts`：给管理员页面展示。
 
+## 2026.05.14-04 Quote Task 009A Finance quote source upload pilot
+
+- 类型：功能 / 数据
+- 影响范围：财务部、报价表上传、OSS、Prisma schema、AuditLog
+- Migration：additive
+- 生产数据命令：待后续部署确认；本轮未运行 production migration
+- 生产数据风险：低
+- Release note id：`2026-05-14-04-finance-quote-source-upload-pilot`
+- Commit：待填写
+
+主要变化：
+
+- 新增 `/finance/quote-source-upload` 和 Finance 首页“报价表上传” Pilot 入口，仅 `super_admin` 可访问。
+- 新增 `QuoteSourceUpload` metadata-only Prisma model，用于记录上传文件名、大小、MIME、私有 OSS storageKey、上传人、adapterId / category 等信息。
+- 上传文件只进入私有 OSS；数据库不保存 Excel 内容、KJ 行、OEM 行、价格、底价、毛利或财务批准价格。
+- 新增上传 URL 生成和 metadata 保存 API route，并写入 `quote_source_upload.upload_url.generate` / `quote_source_upload.create` AuditLog。
+- 本轮不解析 Excel、不导入价格、不创建 staging rows、不生成报价草稿、不生成正式报价。
+
 ## 2026.05.13-16 Quote Task 007C Finance staging 确认 UI wiring
 
 - 类型：功能 / 安全

@@ -2,7 +2,7 @@
 
 日期：2026-05-12
 
-本路线图只面向报价草稿能力，不实现正式报价、订单、合同、价格审批或财务核价。本阶段所有报价表都只能作为数据来源候选，不进入生产数据库。
+本路线图只面向报价草稿能力，不实现正式报价、订单、合同、价格审批或财务核价。本阶段报价表只能作为数据来源候选；009A 之后允许 Finance 上传文件 metadata 入库，但仍不导入价格行、不保存金额、不生成正式报价。
 
 ## 领域归属和数据提交边界
 
@@ -219,6 +219,14 @@ Quote Task 008J 设计并实现出口部经理只读试用边界：
 - 出口部经理只能使用 Mock 数据和草稿 Excel 导出；`KINGA_ENABLE_EXPORT_STAGING_QUOTE_DRAFT` 关闭时 staging 数据源仍 disabled。
 - 普通出口部业务员、普通 admin、财务普通用户、国内部用户仍不可访问。
 - Workbench 仍不保存输入 / 输出，不创建 `QuoteDraft` / `QuoteDraftLine`，不导入报价表，不生成正式报价，不发客户。
+
+Quote Task 009A 新增 Finance 报价表文件上传试点，详见 `docs/quote-source-upload-pilot.md`：
+
+- 新增 `/finance/quote-source-upload`，仅 `super_admin` 可用。
+- 文件上传到私有 OSS，数据库只保存 `QuoteSourceUpload` 文件 metadata。
+- metadata 只记录文件名、大小、MIME、OSS storageKey、上传人、adapterId / category 等，不保存价格、KJ 行、OEM 行或 Excel 内容。
+- 009A 不解析 Excel，不导入 rows，不生成 staging batch / rows，不生成报价草稿，不生成正式报价。
+- 上传报价表不等于导入价格，不等于 `FinanceApprovedPrice`，正式报价仍必须后续接 FinancePricing。
 
 ## V2｜KJ / OEM 混合匹配
 

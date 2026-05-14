@@ -138,12 +138,14 @@ describe("KingaOS company receipt accounts", () => {
     expect(customerSelector).not.toContain('name="accountNo"');
   });
 
-  it("财务部开放收款账号管理和内部 dry-run，价格相关模块仍暂未开放", () => {
+  it("财务部开放收款账号管理、内部 dry-run 和报价表上传 Pilot，价格相关模块仍暂未开放", () => {
     expect(financePage).toContain("收款账号管理");
     expect(financePage).toContain("报价表 dry-run");
+    expect(financePage).toContain("报价表上传");
+    expect(financePage).toContain('href="/finance/quote-source-upload"');
+    expect(financePage).toContain("Pilot");
     expect(financePage).toContain('user.role === "super_admin"');
     expect(financePage).toContain("价格表设置");
-    expect(financePage).toContain("上传价格表");
     expect(financePage).toContain("统一改价");
     expect(financePage).toContain("报价核价");
     expect(financePage).toContain("暂未开放");

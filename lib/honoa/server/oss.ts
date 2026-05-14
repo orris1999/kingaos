@@ -25,6 +25,13 @@ export const ALLOWED_ATTACHMENT_MIME_TYPES = new Set([
 
 export const BLOCKED_ATTACHMENT_EXTENSIONS = new Set([".exe", ".js", ".html", ".htm", ".sh", ".bat"]);
 
+export const ALLOWED_QUOTE_SOURCE_UPLOAD_EXTENSIONS = new Set([".xls", ".xlsx"]);
+export const ALLOWED_QUOTE_SOURCE_UPLOAD_MIME_TYPES = new Set([
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/octet-stream"
+]);
+
 type OssEnv = Record<string, string | undefined>;
 
 export type OssConfig = {
@@ -54,10 +61,21 @@ export function isOssConfigured(env: OssEnv = process.env) {
   );
 }
 
-export function getOssConfig(env: OssEnv = process.env): OssConfig {
+function getOssConnectionConfig(env: OssEnv = process.env) {
   if (!isOssConfigured(env)) {
     throw new Error("OSS 尚未配置，暂时不能上传文件。请联系管理员配置阿里云 OSS。");
   }
+  return {
+    region: env.ALIYUN_OSS_REGION!,
+    bucket: env.ALIYUN_OSS_BUCKET!,
+    endpoint: env.ALIYUN_OSS_ENDPOINT!,
+    accessKeyId: env.ALIYUN_OSS_ACCESS_KEY_ID!,
+    accessKeySecret: env.ALIYUN_OSS_ACCESS_KEY_SECRET!
+  };
+}
+
+export function getOssConfig(env: OssEnv = process.env): OssConfig {
+  const connection = getOssConnectionConfig(env);
   const uploadPrefix = (env.ALIYUN_OSS_UPLOAD_PREFIX || "customers").replace(/^\/+|\/+$/g, "");
   if (uploadPrefix !== "customers") {
     throw new Error("OSS 上传前缀必须是 customers。");
@@ -65,18 +83,14 @@ export function getOssConfig(env: OssEnv = process.env): OssConfig {
   const expires = Number(env.ALIYUN_OSS_SIGNED_URL_EXPIRES_SECONDS || 600);
   const maxFileSizeMb = Number(env.ALIYUN_OSS_MAX_FILE_SIZE_MB || 20);
   return {
-    region: env.ALIYUN_OSS_REGION!,
-    bucket: env.ALIYUN_OSS_BUCKET!,
-    endpoint: env.ALIYUN_OSS_ENDPOINT!,
-    accessKeyId: env.ALIYUN_OSS_ACCESS_KEY_ID!,
-    accessKeySecret: env.ALIYUN_OSS_ACCESS_KEY_SECRET!,
+    ...connection,
     uploadPrefix: "customers",
     signedUrlExpiresSeconds: Number.isFinite(expires) && expires > 0 ? expires : 600,
     maxFileSizeBytes: Math.max(1, Number.isFinite(maxFileSizeMb) && maxFileSizeMb > 0 ? maxFileSizeMb : 20) * 1024 * 1024
   };
 }
 
-export function createOssClient(config = getOssConfig()) {
+export function createOssClient(config: Pick<OssConfig, "region" | "bucket" | "endpoint" | "accessKeyId" | "accessKeySecret"> = getOssConfig()) {
   return new OSS({
     region: config.region,
     bucket: config.bucket,
@@ -122,6 +136,46 @@ export function validateOssUploadRequest(input: OssUploadRequest, env: OssEnv = 
   return { fileName, fileSize, mimeType, maxFileSizeBytes: config.maxFileSizeBytes };
 }
 
+function getQuoteSourceUploadConfig(env: OssEnv = process.env) {
+  const connection = getOssConnectionConfig(env);
+  const expires = Number(env.ALIYUN_OSS_SIGNED_URL_EXPIRES_SECONDS || 600);
+  const maxFileSizeMb = Number(env.ALIYUN_OSS_QUOTE_SOURCE_MAX_FILE_SIZE_MB || 50);
+  const uploadPrefix = (env.ALIYUN_OSS_QUOTE_SOURCE_UPLOAD_PREFIX || "quote-source-uploads").replace(/^\/+|\/+$/g, "");
+  if (!uploadPrefix || uploadPrefix === "." || uploadPrefix.includes("..") || uploadPrefix.includes("\\")) {
+    throw new Error("报价表上传 OSS 前缀无效。");
+  }
+  return {
+    ...connection,
+    uploadPrefix,
+    signedUrlExpiresSeconds: Number.isFinite(expires) && expires > 0 ? expires : 600,
+    maxFileSizeBytes: Math.max(1, Number.isFinite(maxFileSizeMb) && maxFileSizeMb > 0 ? maxFileSizeMb : 50) * 1024 * 1024
+  };
+}
+
+function quoteSourceMimeTypeForExtension(ext: string) {
+  if (ext === ".xls") return "application/vnd.ms-excel";
+  if (ext === ".xlsx") return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+  return "";
+}
+
+export function validateQuoteSourceUploadRequest(input: OssUploadRequest, env: OssEnv = process.env) {
+  const config = getQuoteSourceUploadConfig(env);
+  const fileName = sanitizeOssFileName(input.fileName);
+  const fileSize = Number(input.fileSize);
+  const ext = fileExtension(fileName);
+  const rawMimeType = String(input.mimeType || "").trim().toLowerCase();
+  const mimeType = rawMimeType || quoteSourceMimeTypeForExtension(ext);
+
+  if (!fileName) throw new Error("文件名无效。");
+  if (!ALLOWED_QUOTE_SOURCE_UPLOAD_EXTENSIONS.has(ext)) throw new Error("只允许上传 .xls / .xlsx 报价表文件。");
+  if (!Number.isFinite(fileSize) || fileSize <= 0) throw new Error("文件大小无效。");
+  if (fileSize > config.maxFileSizeBytes) throw new Error(`文件不能超过 ${Math.round(config.maxFileSizeBytes / 1024 / 1024)}MB。`);
+  if (!ALLOWED_QUOTE_SOURCE_UPLOAD_MIME_TYPES.has(mimeType)) throw new Error("文件类型不允许上传。");
+  if (BLOCKED_ATTACHMENT_EXTENSIONS.has(ext)) throw new Error("该文件扩展名不允许上传。");
+
+  return { fileName, fileSize, mimeType, fileExt: ext, maxFileSizeBytes: config.maxFileSizeBytes };
+}
+
 function safeCustomerId(customerId: string) {
   const safe = String(customerId || "").replace(/[^a-zA-Z0-9_-]/g, "");
   if (!safe) throw new Error("客户 ID 无效。");
@@ -133,6 +187,25 @@ export function generateCustomerAttachmentObjectKey(customerId: string, fileName
   const year = String(now.getFullYear());
   const safeFileName = sanitizeOssFileName(fileName);
   return `customers/${customerKey}/${year}/${crypto.randomUUID()}-${safeFileName}`;
+}
+
+export function generateQuoteSourceUploadObjectKey(fileName: string, now = new Date(), env: OssEnv = process.env) {
+  const config = getQuoteSourceUploadConfig(env);
+  const year = String(now.getFullYear());
+  const safeFileName = sanitizeOssFileName(fileName);
+  return `${config.uploadPrefix}/${year}/${crypto.randomUUID()}-${safeFileName}`;
+}
+
+export function assertQuoteSourceUploadObjectKey(objectKey: string, env: OssEnv = process.env) {
+  const config = getQuoteSourceUploadConfig(env);
+  const key = String(objectKey || "");
+  const prefix = `${config.uploadPrefix}/`;
+  const rest = key.slice(prefix.length);
+  const generatedKeyPattern = /^\d{4}\/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}-[^/]+$/i;
+  if (!key.startsWith(prefix) || key.includes("..") || key.includes("\\") || key.includes("//") || !generatedKeyPattern.test(rest)) {
+    throw new Error("OSS objectKey 无效。");
+  }
+  return key;
 }
 
 export function assertCustomerOssObjectKey(customerId: string, objectKey: string) {
@@ -160,6 +233,28 @@ export function generatePutSignedUrl(customerId: string, input: OssUploadRequest
     uploadUrl,
     objectKey,
     expiresAt: new Date(Date.now() + config.signedUrlExpiresSeconds * 1000).toISOString(),
+    mimeType: normalized.mimeType,
+    fileSize: normalized.fileSize
+  };
+}
+
+export function generateQuoteSourceUploadPutSignedUrl(input: OssUploadRequest) {
+  const normalized = validateQuoteSourceUploadRequest(input);
+  const config = getQuoteSourceUploadConfig();
+  const objectKey = generateQuoteSourceUploadObjectKey(normalized.fileName);
+  const client = createOssClient(config);
+  const uploadUrl = client.signatureUrl(objectKey, {
+    method: "PUT",
+    expires: config.signedUrlExpiresSeconds,
+    "Content-Type": normalized.mimeType
+  });
+  return {
+    uploadUrl,
+    objectKey,
+    expiresAt: new Date(Date.now() + config.signedUrlExpiresSeconds * 1000).toISOString(),
+    sourceFileName: normalized.fileName,
+    originalFileName: input.fileName,
+    fileExt: normalized.fileExt,
     mimeType: normalized.mimeType,
     fileSize: normalized.fileSize
   };

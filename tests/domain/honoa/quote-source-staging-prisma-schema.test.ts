@@ -109,11 +109,11 @@ describe("Quote Task 006B Finance quote source staging Prisma schema", () => {
     expect(sql).not.toMatch(/ALTER\s+TABLE[\s\S]*\bDROP\b/i);
   });
 
-  it("no quote source import API route was added", () => {
+  it("no quote source staging import or quote draft API route was added", () => {
     const apiFiles = listFiles(path.join(repoRoot, "app/api"));
     const quoteSourceApiFiles = apiFiles.filter((file) =>
       /quote-source|quoteSource|quote-draft|quoteDraft/.test(file)
-    );
+    ).filter((file) => !file.includes("quote-source-upload"));
 
     expect(quoteSourceApiFiles).toEqual([]);
   });

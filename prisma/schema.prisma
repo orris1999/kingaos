@@ -370,6 +370,34 @@ model QuoteSourceStagingRow {
   @@index([visibility])
 }
 
+model QuoteSourceUpload {
+  id                 String   @id @default(cuid())
+  sourceFileName     String
+  originalFileName   String
+  fileExt            String?
+  mimeType           String?
+  fileSize           Int?
+  storageProvider    String   @default("aliyun_oss")
+  storageKey         String
+  uploadStatus       String   @default("uploaded")
+  adapterId          String?
+  category           String?
+  submittedByRole    String   @default("finance")
+  consumerDepartment String   @default("export")
+  uploadedByUserId   String?
+  uploadedByName     String?
+  uploadedAt         DateTime @default(now())
+  notes              String?
+  warnings           Json?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([adapterId])
+  @@index([category])
+  @@index([uploadStatus])
+  @@index([uploadedAt])
+}
+
 model AuditLog {
   id          String   @id @default(cuid())
   actorUserId String?

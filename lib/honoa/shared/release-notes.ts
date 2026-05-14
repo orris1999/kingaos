@@ -25,6 +25,23 @@ export const RELEASE_CATEGORY_LABELS: Record<ReleaseNoteCategory, string> = {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-05-14-04-finance-quote-source-upload-pilot",
+    date: "2026-05-14",
+    version: "2026.05.14-04",
+    title: "Quote Task 009A Finance quote source upload pilot",
+    category: "data",
+    summary: [
+      "新增 super_admin-only 的 /finance/quote-source-upload 和 Finance 首页 Pilot 入口，用于财务报价表文件上传试点。",
+      "新增 QuoteSourceUpload metadata-only Prisma model，只记录文件名、大小、MIME、OSS storageKey、上传人和可选 adapterId / category。",
+      "上传文件只进入私有 OSS；数据库不保存 Excel 内容、KJ 行、OEM 行、价格、底价、毛利或财务批准价格，也不生成 staging rows、报价草稿或正式报价。"
+    ],
+    affectedAreas: ["财务部", "报价表上传", "OSS", "Prisma schema", "AuditLog"],
+    migration: "additive",
+    productionDataCommand: "migration",
+    productionDataRisk: "low",
+    commitHash: "待填写"
+  },
+  {
     id: "2026-05-13-16-finance-staging-confirm-ui-wiring",
     date: "2026-05-13",
     version: "2026.05.13-16",
