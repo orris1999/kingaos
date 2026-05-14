@@ -174,3 +174,60 @@ export function FinanceQuoteSourceUploadDryRunButton({
     </div>
   );
 }
+
+export function FinanceQuoteSourceUploadDryRunConfirmButton({
+  uploadId,
+  confirmEnabled,
+  dryRunStatus,
+  stagingBatchId
+}: {
+  uploadId: string;
+  confirmEnabled: boolean;
+  dryRunStatus: string;
+  stagingBatchId?: string | null;
+}) {
+  const router = useRouter();
+  const [busy, setBusy] = React.useState(false);
+  const [message, setMessage] = React.useState("");
+  const alreadyConfirmed = Boolean(stagingBatchId);
+  const canConfirm = confirmEnabled && dryRunStatus === "completed" && !alreadyConfirmed;
+
+  async function confirmDryRun() {
+    if (!canConfirm) return;
+    setBusy(true);
+    setMessage("");
+    try {
+      const response = await fetch(`/api/finance/quote-source-upload/${uploadId}/confirm-dry-run`, {
+        method: "POST"
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "dry-run 确认失败。");
+      setMessage("dry-run 已确认进入 staging batch metadata；未创建 rows，未导入价格。");
+      router.refresh();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "dry-run 确认失败。");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!confirmEnabled) {
+    return (
+      <div className="stack compact">
+        <button disabled type="button">dry-run 确认暂未开放</button>
+        <span className="tiny muted">production 默认关闭，不会创建 staging batch。</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="stack compact">
+      <button disabled={!canConfirm || busy} type="button" onClick={confirmDryRun}>
+        {busy ? "确认中..." : alreadyConfirmed ? "dry-run 已确认" : "确认 dry-run 结果进入 staging"}
+      </button>
+      {dryRunStatus !== "completed" ? <span className="tiny muted">仅 completed dry-run 可确认。</span> : null}
+      {alreadyConfirmed ? <span className="tiny ok-text">stagingBatchId: {stagingBatchId}</span> : null}
+      {message ? <span className={message.includes("已确认") ? "tiny ok-text" : "tiny warn-text"}>{message}</span> : null}
+    </div>
+  );
+}

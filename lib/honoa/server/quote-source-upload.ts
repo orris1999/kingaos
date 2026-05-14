@@ -159,6 +159,9 @@ export function quoteSourceUploadViewModel(upload: QuoteSourceUpload) {
     dryRunCategory: upload.dryRunCategory,
     dryRunAt: upload.dryRunAt?.toISOString() ?? null,
     dryRunByName: upload.dryRunByName,
+    stagingBatchId: upload.stagingBatchId,
+    dryRunConfirmedAt: upload.dryRunConfirmedAt?.toISOString() ?? null,
+    dryRunConfirmedByName: upload.dryRunConfirmedByName,
     dryRunSheetCount: typeof dryRunSummary?.sheetCount === "number" ? dryRunSummary.sheetCount : null,
     dryRunMappedColumnKeys: Object.keys(mappedColumns),
     dryRunFieldDetection: {

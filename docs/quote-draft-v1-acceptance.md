@@ -307,6 +307,26 @@ Quote Task 009C 新增 uploaded file dry-run metadata，仍属于上传试点的
 11. AuditLog metadata 不得包含价格、底价、毛利、Excel 行数据、KJ 明细、OEM 明细、signed URL 或 AccessKey。
 12. 009C migration 必须是 additive，只对 `QuoteSourceUpload` 增加 dry-run metadata 字段和索引，不修改或删除现有业务表数据。
 
+Quote Task 009E 新增 uploaded file dry-run confirmation，仍只把结构识别结果推进到 staging batch metadata，不属于价格导入或报价生成。
+
+验收要求：
+
+1. `KINGA_ENABLE_FINANCE_QUOTE_SOURCE_DRY_RUN_CONFIRM` 缺失 / false 时默认关闭。
+2. 不使用 `NEXT_PUBLIC_`，production 不自动启用。
+3. 确认动作只允许 `super_admin` 执行，不新增 permission key，不运行 seed。
+4. 确认只对 `uploadStatus = uploaded`、`dryRunStatus = completed`、`dryRunAdapterId` 存在、`dryRunCategory` 存在且 `dryRunSummary` 存在的记录可执行。
+5. 同一个 upload 已存在 `stagingBatchId` 时必须拒绝重复确认。
+6. 确认后创建 `QuoteSourceStagingBatch` metadata，`submittedByRole = finance`、`consumerDepartment = export`。
+7. 结构满足 V1 条件的 completed dry-run 确认后，staging batch status 为 `dry_run_passed`。
+8. 确认后必须在 `QuoteSourceUpload` 写入 `stagingBatchId`、确认人和确认时间。
+9. 确认后不得创建 `QuoteSourceStagingRow`。
+10. 确认不得保存具体价格、KJ 行、OEM 行或完整 Excel 内容。
+11. 确认不得生成 QuoteDraft / QuoteDraftLine。
+12. 确认不得生成正式报价或可发客户报价单。
+13. 必须写入 `quote_source_upload.dry_run_confirm` AuditLog。
+14. AuditLog metadata 不得包含价格、底价、毛利、Excel 行数据、KJ 明细、OEM 明细、signed URL 或 AccessKey。
+15. 009E migration 必须是 additive，只对 `QuoteSourceUpload` 增加 confirmation metadata 字段和索引，不修改或删除现有业务表数据。
+
 1. 用户输入 `KJ-80002` 这类标准 KJ 时，系统能按规范化后的 KJ 查找候选。
 2. 用户输入含前后空格、全角字符、大小写差异或无意义空格的 KJ 时，系统能归一为同一 `standardKjCode`。
 3. 找到唯一 KJ 时，输出 `matchStatus = "matched_by_kj"`。

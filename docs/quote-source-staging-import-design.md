@@ -214,6 +214,54 @@ type QuoteSourceStagingMappedFromDryRunAuditMetadata = {
 
 006E 不接真实 AuditLog 写入，不开放 UI / API / server action。
 
+## Quote Task 009E uploaded dry-run confirmation to batch metadata
+
+009E 在 009C uploaded file dry-run 之后新增 feature-gated 确认动作：把 `QuoteSourceUpload` 上已完成的 dry-run 结构摘要确认进入 `QuoteSourceStagingBatch` metadata。
+
+边界：
+
+1. 确认动作只创建 `QuoteSourceStagingBatch`。
+2. 不创建 `QuoteSourceStagingRow`。
+3. 不读取 Excel 行。
+4. 不保存具体价格、底价、毛利或财务批准价格。
+5. 不保存 KJ 行 / OEM 行。
+6. 不生成报价草稿。
+7. 不生成正式报价。
+
+feature flag：
+
+- `KINGA_ENABLE_FINANCE_QUOTE_SOURCE_DRY_RUN_CONFIRM`
+- 缺失 / `false` 默认关闭。
+- 不使用 `NEXT_PUBLIC_`。
+- production 部署后默认不可确认。
+
+确认前置条件：
+
+1. `uploadStatus = uploaded`。
+2. `dryRunStatus = completed`。
+3. `dryRunAdapterId` 存在。
+4. `dryRunCategory` 存在。
+5. `dryRunSummary` 存在。
+6. `stagingBatchId` 为空，避免同一个 upload 重复确认创建多个 batch。
+
+确认后写入：
+
+1. `QuoteSourceStagingBatch.sourceFileName = QuoteSourceUpload.sourceFileName`。
+2. `adapterId = dryRunAdapterId`。
+3. `category = dryRunCategory`。
+4. `submittedByRole = finance`。
+5. `consumerDepartment = export`。
+6. `dryRunDecisionStatus` 来自 dry-run decision。
+7. `status` 按 dry-run decision 映射，结构满足 V1 条件时为 `dry_run_passed`。
+8. `createdByUserId / createdByName` 为当前 `super_admin`。
+9. `QuoteSourceUpload.stagingBatchId`、`dryRunConfirmedAt`、`dryRunConfirmedByUserId`、`dryRunConfirmedByName`。
+
+AuditLog：
+
+- action：`quote_source_upload.dry_run_confirm`
+- metadata 只包含 uploadId、stagingBatchId、sourceFileName、adapterId、category、dryRunStatus、dryRunDecisionStatus、batch status、actor 和 warnings。
+- metadata 不得包含具体价格、底价、毛利、完整 Excel 行、KJ 明细、OEM 明细、signed URL 或 AccessKey。
+
 ## Quote Task 006F finance confirmation domain action
 
 006F 增加 Finance staging confirmation domain action。该 action 仍然只服务 staging metadata，只允许在 local / test DB 中测试，不开放 UI、API route 或 server action，不读取真实 Excel，不导入报价表，不写 production 数据。

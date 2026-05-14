@@ -140,7 +140,7 @@ describe("Finance quote source upload pilot", () => {
     expect(model).toMatch(/storageProvider\s+String\s+@default\("aliyun_oss"\)/);
     expect(model).toMatch(/uploadStatus\s+String\s+@default\("uploaded"\)/);
     expect(model).toMatch(/submittedByRole\s+String\s+@default\("finance"\)/);
-    expect(model).toContain('consumerDepartment String   @default("export")');
+    expect(model).toMatch(/consumerDepartment\s+String\s+@default\("export"\)/);
     expect(model).not.toMatch(/amount|costPrice|quotePrice|financeApprovedPrice|minimumPrice|grossMargin|margin|profit/i);
     expect(model).not.toMatch(/kjRows|oemRows|excelContent|officialQuote|sentToCustomer/i);
   });

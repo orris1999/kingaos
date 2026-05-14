@@ -25,6 +25,23 @@ export const RELEASE_CATEGORY_LABELS: Record<ReleaseNoteCategory, string> = {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-05-14-08-finance-quote-source-dry-run-confirmation",
+    date: "2026-05-14",
+    version: "2026.05.14-08",
+    title: "Quote Task 009E Finance quote source dry-run confirmation",
+    category: "data",
+    summary: [
+      "新增服务端 feature flag KINGA_ENABLE_FINANCE_QUOTE_SOURCE_DRY_RUN_CONFIRM，缺失或 false 时默认关闭，不使用 NEXT_PUBLIC_。",
+      "在 QuoteSourceUpload 上新增 additive dry-run confirmation metadata 字段，用于记录 stagingBatchId、确认人和确认时间，防止同一 upload 重复确认。",
+      "新增 super_admin-only 的 dry-run confirmation route 和页面按钮；确认只创建 QuoteSourceStagingBatch metadata，不创建 rows，不保存价格、KJ 行或 OEM 行，也不生成报价草稿或正式报价。"
+    ],
+    affectedAreas: ["财务部", "报价表上传", "报价表 dry-run", "报价表 staging", "Prisma schema", "AuditLog"],
+    migration: "additive",
+    productionDataCommand: "migration",
+    productionDataRisk: "low",
+    commitHash: "待填写"
+  },
+  {
     id: "2026-05-14-06-finance-quote-source-upload-dry-run",
     date: "2026-05-14",
     version: "2026.05.14-06",

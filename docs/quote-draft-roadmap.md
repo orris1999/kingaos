@@ -2,7 +2,7 @@
 
 日期：2026-05-12
 
-本路线图只面向报价草稿能力，不实现正式报价、订单、合同、价格审批或财务核价。本阶段报价表只能作为数据来源候选；009A 之后允许 Finance 上传文件 metadata 入库，009C 之后可在 feature flag 开启时对已上传文件做 metadata-only 结构 dry-run，但仍不导入价格行、不保存金额、不生成正式报价。
+本路线图只面向报价草稿能力，不实现正式报价、订单、合同、价格审批或财务核价。本阶段报价表只能作为数据来源候选；009A 之后允许 Finance 上传文件 metadata 入库，009C 之后可在 feature flag 开启时对已上传文件做 metadata-only 结构 dry-run，009E 之后可在独立 feature flag 开启时把 completed dry-run 确认为 staging batch metadata，但仍不导入价格行、不保存金额、不生成正式报价。
 
 ## 领域归属和数据提交边界
 
@@ -235,6 +235,14 @@ Quote Task 009C 在 009A 的上传 metadata 基础上新增 feature-gated upload
 - dry-run metadata 写回 `QuoteSourceUpload`，但只保存结构摘要，不保存具体价格、KJ 行、OEM 行或完整 Excel 内容。
 - dry-run 不创建 `QuoteSourceStagingBatch` / `QuoteSourceStagingRow`，不生成报价草稿，不生成正式报价。
 - production 默认关闭，后续进入 staging 仍必须单独设计导入和财务确认流程。
+
+Quote Task 009E 在 009C 的 uploaded file dry-run metadata 基础上新增 feature-gated dry-run confirmation：
+
+- 新增服务端 flag `KINGA_ENABLE_FINANCE_QUOTE_SOURCE_DRY_RUN_CONFIRM`，缺失 / false 默认关闭，不使用 `NEXT_PUBLIC_`。
+- 只允许 `super_admin` 对 `uploadStatus = uploaded`、`dryRunStatus = completed`、已有 adapter / category / summary 且尚未确认的 upload 执行确认。
+- 确认只创建 `QuoteSourceStagingBatch` metadata，并在 `QuoteSourceUpload` 写入 `stagingBatchId` 和确认人 / 确认时间，防止重复确认。
+- 确认不创建 `QuoteSourceStagingRow`，不读取 Excel 行，不保存具体价格、KJ 行、OEM 行，不生成报价草稿或正式报价。
+- production 默认关闭，后续行级导入 / staging rows 仍必须单独设计和验收。
 
 ## V2｜KJ / OEM 混合匹配
 

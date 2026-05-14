@@ -7,6 +7,24 @@
 - `docs/CHANGELOG.md`：给团队阅读，记录背景和规则。
 - `lib/honoa/shared/release-notes.ts`：给管理员页面展示。
 
+## 2026.05.14-08 Quote Task 009E Finance quote source dry-run confirmation
+
+- 类型：功能 / 数据
+- 影响范围：财务部、报价表上传、报价表 dry-run、报价表 staging、Prisma schema、AuditLog
+- Migration：additive
+- 生产数据命令：待后续部署确认；本轮未运行 production migration
+- 生产数据风险：低
+- Release note id：`2026-05-14-08-finance-quote-source-dry-run-confirmation`
+- Commit：待填写
+
+主要变化：
+
+- 新增服务端 feature flag `KINGA_ENABLE_FINANCE_QUOTE_SOURCE_DRY_RUN_CONFIRM`，缺失或 `false` 时默认关闭，不使用 `NEXT_PUBLIC_`。
+- 在 `QuoteSourceUpload` 上新增 dry-run confirmation metadata 字段，用于记录 `stagingBatchId`、确认人和确认时间，防止同一 upload 重复确认。
+- 新增 super_admin-only 的 dry-run confirmation route 和页面按钮；确认只创建 `QuoteSourceStagingBatch` metadata，不创建 `QuoteSourceStagingRow`。
+- 确认动作不读取 Excel 行、不保存具体价格、KJ 行或 OEM 行，不生成报价草稿或正式报价。
+- 写入 `quote_source_upload.dry_run_confirm` AuditLog，metadata 不包含价格、底价、毛利、Excel 行、KJ 明细、OEM 明细、signed URL 或 AccessKey。
+
 ## 2026.05.14-06 Quote Task 009C Finance uploaded quote source dry-run
 
 - 类型：功能 / 数据

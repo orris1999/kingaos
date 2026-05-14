@@ -1,8 +1,15 @@
 import Link from "next/link";
-import { FinanceQuoteSourceUpload, FinanceQuoteSourceUploadDryRunButton } from "@/components/finance-quote-source-upload";
+import {
+  FinanceQuoteSourceUpload,
+  FinanceQuoteSourceUploadDryRunButton,
+  FinanceQuoteSourceUploadDryRunConfirmButton
+} from "@/components/finance-quote-source-upload";
 import { Forbidden, KingaShell } from "@/components/kinga-shell";
 import { requireCurrentUser } from "@/lib/honoa/server/auth";
-import { isFinanceQuoteSourceDryRunEnabled } from "@/lib/honoa/server/feature-flags";
+import {
+  isFinanceQuoteSourceDryRunConfirmEnabled,
+  isFinanceQuoteSourceDryRunEnabled
+} from "@/lib/honoa/server/feature-flags";
 import { isOssConfigured } from "@/lib/honoa/server/oss";
 import { listQuoteSourceUploads, quoteSourceUploadViewModel } from "@/lib/honoa/server/quote-source-upload";
 
@@ -48,6 +55,7 @@ export default async function FinanceQuoteSourceUploadPage() {
 
   const uploads = (await listQuoteSourceUploads(50)).map(quoteSourceUploadViewModel);
   const dryRunEnabled = isFinanceQuoteSourceDryRunEnabled();
+  const dryRunConfirmEnabled = isFinanceQuoteSourceDryRunConfirmEnabled();
   return (
     <KingaShell user={user}>
       <div className="stack">
@@ -87,6 +95,11 @@ export default async function FinanceQuoteSourceUploadPage() {
           ) : (
             <p className="muted">dry-run 开启后仅执行 workbook / sheet / 表头结构识别，不导入价格、不创建 staging rows。</p>
           )}
+          {!dryRunConfirmEnabled ? (
+            <p className="warn-text">dry-run 确认暂未开放。当前不会创建 staging batch metadata。</p>
+          ) : (
+            <p className="muted">dry-run 确认开启后仅创建 staging batch metadata，不创建 staging rows、不导入价格。</p>
+          )}
           <div className="table-wrap">
             <table>
               <thead>
@@ -99,6 +112,7 @@ export default async function FinanceQuoteSourceUploadPage() {
                   <th>adapterId</th>
                   <th>品类</th>
                   <th>dry-run</th>
+                  <th>确认</th>
                   <th>结构摘要</th>
                   <th>字段检测</th>
                   <th>操作</th>
@@ -120,6 +134,18 @@ export default async function FinanceQuoteSourceUploadPage() {
                           {formatDryRunStatus(upload.dryRunStatus)}
                         </span>
                         {upload.dryRunAt ? <div className="tiny muted">{formatDate(upload.dryRunAt)}</div> : null}
+                      </td>
+                      <td>
+                        {upload.stagingBatchId ? (
+                          <div className="stack compact">
+                            <span className="tag ok">dry-run 已确认</span>
+                            <span className="tiny">stagingBatchId: {upload.stagingBatchId}</span>
+                            {upload.dryRunConfirmedAt ? <span className="tiny muted">{formatDate(upload.dryRunConfirmedAt)}</span> : null}
+                            {upload.dryRunConfirmedByName ? <span className="tiny muted">{upload.dryRunConfirmedByName}</span> : null}
+                          </div>
+                        ) : (
+                          <span className="tag">未确认</span>
+                        )}
                       </td>
                       <td>
                         <div className="tiny">adapter: {upload.dryRunAdapterId || "-"}</div>
@@ -144,12 +170,18 @@ export default async function FinanceQuoteSourceUploadPage() {
                           uploadId={upload.id}
                           uploadStatus={upload.uploadStatus}
                         />
+                        <FinanceQuoteSourceUploadDryRunConfirmButton
+                          confirmEnabled={dryRunConfirmEnabled}
+                          dryRunStatus={upload.dryRunStatus}
+                          stagingBatchId={upload.stagingBatchId}
+                          uploadId={upload.id}
+                        />
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td className="muted" colSpan={11}>暂无报价表上传记录。</td>
+                    <td className="muted" colSpan={12}>暂无报价表上传记录。</td>
                   </tr>
                 )}
               </tbody>
