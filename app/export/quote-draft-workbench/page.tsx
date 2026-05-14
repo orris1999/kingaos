@@ -2,11 +2,12 @@ import { Forbidden, KingaShell } from "@/components/kinga-shell";
 import { QuoteDraftWorkbench } from "@/components/quote-draft-workbench";
 import { findExportQuoteDraftSourceCandidatesAction } from "@/lib/honoa/quote-draft/export-staging-consumption-actions";
 import { requireCurrentUser } from "@/lib/honoa/server/auth";
-import { isExportStagingQuoteDraftEnabled } from "@/lib/honoa/server/feature-flags";
+import { isExportQuoteDraftExcelEnabled, isExportStagingQuoteDraftEnabled } from "@/lib/honoa/server/feature-flags";
 
 export default async function ExportQuoteDraftWorkbenchPage() {
   const user = await requireCurrentUser();
   const stagingCandidatesEnabled = isExportStagingQuoteDraftEnabled();
+  const excelExportEnabled = isExportQuoteDraftExcelEnabled();
   if (user.role !== "super_admin") {
     return (
       <KingaShell user={user}>
@@ -30,6 +31,7 @@ export default async function ExportQuoteDraftWorkbenchPage() {
         </section>
         <QuoteDraftWorkbench
           stagingCandidatesEnabled={stagingCandidatesEnabled}
+          excelExportEnabled={excelExportEnabled}
           findStagingCandidatesAction={
             stagingCandidatesEnabled ? findExportQuoteDraftSourceCandidatesAction : undefined
           }

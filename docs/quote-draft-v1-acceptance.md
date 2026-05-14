@@ -197,6 +197,27 @@ Quote Task 008E 整理内部 Workbench 的草稿预览 UI 和异常状态。
 17. Workbench 仍不生成正式报价，仍不能发客户。
 18. Workbench 仍不显示具体价格、底价、毛利、财务批准价格或可发客户状态。
 
+Quote Task 008F 允许内部 Workbench 在 feature flag 开启时导出当前页面草稿预览 Excel，但仍不是正式报价。
+
+验收要求：
+
+1. `KINGA_ENABLE_EXPORT_QUOTE_DRAFT_EXCEL` 缺失 / false 时，导出按钮 disabled。
+2. 不使用 `NEXT_PUBLIC_`。
+3. production 默认关闭，本轮不修改 ECS `.env`。
+4. flag 关闭时，页面显示“Excel 导出暂未开放”，不能触发导出。
+5. flag 开启且已有 preview lines 时，可以浏览器本地生成草稿 Excel。
+6. 没有 preview lines 时不能导出。
+7. Excel 文件名必须包含“草稿”。
+8. Excel 顶部必须包含“非正式报价”。
+9. Excel 顶部必须包含“价格候选不是财务批准价格，不能直接发客户”。
+10. Excel 只能导出当前页面预览结果。
+11. Excel 不包含具体价格、底价、毛利、财务批准价格、正式报价状态或发送客户状态。
+12. 导出不调用 server action。
+13. 导出不新增 API route。
+14. 导出不上传文件、不写数据库、不保存输入或输出。
+15. Workbench 仍不创建 `QuoteDraft` / `QuoteDraftLine`。
+16. Workbench 仍不生成正式报价、不生成正式 PDF、不能发客户。
+
 1. 用户输入 `KJ-80002` 这类标准 KJ 时，系统能按规范化后的 KJ 查找候选。
 2. 用户输入含前后空格、全角字符、大小写差异或无意义空格的 KJ 时，系统能归一为同一 `standardKjCode`。
 3. 找到唯一 KJ 时，输出 `matchStatus = "matched_by_kj"`。

@@ -432,3 +432,78 @@ Workbench 展示：
 7. 不导出 Excel / PDF。
 8. 不生成正式报价。
 9. 不显示具体价格、底价、毛利、财务批准价格或可发客户状态。
+
+## Quote Task 008F｜Workbench draft Excel export
+
+008F 为内部 `/export/quote-draft-workbench` 增加 feature-gated 草稿 Excel 导出。导出的只是当前页面内存中的 `ExportQuoteDraftPreviewLine[]`，用于内部整理询价 / 报价草稿预览。
+
+服务端 feature flag：
+
+```text
+KINGA_ENABLE_EXPORT_QUOTE_DRAFT_EXCEL=false
+```
+
+规则：
+
+1. 环境变量缺失或不是 `true` 时，视为关闭。
+2. 不使用 `NEXT_PUBLIC_`，不把环境变量暴露到浏览器。
+3. production 默认关闭，本轮不修改 ECS `.env`。
+4. flag 关闭时，“导出草稿 Excel”按钮 disabled，并显示“Excel 导出暂未开放”。
+5. flag 开启且页面已有 preview lines 时，`super_admin` 可以在浏览器本地生成 Excel。
+
+导出方式：
+
+1. 只读取当前页面预览结果。
+2. 浏览器本地 lazy import `xlsx` 并生成 workbook。
+3. 不调用 server action。
+4. 不新增 API route。
+5. 不上传文件。
+6. 不写数据库。
+7. 不保存输入或输出。
+
+导出文件名：
+
+```text
+KingaOS-询价报价草稿-YYYYMMDD-HHMM.xlsx
+```
+
+文件名必须包含“草稿”，不得命名为“正式报价单”或任何正式报价含义。
+
+Excel 顶部必须写明：
+
+```text
+KingaOS 询价 / 报价草稿
+非正式报价，仅供内部整理使用。
+价格候选不是财务批准价格，不能直接发客户。
+```
+
+导出列：
+
+1. 行号。
+2. 原始输入。
+3. 识别编码。
+4. 数量。
+5. 备注。
+6. 销售模式。
+7. 数据源。
+8. 预览状态。
+9. KJ。
+10. 产品名称。
+11. 品类。
+12. 价格候选状态。
+13. 是否有成本候选。
+14. 是否有报价候选。
+15. 风险提示。
+16. 待处理事项。
+
+Excel 不包含：
+
+1. 具体价格。
+2. 底价。
+3. 毛利。
+4. `FinanceApprovedPrice`。
+5. `officialQuote`。
+6. `sentToCustomer`。
+7. 正式报价状态。
+
+008F 仍不创建 `QuoteDraft` / `QuoteDraftLine`，不生成正式报价，不生成正式 PDF，不发客户。正式报价仍必须后续接 FinancePricing。

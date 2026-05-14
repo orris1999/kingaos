@@ -34,6 +34,8 @@ describe("Quote Task 002C 出口部 KJ 报价草稿 Workbench", () => {
     expect(page).toContain('user.role !== "super_admin"');
     expect(page).toContain("当前账号不能查看报价草稿解析器 Workbench");
     expect(page).toContain("isExportStagingQuoteDraftEnabled");
+    expect(page).toContain("isExportQuoteDraftExcelEnabled");
+    expect(page).toContain("excelExportEnabled={excelExportEnabled}");
     expect(page).toContain("findExportQuoteDraftSourceCandidatesAction");
     expect(page).toContain("stagingCandidatesEnabled ? findExportQuoteDraftSourceCandidatesAction : undefined");
   });
@@ -92,12 +94,19 @@ describe("Quote Task 002C 出口部 KJ 报价草稿 Workbench", () => {
     expect(component).toContain("填入示例");
     expect(component).toContain("清空");
     expect(component).toContain("复制预览 JSON");
+    expect(component).toContain("导出草稿 Excel");
+    expect(component).toContain("Excel 导出暂未开放");
+    expect(component).toContain("暂无可导出内容");
     expect(component).toContain("生成草稿预览");
     expect(component).toContain("Mock 数据");
     expect(component).toContain("财务确认 staging 候选");
     expect(component).toContain("财务确认 staging 候选暂未开放");
     expect(component).toContain('data-testid="quote-draft-action-items"');
     expect(component).toContain("待处理事项");
+    expect(component).toContain("Excel 导出只导出当前页面预览结果");
+    expect(component).toContain('await import("xlsx")');
+    expect(component).toContain("buildExportQuoteDraftWorkbookRows");
+    expect(component).toContain("buildExportQuoteDraftExcelFileName");
     expect(summaryHelper).toContain("缺少数量，请补充数量");
     expect(summaryHelper).toContain("未找到财务确认 staging 候选");
     expect(summaryHelper).toContain("多候选，需要选择正确 KJ");
@@ -178,6 +187,7 @@ describe("Quote Task 002C 出口部 KJ 报价草稿 Workbench", () => {
 
     expect(component).not.toContain("fetch(");
     expect(component).not.toContain("action=");
+    expect(component).not.toContain("server action");
     expect(page).not.toContain("PrismaClient");
     expect(page).toContain("stagingCandidatesEnabled ? findExportQuoteDraftSourceCandidatesAction : undefined");
     expect(action).toContain("requireCurrentUser");
@@ -204,9 +214,12 @@ describe("Quote Task 002C 出口部 KJ 报价草稿 Workbench", () => {
     const flagHelper = readRepoFile("lib/honoa/server/feature-flags.ts");
 
     expect(flagHelper).toContain("KINGA_ENABLE_EXPORT_STAGING_QUOTE_DRAFT");
+    expect(flagHelper).toContain("KINGA_ENABLE_EXPORT_QUOTE_DRAFT_EXCEL");
     expect(flagHelper).not.toContain("NEXT_PUBLIC_");
     expect(component).toContain('disabled={!stagingCandidatesEnabled}');
+    expect(component).toContain("disabled={!excelExportEnabled || previewLines.length === 0 || isExcelExportPending}");
     expect(component).toContain("财务确认 staging 候选暂未开放。默认只使用 Mock 数据");
+    expect(component).toContain("Excel 导出暂未开放。");
     expect(component).toContain("未找到候选");
     expect(component).toContain("OEM 暂未开放");
     expect(component).toContain("非财务批准价格，仅草稿候选");

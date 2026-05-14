@@ -2,7 +2,9 @@
 
 import { useMemo, useState } from "react";
 import {
+  buildExportQuoteDraftExcelFileName,
   buildExportQuoteDraftPreviewLines,
+  buildExportQuoteDraftWorkbookRows,
   parseQuoteDraftInput,
   QUOTE_DRAFT_WORKBENCH_SAMPLE_INPUT,
   summarizeExportQuoteDraftPreviewLines
@@ -53,6 +55,7 @@ type FindStagingCandidatesAction = (
 
 type QuoteDraftWorkbenchProps = {
   stagingCandidatesEnabled?: boolean;
+  excelExportEnabled?: boolean;
   findStagingCandidatesAction?: FindStagingCandidatesAction;
 };
 
@@ -103,6 +106,7 @@ function shortText(value?: string, maxLength = 32) {
 
 export function QuoteDraftWorkbench({
   stagingCandidatesEnabled = false,
+  excelExportEnabled = false,
   findStagingCandidatesAction
 }: QuoteDraftWorkbenchProps) {
   const [input, setInput] = useState(QUOTE_DRAFT_WORKBENCH_SAMPLE_INPUT);
@@ -111,8 +115,10 @@ export function QuoteDraftWorkbench({
   const [sourceMode, setSourceMode] = useState<ExportQuoteDraftPreviewSourceMode>("mock");
   const [previewLines, setPreviewLines] = useState<ExportQuoteDraftPreviewLine[]>(buildInitialPreviewLines);
   const [isStagingLookupPending, setIsStagingLookupPending] = useState(false);
+  const [isExcelExportPending, setIsExcelExportPending] = useState(false);
   const [previewMessage, setPreviewMessage] = useState("");
   const [copyMessage, setCopyMessage] = useState("");
+  const [exportMessage, setExportMessage] = useState("");
 
   const effectiveSourceMode: ExportQuoteDraftPreviewSourceMode =
     stagingCandidatesEnabled && sourceMode === "finance_confirmed_staging"
@@ -172,11 +178,13 @@ export function QuoteDraftWorkbench({
     setPreviewLines(buildInitialPreviewLines());
     setPreviewMessage("");
     setCopyMessage("");
+    setExportMessage("");
   }
 
   async function runPreview() {
     setSubmittedInput(input);
     setCopyMessage("");
+    setExportMessage("");
 
     if (isStagingSource(effectiveSourceMode)) {
       setIsStagingLookupPending(true);
@@ -212,6 +220,36 @@ export function QuoteDraftWorkbench({
     };
     await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
     setCopyMessage("已复制草稿预览 JSON。");
+  }
+
+  async function exportDraftExcel() {
+    setExportMessage("");
+
+    if (!excelExportEnabled) {
+      setExportMessage("Excel 导出暂未开放。");
+      return;
+    }
+
+    if (previewLines.length === 0) {
+      setExportMessage("暂无可导出内容。请先生成草稿预览。");
+      return;
+    }
+
+    setIsExcelExportPending(true);
+    try {
+      const XLSX = await import("xlsx");
+      const workbookRows = buildExportQuoteDraftWorkbookRows(previewLines, summary);
+      const worksheet = XLSX.utils.aoa_to_sheet(workbookRows);
+      const workbook = XLSX.utils.book_new();
+
+      XLSX.utils.book_append_sheet(workbook, worksheet, "报价草稿预览");
+      XLSX.writeFile(workbook, buildExportQuoteDraftExcelFileName());
+      setExportMessage("已在本地生成询价 / 报价草稿 Excel。");
+    } catch (error) {
+      setExportMessage(error instanceof Error ? error.message : "草稿 Excel 导出失败。");
+    } finally {
+      setIsExcelExportPending(false);
+    }
   }
 
   return (
@@ -306,6 +344,14 @@ export function QuoteDraftWorkbench({
             复制预览 JSON
           </button>
           <button
+            className="secondary"
+            type="button"
+            onClick={exportDraftExcel}
+            disabled={!excelExportEnabled || previewLines.length === 0 || isExcelExportPending}
+          >
+            导出草稿 Excel
+          </button>
+          <button
             className="ghost"
             type="button"
             onClick={() => {
@@ -314,20 +360,25 @@ export function QuoteDraftWorkbench({
               setPreviewLines([]);
               setPreviewMessage("");
               setCopyMessage("");
+              setExportMessage("");
             }}
           >
             清空
           </button>
         </div>
+        {!excelExportEnabled ? <p className="muted tiny">Excel 导出暂未开放。</p> : null}
+        {excelExportEnabled && previewLines.length === 0 ? <p className="muted tiny">暂无可导出内容。</p> : null}
         {previewMessage ? <p className="muted tiny">{previewMessage}</p> : null}
         {copyMessage ? <p className="ok-text tiny">{copyMessage}</p> : null}
+        {exportMessage ? <p className="ok-text tiny">{exportMessage}</p> : null}
       </section>
 
       <section className="panel stack">
         <div className="split">
           <div>
             <h2>草稿候选预览</h2>
-            <p className="muted">输出仅用于内部预览，不保存、不导出、不生成正式报价。</p>
+            <p className="muted">输出仅用于内部预览，不保存、不上传、不写数据库、不生成正式报价。</p>
+            <p className="muted tiny">Excel 导出只导出当前页面预览结果，文件会标注询价 / 报价草稿、非正式报价。</p>
             {isStagingSource(effectiveSourceMode) ? (
               <p className="muted tiny">
                 来源：finance_confirmed staging；finance_confirmed 不等于 FinanceApprovedPrice。
@@ -355,7 +406,7 @@ export function QuoteDraftWorkbench({
           <div className="split">
             <div>
               <h3>待处理事项</h3>
-              <p className="muted">这些事项只用于整理草稿预览，不会保存、不导出，也不会生成正式报价。</p>
+              <p className="muted">这些事项只用于整理草稿预览，不会保存、不上传，也不会生成正式报价。</p>
             </div>
             <span className={summary.actionItems.length > 0 ? "tag warn" : "tag ok"}>
               {summary.actionItems.length > 0 ? `${summary.actionItems.length} 类待处理` : "暂无待处理异常"}

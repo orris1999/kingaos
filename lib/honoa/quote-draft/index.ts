@@ -1,4 +1,5 @@
 export * from "./draft-generator";
+export * from "./export-quote-draft-excel";
 export * from "./export-quote-draft-preview";
 export * from "./export-quote-draft-preview-summary";
 export * from "./export-staging-consumption-repository";
