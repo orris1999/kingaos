@@ -507,3 +507,25 @@ Excel 不包含：
 7. 正式报价状态。
 
 008F 仍不创建 `QuoteDraft` / `QuoteDraftLine`，不生成正式报价，不生成正式 PDF，不发客户。正式报价仍必须后续接 FinancePricing。
+
+## Quote Task 008G｜Internal UAT and feature flag readiness
+
+008G 不新增业务功能，只确认当前“询价 / 报价草稿预览 + 草稿 Excel 导出”是否可进入内部试用。
+
+新增文档：
+
+1. `docs/quote-draft-internal-uat-checklist.md`
+2. `docs/quote-draft-feature-flag-rollout-runbook.md`
+
+验证范围：
+
+1. `KINGA_ENABLE_EXPORT_STAGING_QUOTE_DRAFT` 缺失 / `false` / `true` 的行为。
+2. `KINGA_ENABLE_EXPORT_QUOTE_DRAFT_EXCEL` 缺失 / `false` / `true` 的行为。
+3. 两个 flag 都不使用 `NEXT_PUBLIC_`。
+4. production 默认关闭，本轮不修改 ECS `.env`。
+5. Mock 模式可以生成草稿预览，并构建草稿 Excel workbook rows。
+6. Staging 模式使用 local / test 脱敏 fixture 验证 `finance_confirmed + export_draft_candidate + candidate` 候选。
+7. Excel 草稿包含“非正式报价”和“价格候选不是财务批准价格，不能直接发客户”。
+8. Excel 草稿不包含具体价格、底价、毛利、`FinanceApprovedPrice`、`officialQuote` 或 `sentToCustomer`。
+
+008G 仍不启用 production feature flags，不写 production 数据，不读取真实 Excel，不导入报价表，不保存草稿，不生成正式报价。

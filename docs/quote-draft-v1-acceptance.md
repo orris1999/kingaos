@@ -218,6 +218,32 @@ Quote Task 008F 允许内部 Workbench 在 feature flag 开启时导出当前页
 15. Workbench 仍不创建 `QuoteDraft` / `QuoteDraftLine`。
 16. Workbench 仍不生成正式报价、不生成正式 PDF、不能发客户。
 
+Quote Task 008G 验收内部 UAT checklist 和 feature flag rollout runbook，不新增正式业务能力。
+
+验收要求：
+
+1. 必须新增内部 UAT checklist。
+2. 必须新增 feature flag rollout runbook。
+3. `KINGA_ENABLE_EXPORT_STAGING_QUOTE_DRAFT` 缺失时默认 false。
+4. `KINGA_ENABLE_EXPORT_STAGING_QUOTE_DRAFT=false` 时 false。
+5. `KINGA_ENABLE_EXPORT_STAGING_QUOTE_DRAFT=true` 时 true。
+6. `KINGA_ENABLE_EXPORT_QUOTE_DRAFT_EXCEL` 缺失时默认 false。
+7. `KINGA_ENABLE_EXPORT_QUOTE_DRAFT_EXCEL=false` 时 false。
+8. `KINGA_ENABLE_EXPORT_QUOTE_DRAFT_EXCEL=true` 时 true。
+9. 不使用 `NEXT_PUBLIC_`。
+10. 不修改 ECS `.env`。
+11. Mock preview 可以构建草稿 Excel rows。
+12. Staging preview 可以用 local / test 脱敏 fixture 验证草稿候选 warning。
+13. Excel 草稿必须包含非正式报价警示。
+14. Excel 草稿必须包含价格候选不是财务批准价格的警示。
+15. Excel 草稿不得包含具体价格、底价、毛利、财务批准价格、正式报价或发送客户状态。
+16. 页面不得保存数据。
+17. 页面不得新增 API route。
+18. 不得新增 Prisma schema / migration。
+19. 不得读取真实 Excel。
+20. 不得导入报价表。
+21. 不得写 production 数据。
+
 1. 用户输入 `KJ-80002` 这类标准 KJ 时，系统能按规范化后的 KJ 查找候选。
 2. 用户输入含前后空格、全角字符、大小写差异或无意义空格的 KJ 时，系统能归一为同一 `standardKjCode`。
 3. 找到唯一 KJ 时，输出 `matchStatus = "matched_by_kj"`。

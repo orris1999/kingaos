@@ -201,6 +201,15 @@ Quote Task 008F 为内部 Workbench 增加 feature-gated 草稿 Excel 导出：
 - Excel 不包含具体价格、底价、毛利、财务批准价格、正式报价状态或发送客户状态。
 - Workbench 仍不保存输入 / 输出、不创建 `QuoteDraft` / `QuoteDraftLine`、不生成正式报价、不生成正式 PDF、不发客户。
 
+Quote Task 008G 只做内部 UAT checklist 和 feature flag rollout runbook：
+
+- 新增 `docs/quote-draft-internal-uat-checklist.md`，用于业务员内部试用前检查。
+- 新增 `docs/quote-draft-feature-flag-rollout-runbook.md`，用于人工开启 / 关闭 feature flags。
+- 验证 `KINGA_ENABLE_EXPORT_STAGING_QUOTE_DRAFT` 与 `KINGA_ENABLE_EXPORT_QUOTE_DRAFT_EXCEL` 缺失 / false 默认关闭，true 仅在 local / test 中可用。
+- 验证不使用 `NEXT_PUBLIC_`，不自动修改 ECS `.env`。
+- 验证草稿 Excel 包含非正式报价警示，并且不包含具体价格、底价、毛利、财务批准价格或发送客户状态。
+- 008G 不新增 UI / API / schema / migration，不启用 production feature flags，不写 production 数据。
+
 ## V2｜KJ / OEM 混合匹配
 
 目标：在 KJ 精确匹配稳定后，把 OEM / OE 作为候选匹配能力接入。
