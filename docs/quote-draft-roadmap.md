@@ -210,6 +210,16 @@ Quote Task 008G 只做内部 UAT checklist 和 feature flag rollout runbook：
 - 验证草稿 Excel 包含非正式报价警示，并且不包含具体价格、底价、毛利、财务批准价格或发送客户状态。
 - 008G 不新增 UI / API / schema / migration，不启用 production feature flags，不写 production 数据。
 
+Quote Task 008J 设计并实现出口部经理只读试用边界：
+
+- 新增服务端 flag `KINGA_ENABLE_EXPORT_MANAGER_QUOTE_DRAFT_TRIAL`，缺失 / false 默认关闭。
+- 不使用 `NEXT_PUBLIC_`，不自动修改 ECS `.env`，production 默认关闭。
+- `super_admin` 仍可访问 Workbench。
+- `department = export` 且 `role = manager` 的出口部经理仅在该 flag 开启时可访问 Workbench。
+- 出口部经理只能使用 Mock 数据和草稿 Excel 导出；`KINGA_ENABLE_EXPORT_STAGING_QUOTE_DRAFT` 关闭时 staging 数据源仍 disabled。
+- 普通出口部业务员、普通 admin、财务普通用户、国内部用户仍不可访问。
+- Workbench 仍不保存输入 / 输出，不创建 `QuoteDraft` / `QuoteDraftLine`，不导入报价表，不生成正式报价，不发客户。
+
 ## V2｜KJ / OEM 混合匹配
 
 目标：在 KJ 精确匹配稳定后，把 OEM / OE 作为候选匹配能力接入。

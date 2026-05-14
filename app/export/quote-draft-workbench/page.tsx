@@ -2,13 +2,22 @@ import { Forbidden, KingaShell } from "@/components/kinga-shell";
 import { QuoteDraftWorkbench } from "@/components/quote-draft-workbench";
 import { findExportQuoteDraftSourceCandidatesAction } from "@/lib/honoa/quote-draft/export-staging-consumption-actions";
 import { requireCurrentUser } from "@/lib/honoa/server/auth";
-import { isExportQuoteDraftExcelEnabled, isExportStagingQuoteDraftEnabled } from "@/lib/honoa/server/feature-flags";
+import {
+  canAccessExportQuoteDraftWorkbench,
+  isExportManagerQuoteDraftTrialEnabled,
+  isExportManagerQuoteDraftTrialUser,
+  isExportQuoteDraftExcelEnabled,
+  isExportStagingQuoteDraftEnabled
+} from "@/lib/honoa/server/feature-flags";
 
 export default async function ExportQuoteDraftWorkbenchPage() {
   const user = await requireCurrentUser();
-  const stagingCandidatesEnabled = isExportStagingQuoteDraftEnabled();
+  const exportManagerTrialEnabled = isExportManagerQuoteDraftTrialEnabled();
+  const canAccessWorkbench = canAccessExportQuoteDraftWorkbench(user, exportManagerTrialEnabled);
+  const isExportManagerTrial = exportManagerTrialEnabled && isExportManagerQuoteDraftTrialUser(user);
+  const stagingCandidatesEnabled = user.role === "super_admin" ? isExportStagingQuoteDraftEnabled() : false;
   const excelExportEnabled = isExportQuoteDraftExcelEnabled();
-  if (user.role !== "super_admin") {
+  if (!canAccessWorkbench) {
     return (
       <KingaShell user={user}>
         <Forbidden message="当前账号不能查看报价草稿解析器 Workbench。" />
@@ -32,6 +41,7 @@ export default async function ExportQuoteDraftWorkbenchPage() {
         <QuoteDraftWorkbench
           stagingCandidatesEnabled={stagingCandidatesEnabled}
           excelExportEnabled={excelExportEnabled}
+          isExportManagerTrial={isExportManagerTrial}
           findStagingCandidatesAction={
             stagingCandidatesEnabled ? findExportQuoteDraftSourceCandidatesAction : undefined
           }

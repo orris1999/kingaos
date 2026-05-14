@@ -9,3 +9,24 @@ export function isExportStagingQuoteDraftEnabled() {
 export function isExportQuoteDraftExcelEnabled() {
   return process.env.KINGA_ENABLE_EXPORT_QUOTE_DRAFT_EXCEL?.trim().toLowerCase() === "true";
 }
+
+export function isExportManagerQuoteDraftTrialEnabled() {
+  return process.env.KINGA_ENABLE_EXPORT_MANAGER_QUOTE_DRAFT_TRIAL?.trim().toLowerCase() === "true";
+}
+
+export type QuoteDraftWorkbenchAccessUser = {
+  department: string;
+  role: string;
+  isActive?: boolean;
+};
+
+export function isExportManagerQuoteDraftTrialUser(user: QuoteDraftWorkbenchAccessUser) {
+  return user.department === "export" && user.role === "manager" && user.isActive !== false;
+}
+
+export function canAccessExportQuoteDraftWorkbench(
+  user: QuoteDraftWorkbenchAccessUser,
+  exportManagerTrialEnabled = isExportManagerQuoteDraftTrialEnabled()
+) {
+  return user.role === "super_admin" || (exportManagerTrialEnabled && isExportManagerQuoteDraftTrialUser(user));
+}

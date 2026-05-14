@@ -147,7 +147,7 @@ KJMOCK003, 50, 急单
 ### Enhancement
 
 1. 建议在下一轮给出口部经理试用前，统一 UAT 文档和页面示例里的 mock 编码，优先使用当前 mock catalog 已存在的 `KJMOCK-COND-001`、`KJMOCK-RAD-PA16-A`、`KJMOCK-RAD-BASE-001` 等，减少 `KJMOCK001` 简写被误解为系统失败的可能。
-2. 如要开放给出口部经理，需要单独设计只读访问边界；当前页面仍是 `super_admin` only。
+2. 如要开放给出口部经理，需要单独启用经理试用 flag；经理只允许使用 Mock 数据和草稿 Excel，不开放 staging 数据源。
 
 ## 分级结论
 
@@ -162,7 +162,13 @@ KJMOCK003, 50, 急单
 
 继续 `super_admin` 内部试用：建议继续。
 
-开放给出口部经理小范围试用：有条件建议。当前页面仍是 `super_admin` only，不建议直接绕过权限开放；建议下一步只做经理只读访问边界，并继续保持：
+开放给出口部经理小范围试用：有条件建议。Quote Task 008J 设计为通过独立 flag 控制经理试用边界：
+
+```text
+KINGA_ENABLE_EXPORT_MANAGER_QUOTE_DRAFT_TRIAL=true
+```
+
+启用后仍必须继续保持：
 
 1. 只开放 Mock 数据源。
 2. 只开放草稿预览和草稿 Excel 导出。
@@ -170,6 +176,7 @@ KJMOCK003, 50, 急单
 4. 不保存草稿。
 5. 不生成正式报价。
 6. 不允许发客户。
+7. 普通出口部业务员仍不开放。
 
 是否建议关闭 Excel 导出 flag：不建议关闭。当前 UAT 未发现 Excel 安全边界失败。
 

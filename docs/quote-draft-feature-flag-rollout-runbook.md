@@ -11,6 +11,7 @@ production 默认关闭：
 ```text
 KINGA_ENABLE_EXPORT_STAGING_QUOTE_DRAFT=false
 KINGA_ENABLE_EXPORT_QUOTE_DRAFT_EXCEL=false
+KINGA_ENABLE_EXPORT_MANAGER_QUOTE_DRAFT_TRIAL=false
 ```
 
 功能边界：
@@ -22,6 +23,7 @@ KINGA_ENABLE_EXPORT_QUOTE_DRAFT_EXCEL=false
 5. `export_draft_candidate` 仍然不是正式报价。
 6. 正式报价必须后续接 FinancePricing。
 7. 当前能力不保存草稿、不写数据库、不导入报价表。
+8. 出口部经理试用必须由独立 flag 控制，不能和 Excel 导出 flag 绑定。
 
 ## 开启前条件
 
@@ -47,6 +49,14 @@ KINGA_ENABLE_EXPORT_QUOTE_DRAFT_EXCEL=false
 
 如果只开启 mock Excel 导出，可以不开启 staging 查询。
 
+如果要开放出口部经理小范围试用，还必须确认：
+
+1. `KINGA_ENABLE_EXPORT_MANAGER_QUOTE_DRAFT_TRIAL=true` 只用于经理试用。
+2. 经理账号满足 `department = export` 且 `role = manager`。
+3. 普通出口部业务员仍不可访问。
+4. staging 查询仍保持关闭，除非另行完成真实 staging 数据源试用审批。
+5. 经理试用只允许 Mock 数据、草稿预览和草稿 Excel 导出。
+
 ## 开启方式
 
 必须由人工修改 ECS `.env`。
@@ -55,6 +65,12 @@ KINGA_ENABLE_EXPORT_QUOTE_DRAFT_EXCEL=false
 
 ```text
 KINGA_ENABLE_EXPORT_QUOTE_DRAFT_EXCEL=true
+```
+
+开放出口部经理 Mock 试用：
+
+```text
+KINGA_ENABLE_EXPORT_MANAGER_QUOTE_DRAFT_TRIAL=true
 ```
 
 如需同时开启 staging candidates 查询：
@@ -88,6 +104,7 @@ npm run cleanup:customer-history-spam:apply
 ```text
 KINGA_ENABLE_EXPORT_QUOTE_DRAFT_EXCEL=false
 KINGA_ENABLE_EXPORT_STAGING_QUOTE_DRAFT=false
+KINGA_ENABLE_EXPORT_MANAGER_QUOTE_DRAFT_TRIAL=false
 ```
 
 然后重启：
@@ -114,6 +131,18 @@ pm2 status
 10. 如 staging flag 已开启，再切到 `财务确认 staging 候选` 做 local / test KJ 查询。
 11. 记录未找到、多候选、缺数量、OEM 暂未开放和非财务批准价格问题。
 
+## 出口部经理小范围试用流程
+
+仅当 `KINGA_ENABLE_EXPORT_MANAGER_QUOTE_DRAFT_TRIAL=true` 时执行。
+
+1. 只允许出口部经理账号访问。
+2. 数据源必须保持 `Mock 数据`。
+3. `财务确认 staging 候选` 必须 disabled。
+4. 可以输入 KJ / 数量 / 备注并生成草稿预览。
+5. 如 `KINGA_ENABLE_EXPORT_QUOTE_DRAFT_EXCEL=true`，可以导出草稿 Excel。
+6. 不保存草稿、不写数据库、不生成正式报价。
+7. 普通出口部业务员仍不开放。
+
 ## 风险
 
 1. 导出的仍是草稿，不是正式报价。
@@ -137,11 +166,12 @@ pm2 status
 Go 条件：
 
 1. feature flag 关闭时功能不可用。
-2. feature flag 开启后只允许 `super_admin` 试用。
+2. feature flag 开启后只允许 `super_admin`，或在经理试用 flag 开启时允许出口部经理使用 Mock 数据。
 3. Excel 警示完整。
 4. Excel 脱敏完整。
 5. Workbench 不保存输入 / 输出。
 6. Workbench 不写数据库。
+7. 出口部经理不能使用 staging 数据源。
 
 No-Go 条件：
 
@@ -150,3 +180,4 @@ No-Go 条件：
 3. 普通用户可访问 staging 查询或导出。
 4. flag 关闭时仍可使用。
 5. 需要导入真实报价表或修改 production 数据才能完成试用。
+6. 普通出口部业务员可访问 Workbench。

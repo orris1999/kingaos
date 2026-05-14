@@ -8,6 +8,8 @@ import {
   type ExportQuoteDraftSourceCandidate
 } from "@/lib/honoa/quote-draft";
 import {
+  canAccessExportQuoteDraftWorkbench,
+  isExportManagerQuoteDraftTrialEnabled,
   isExportQuoteDraftExcelEnabled,
   isExportStagingQuoteDraftEnabled
 } from "@/lib/honoa/server/feature-flags";
@@ -88,6 +90,34 @@ describe("Quote Task 008G quote draft feature flag readiness", () => {
     expect(isExportQuoteDraftExcelEnabled()).toBe(true);
   });
 
+  it("verifies export manager trial feature flag missing, false, and true states", () => {
+    withMissingEnv("KINGA_ENABLE_EXPORT_MANAGER_QUOTE_DRAFT_TRIAL", () => {
+      expect(isExportManagerQuoteDraftTrialEnabled()).toBe(false);
+    });
+
+    vi.stubEnv("KINGA_ENABLE_EXPORT_MANAGER_QUOTE_DRAFT_TRIAL", "false");
+    expect(isExportManagerQuoteDraftTrialEnabled()).toBe(false);
+
+    vi.stubEnv("KINGA_ENABLE_EXPORT_MANAGER_QUOTE_DRAFT_TRIAL", "true");
+    expect(isExportManagerQuoteDraftTrialEnabled()).toBe(true);
+  });
+
+  it("keeps quote draft workbench manager access behind the dedicated trial flag", () => {
+    const superAdmin = { department: "admin", role: "super_admin", isActive: true };
+    const exportManager = { department: "export", role: "manager", isActive: true };
+    const exportStaff = { department: "export", role: "staff", isActive: true };
+    const regularAdmin = { department: "admin", role: "admin", isActive: true };
+    const financeManager = { department: "finance", role: "manager", isActive: true };
+
+    expect(canAccessExportQuoteDraftWorkbench(superAdmin, false)).toBe(true);
+    expect(canAccessExportQuoteDraftWorkbench(exportManager, false)).toBe(false);
+    expect(canAccessExportQuoteDraftWorkbench(exportManager, true)).toBe(true);
+    expect(canAccessExportQuoteDraftWorkbench(exportStaff, true)).toBe(false);
+    expect(canAccessExportQuoteDraftWorkbench(regularAdmin, true)).toBe(false);
+    expect(canAccessExportQuoteDraftWorkbench(financeManager, true)).toBe(false);
+    expect(canAccessExportQuoteDraftWorkbench({ ...exportManager, isActive: false }, true)).toBe(false);
+  });
+
   it("keeps feature flags server-side and not exposed with NEXT_PUBLIC", () => {
     const flagHelper = readRepoFile("lib/honoa/server/feature-flags.ts");
     const page = readRepoFile("app/export/quote-draft-workbench/page.tsx");
@@ -96,8 +126,11 @@ describe("Quote Task 008G quote draft feature flag readiness", () => {
 
     expect(flagHelper).toContain("KINGA_ENABLE_EXPORT_STAGING_QUOTE_DRAFT");
     expect(flagHelper).toContain("KINGA_ENABLE_EXPORT_QUOTE_DRAFT_EXCEL");
+    expect(flagHelper).toContain("KINGA_ENABLE_EXPORT_MANAGER_QUOTE_DRAFT_TRIAL");
     expect(page).toContain("isExportStagingQuoteDraftEnabled");
     expect(page).toContain("isExportQuoteDraftExcelEnabled");
+    expect(page).toContain("isExportManagerQuoteDraftTrialEnabled");
+    expect(page).toContain("canAccessExportQuoteDraftWorkbench");
     expect(page).toContain("excelExportEnabled={excelExportEnabled}");
     expect(combined).not.toContain("NEXT_PUBLIC_");
   });

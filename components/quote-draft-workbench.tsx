@@ -56,6 +56,7 @@ type FindStagingCandidatesAction = (
 type QuoteDraftWorkbenchProps = {
   stagingCandidatesEnabled?: boolean;
   excelExportEnabled?: boolean;
+  isExportManagerTrial?: boolean;
   findStagingCandidatesAction?: FindStagingCandidatesAction;
 };
 
@@ -107,6 +108,7 @@ function shortText(value?: string, maxLength = 32) {
 export function QuoteDraftWorkbench({
   stagingCandidatesEnabled = false,
   excelExportEnabled = false,
+  isExportManagerTrial = false,
   findStagingCandidatesAction
 }: QuoteDraftWorkbenchProps) {
   const [input, setInput] = useState(QUOTE_DRAFT_WORKBENCH_SAMPLE_INPUT);
@@ -261,6 +263,9 @@ export function QuoteDraftWorkbench({
         <p>未来真实报价表 / 成本表 / 价格候选数据由财务提交和维护。</p>
         <p>出口部只能基于财务数据生成报价草稿，不能上传或维护价格表。</p>
         <p>本页面不会生成正式报价，价格候选不是财务批准价格，不能发客户。</p>
+        {isExportManagerTrial ? (
+          <p>当前为出口部经理内部试用，仅开放 Mock 数据和草稿 Excel 导出。</p>
+        ) : null}
       </section>
 
       <section className="panel stack">
@@ -314,7 +319,11 @@ export function QuoteDraftWorkbench({
               财务确认 staging 候选
             </label>
             {!stagingCandidatesEnabled ? (
-              <p className="muted tiny">财务确认 staging 候选暂未开放。默认只使用 Mock 数据。</p>
+              <p className="muted tiny">
+                {isExportManagerTrial
+                  ? "出口部经理试用仅使用 Mock 数据；财务确认 staging 候选暂未开放。"
+                  : "财务确认 staging 候选暂未开放。默认只使用 Mock 数据。"}
+              </p>
             ) : (
               <p className="muted tiny">仅 super_admin 可只读查询 finance_confirmed staging 候选。</p>
             )}
