@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { FinanceQuoteSourceUpload } from "@/components/finance-quote-source-upload";
+import { FinanceQuoteSourceUpload, FinanceQuoteSourceUploadDryRunButton } from "@/components/finance-quote-source-upload";
 import { Forbidden, KingaShell } from "@/components/kinga-shell";
 import { requireCurrentUser } from "@/lib/honoa/server/auth";
+import { isFinanceQuoteSourceDryRunEnabled } from "@/lib/honoa/server/feature-flags";
 import { isOssConfigured } from "@/lib/honoa/server/oss";
 import { listQuoteSourceUploads, quoteSourceUploadViewModel } from "@/lib/honoa/server/quote-source-upload";
 
@@ -21,6 +22,20 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
+function formatDryRunStatus(status?: string | null) {
+  switch (status) {
+    case "completed":
+      return "结构识别完成";
+    case "needs_review":
+      return "需人工复核";
+    case "failed":
+      return "识别失败";
+    case "not_run":
+    default:
+      return "未执行";
+  }
+}
+
 export default async function FinanceQuoteSourceUploadPage() {
   const user = await requireCurrentUser();
   if (user.role !== "super_admin") {
@@ -32,6 +47,7 @@ export default async function FinanceQuoteSourceUploadPage() {
   }
 
   const uploads = (await listQuoteSourceUploads(50)).map(quoteSourceUploadViewModel);
+  const dryRunEnabled = isFinanceQuoteSourceDryRunEnabled();
   return (
     <KingaShell user={user}>
       <div className="stack">
@@ -62,10 +78,15 @@ export default async function FinanceQuoteSourceUploadPage() {
           <div className="split">
             <div>
               <h2>上传记录</h2>
-              <p className="muted">这里只展示文件 metadata，不展示 Excel 内容、KJ 明细、OEM 明细或任何金额。</p>
+              <p className="muted">这里只展示文件 metadata 和 dry-run 结构摘要，不展示 Excel 内容、KJ 明细、OEM 明细或任何金额。</p>
             </div>
             <span className="tag">{uploads.length} 条</span>
           </div>
+          {!dryRunEnabled ? (
+            <p className="warn-text">dry-run 暂未开放。当前页面只展示已上传文件 metadata，不读取文件结构。</p>
+          ) : (
+            <p className="muted">dry-run 开启后仅执行 workbook / sheet / 表头结构识别，不导入价格、不创建 staging rows。</p>
+          )}
           <div className="table-wrap">
             <table>
               <thead>
@@ -77,6 +98,10 @@ export default async function FinanceQuoteSourceUploadPage() {
                   <th>状态</th>
                   <th>adapterId</th>
                   <th>品类</th>
+                  <th>dry-run</th>
+                  <th>结构摘要</th>
+                  <th>字段检测</th>
+                  <th>操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -90,11 +115,41 @@ export default async function FinanceQuoteSourceUploadPage() {
                       <td><span className="tag ok">{upload.uploadStatus}</span></td>
                       <td>{upload.adapterId || "-"}</td>
                       <td>{upload.category || "-"}</td>
+                      <td>
+                        <span className={upload.dryRunStatus === "completed" ? "tag ok" : upload.dryRunStatus === "needs_review" ? "tag warn" : "tag"}>
+                          {formatDryRunStatus(upload.dryRunStatus)}
+                        </span>
+                        {upload.dryRunAt ? <div className="tiny muted">{formatDate(upload.dryRunAt)}</div> : null}
+                      </td>
+                      <td>
+                        <div className="tiny">adapter: {upload.dryRunAdapterId || "-"}</div>
+                        <div className="tiny">品类: {upload.dryRunCategory || "-"}</div>
+                        <div className="tiny">sheet 数量: {upload.dryRunSheetCount ?? "-"}</div>
+                        <div className="tiny">mappedColumns: {upload.dryRunMappedColumnKeys.length > 0 ? upload.dryRunMappedColumnKeys.join(", ") : "-"}</div>
+                      </td>
+                      <td>
+                        <div className="tiny">KJ: {upload.dryRunFieldDetection.hasKjColumn ? "已检测" : "-"}</div>
+                        <div className="tiny">OEM / OE: {upload.dryRunFieldDetection.hasOemOrOeColumn ? "已检测" : "-"}</div>
+                        <div className="tiny">产品名称: {upload.dryRunFieldDetection.hasProductNameColumn ? "已检测" : "-"}</div>
+                        <div className="tiny">成本候选: {upload.dryRunFieldDetection.hasCostCandidateColumn ? "已检测" : "-"}</div>
+                        <div className="tiny">报价候选: {upload.dryRunFieldDetection.hasQuoteCandidateColumn ? "已检测" : "-"}</div>
+                        <div className="tiny">包装: {upload.dryRunFieldDetection.hasPackagingColumn ? "已检测" : "-"}</div>
+                        {upload.dryRunWarnings.length > 0 ? (
+                          <div className="tiny warn-text">{upload.dryRunWarnings.slice(0, 3).join(" / ")}</div>
+                        ) : null}
+                      </td>
+                      <td>
+                        <FinanceQuoteSourceUploadDryRunButton
+                          dryRunEnabled={dryRunEnabled}
+                          uploadId={upload.id}
+                          uploadStatus={upload.uploadStatus}
+                        />
+                      </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td className="muted" colSpan={7}>暂无报价表上传记录。</td>
+                    <td className="muted" colSpan={11}>暂无报价表上传记录。</td>
                   </tr>
                 )}
               </tbody>

@@ -25,6 +25,23 @@ export const RELEASE_CATEGORY_LABELS: Record<ReleaseNoteCategory, string> = {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-05-14-06-finance-quote-source-upload-dry-run",
+    date: "2026-05-14",
+    version: "2026.05.14-06",
+    title: "Quote Task 009C Finance uploaded quote source dry-run",
+    category: "data",
+    summary: [
+      "新增服务端 feature flag KINGA_ENABLE_FINANCE_QUOTE_SOURCE_DRY_RUN，缺失或 false 时默认关闭，不使用 NEXT_PUBLIC_。",
+      "在 QuoteSourceUpload 上新增 additive dry-run metadata 字段，用于保存 uploaded file 的 workbook / sheet / 表头 / adapter / mappedColumns 结构摘要。",
+      "新增 super_admin-only 的 uploaded file dry-run route 和页面按钮；dry-run 从私有 OSS 读取已上传文件，但不保存具体价格、KJ 行、OEM 行，不创建 staging rows，也不生成报价草稿或正式报价。"
+    ],
+    affectedAreas: ["财务部", "报价表上传", "报价表 dry-run", "OSS", "Prisma schema", "AuditLog"],
+    migration: "additive",
+    productionDataCommand: "migration",
+    productionDataRisk: "low",
+    commitHash: "待填写"
+  },
+  {
     id: "2026-05-14-04-finance-quote-source-upload-pilot",
     date: "2026-05-14",
     version: "2026.05.14-04",

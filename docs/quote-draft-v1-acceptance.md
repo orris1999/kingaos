@@ -290,6 +290,23 @@ Quote Task 009A 新增 Finance 侧报价表文件上传试点，详见 `docs/quo
 14. AuditLog metadata 不得包含价格、底价、毛利或 Excel 行数据。
 15. 009A migration 必须是 additive，只创建 `QuoteSourceUpload` 表和索引，不修改或删除现有业务表数据。
 
+Quote Task 009C 新增 uploaded file dry-run metadata，仍属于上传试点的结构识别阶段，不属于价格导入或报价生成。
+
+验收要求：
+
+1. `KINGA_ENABLE_FINANCE_QUOTE_SOURCE_DRY_RUN` 缺失 / false 时默认关闭。
+2. 不使用 `NEXT_PUBLIC_`，production 不自动启用。
+3. dry-run 只允许 `super_admin` 执行，不新增 permission key，不运行 seed。
+4. dry-run 只对 `uploadStatus = uploaded` 的记录可执行。
+5. dry-run 从私有 OSS 读取已上传文件，只识别 workbook metadata、sheet、表头候选、adapter 匹配、mappedColumns 和 warnings。
+6. `QuoteSourceUpload` 只能保存 dry-run 结构摘要字段，不能保存具体价格、KJ 行、OEM 行或完整 Excel 内容。
+7. dry-run 不创建 `QuoteSourceStagingBatch` / `QuoteSourceStagingRow`。
+8. dry-run 不生成 QuoteDraft / QuoteDraftLine。
+9. dry-run 不生成正式报价，不生成可发客户报价单。
+10. 必须写入 `quote_source_upload.dry_run` AuditLog。
+11. AuditLog metadata 不得包含价格、底价、毛利、Excel 行数据、KJ 明细、OEM 明细、signed URL 或 AccessKey。
+12. 009C migration 必须是 additive，只对 `QuoteSourceUpload` 增加 dry-run metadata 字段和索引，不修改或删除现有业务表数据。
+
 1. 用户输入 `KJ-80002` 这类标准 KJ 时，系统能按规范化后的 KJ 查找候选。
 2. 用户输入含前后空格、全角字符、大小写差异或无意义空格的 KJ 时，系统能归一为同一 `standardKjCode`。
 3. 找到唯一 KJ 时，输出 `matchStatus = "matched_by_kj"`。

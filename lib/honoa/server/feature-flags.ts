@@ -14,6 +14,10 @@ export function isExportManagerQuoteDraftTrialEnabled() {
   return process.env.KINGA_ENABLE_EXPORT_MANAGER_QUOTE_DRAFT_TRIAL?.trim().toLowerCase() === "true";
 }
 
+export function isFinanceQuoteSourceDryRunEnabled() {
+  return process.env.KINGA_ENABLE_FINANCE_QUOTE_SOURCE_DRY_RUN?.trim().toLowerCase() === "true";
+}
+
 export type QuoteDraftWorkbenchAccessUser = {
   department: string;
   role: string;

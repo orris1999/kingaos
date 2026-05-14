@@ -2,7 +2,7 @@
 
 日期：2026-05-12
 
-本路线图只面向报价草稿能力，不实现正式报价、订单、合同、价格审批或财务核价。本阶段报价表只能作为数据来源候选；009A 之后允许 Finance 上传文件 metadata 入库，但仍不导入价格行、不保存金额、不生成正式报价。
+本路线图只面向报价草稿能力，不实现正式报价、订单、合同、价格审批或财务核价。本阶段报价表只能作为数据来源候选；009A 之后允许 Finance 上传文件 metadata 入库，009C 之后可在 feature flag 开启时对已上传文件做 metadata-only 结构 dry-run，但仍不导入价格行、不保存金额、不生成正式报价。
 
 ## 领域归属和数据提交边界
 
@@ -227,6 +227,14 @@ Quote Task 009A 新增 Finance 报价表文件上传试点，详见 `docs/quote-
 - metadata 只记录文件名、大小、MIME、OSS storageKey、上传人、adapterId / category 等，不保存价格、KJ 行、OEM 行或 Excel 内容。
 - 009A 不解析 Excel，不导入 rows，不生成 staging batch / rows，不生成报价草稿，不生成正式报价。
 - 上传报价表不等于导入价格，不等于 `FinanceApprovedPrice`，正式报价仍必须后续接 FinancePricing。
+
+Quote Task 009C 在 009A 的上传 metadata 基础上新增 feature-gated uploaded file dry-run：
+
+- 新增服务端 flag `KINGA_ENABLE_FINANCE_QUOTE_SOURCE_DRY_RUN`，缺失 / false 默认关闭，不使用 `NEXT_PUBLIC_`。
+- dry-run 从私有 OSS 读取已上传文件，只识别 workbook metadata、sheet、表头候选、adapter 匹配、mappedColumns 和 warnings。
+- dry-run metadata 写回 `QuoteSourceUpload`，但只保存结构摘要，不保存具体价格、KJ 行、OEM 行或完整 Excel 内容。
+- dry-run 不创建 `QuoteSourceStagingBatch` / `QuoteSourceStagingRow`，不生成报价草稿，不生成正式报价。
+- production 默认关闭，后续进入 staging 仍必须单独设计导入和财务确认流程。
 
 ## V2｜KJ / OEM 混合匹配
 

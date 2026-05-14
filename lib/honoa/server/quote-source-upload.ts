@@ -126,6 +126,22 @@ export async function createQuoteSourceUploadMetadata(actor: AuthUser, input: Cr
 }
 
 export function quoteSourceUploadViewModel(upload: QuoteSourceUpload) {
+  const dryRunSummary = upload.dryRunSummary && typeof upload.dryRunSummary === "object" && !Array.isArray(upload.dryRunSummary)
+    ? upload.dryRunSummary as Record<string, unknown>
+    : null;
+  const dryRunWarnings = Array.isArray(upload.dryRunWarnings)
+    ? upload.dryRunWarnings.map((item) => String(item || "").trim()).filter(Boolean)
+    : [];
+  const nestedSummary = dryRunSummary?.dryRunSummary && typeof dryRunSummary.dryRunSummary === "object" && !Array.isArray(dryRunSummary.dryRunSummary)
+    ? dryRunSummary.dryRunSummary as Record<string, unknown>
+    : null;
+  const mappedColumns = nestedSummary?.mappedColumns && typeof nestedSummary.mappedColumns === "object" && !Array.isArray(nestedSummary.mappedColumns)
+    ? nestedSummary.mappedColumns as Record<string, string[]>
+    : {};
+  const fieldDetection = dryRunSummary?.fieldDetection && typeof dryRunSummary.fieldDetection === "object"
+    ? dryRunSummary.fieldDetection as Record<string, boolean>
+    : {};
+
   return {
     id: upload.id,
     sourceFileName: upload.sourceFileName,
@@ -137,6 +153,22 @@ export function quoteSourceUploadViewModel(upload: QuoteSourceUpload) {
     adapterId: upload.adapterId,
     category: upload.category,
     uploadedByName: upload.uploadedByName,
-    uploadedAt: upload.uploadedAt.toISOString()
+    uploadedAt: upload.uploadedAt.toISOString(),
+    dryRunStatus: upload.dryRunStatus,
+    dryRunAdapterId: upload.dryRunAdapterId,
+    dryRunCategory: upload.dryRunCategory,
+    dryRunAt: upload.dryRunAt?.toISOString() ?? null,
+    dryRunByName: upload.dryRunByName,
+    dryRunSheetCount: typeof dryRunSummary?.sheetCount === "number" ? dryRunSummary.sheetCount : null,
+    dryRunMappedColumnKeys: Object.keys(mappedColumns),
+    dryRunFieldDetection: {
+      hasKjColumn: Boolean(fieldDetection.hasKjColumn),
+      hasOemOrOeColumn: Boolean(fieldDetection.hasOemOrOeColumn),
+      hasProductNameColumn: Boolean(fieldDetection.hasProductNameColumn),
+      hasCostCandidateColumn: Boolean(fieldDetection.hasCostCandidateColumn),
+      hasQuoteCandidateColumn: Boolean(fieldDetection.hasQuoteCandidateColumn),
+      hasPackagingColumn: Boolean(fieldDetection.hasPackagingColumn)
+    },
+    dryRunWarnings
   };
 }

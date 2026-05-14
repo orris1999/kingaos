@@ -121,3 +121,56 @@ export function FinanceQuoteSourceUpload({ ossConfigured }: { ossConfigured: boo
     </section>
   );
 }
+
+export function FinanceQuoteSourceUploadDryRunButton({
+  uploadId,
+  dryRunEnabled,
+  uploadStatus
+}: {
+  uploadId: string;
+  dryRunEnabled: boolean;
+  uploadStatus: string;
+}) {
+  const router = useRouter();
+  const [busy, setBusy] = React.useState(false);
+  const [message, setMessage] = React.useState("");
+  const canRun = dryRunEnabled && uploadStatus === "uploaded";
+
+  async function runDryRun() {
+    if (!canRun) return;
+    setBusy(true);
+    setMessage("");
+    try {
+      const response = await fetch(`/api/finance/quote-source-upload/${uploadId}/dry-run`, {
+        method: "POST"
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "结构识别 dry-run 执行失败。");
+      setMessage("结构识别 dry-run 已完成，仅保存 workbook / sheet / 表头元数据。");
+      router.refresh();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "结构识别 dry-run 执行失败。");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!dryRunEnabled) {
+    return (
+      <div className="stack compact">
+        <button disabled type="button">dry-run 暂未开放</button>
+        <span className="tiny muted">production 默认关闭，不会读取文件结构。</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="stack compact">
+      <button disabled={!canRun || busy} type="button" onClick={runDryRun}>
+        {busy ? "识别中..." : "执行结构识别 dry-run"}
+      </button>
+      {uploadStatus !== "uploaded" ? <span className="tiny muted">仅 uploaded 状态可执行。</span> : null}
+      {message ? <span className={message.includes("完成") ? "tiny ok-text" : "tiny warn-text"}>{message}</span> : null}
+    </div>
+  );
+}

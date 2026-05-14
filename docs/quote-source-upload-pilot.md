@@ -74,6 +74,7 @@
 
 - `POST /api/finance/quote-source-upload/upload-url`
 - `POST /api/finance/quote-source-upload`
+- `POST /api/finance/quote-source-upload/[uploadId]/dry-run`
 
 两者都必须：
 
@@ -86,12 +87,56 @@
 
 metadata 保存 route 只保存上传记录，不解析 Excel，不调用 dry-run，不创建 staging。
 
+009C 新增 uploaded file dry-run route，但默认 production 关闭：
+
+- 服务端 feature flag：`KINGA_ENABLE_FINANCE_QUOTE_SOURCE_DRY_RUN`
+- 缺失或 `false` 时视为关闭。
+- 不使用 `NEXT_PUBLIC_`，不把 flag 暴露给前端。
+- flag 关闭时，上传记录列表的 dry-run 按钮 disabled，并显示“dry-run 暂未开放”。
+- flag 开启后，第一版仍只允许 `super_admin` 对 `uploadStatus = uploaded` 的记录执行结构识别。
+
+## Uploaded file dry-run metadata
+
+Quote Task 009C 在 `QuoteSourceUpload` 上增加 additive dry-run metadata 字段：
+
+- `dryRunStatus`
+- `dryRunAdapterId`
+- `dryRunCategory`
+- `dryRunSummary`
+- `dryRunWarnings`
+- `dryRunAt`
+- `dryRunByUserId`
+- `dryRunByName`
+
+dry-run 从私有 OSS 读取已上传文件，只提取：
+
+- workbook 文件类型。
+- sheet 名称和 sheet 数量。
+- 表头候选。
+- adapter 匹配结果。
+- mappedColumns 结构键。
+- 字段检测布尔值。
+- warnings。
+
+dry-run 不保存：
+
+- 具体价格。
+- 底价 / 毛利。
+- KJ 行明细。
+- OEM / OE 行明细。
+- 完整 Excel 内容。
+- staging batch / rows。
+- QuoteDraft / QuoteDraftLine。
+
+dry-run 不等于导入价格，不等于 `FinanceApprovedPrice`，也不会生成报价草稿或正式报价。后续如要进入 staging，需要单独的导入任务和财务确认流程。
+
 ## AuditLog
 
 写入：
 
 - `quote_source_upload.upload_url.generate`
 - `quote_source_upload.create`
+- `quote_source_upload.dry_run`
 
 metadata 允许包含：
 
@@ -108,12 +153,16 @@ metadata 禁止包含：
 - 底价。
 - 毛利。
 - Excel 行数据。
+- KJ 明细。
+- OEM 明细。
+- signed URL。
+- AccessKey。
 
 ## 后续阶段
 
 后续必须分阶段推进：
 
-1. Finance dry-run 读取上传文件并做结构识别。
+1. Finance dry-run 读取上传文件并做结构识别。009C 已实现 feature-gated metadata-only dry-run，production 默认关闭。
 2. Finance staging batch / rows 生成。
 3. Finance confirmation。
 4. Export 只读消费 `finance_confirmed + export_draft_candidate` 脱敏候选。

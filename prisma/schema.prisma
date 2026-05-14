@@ -389,12 +389,22 @@ model QuoteSourceUpload {
   uploadedAt         DateTime @default(now())
   notes              String?
   warnings           Json?
+  dryRunStatus       String    @default("not_run")
+  dryRunAdapterId    String?
+  dryRunCategory     String?
+  dryRunSummary      Json?
+  dryRunWarnings     Json?
+  dryRunAt           DateTime?
+  dryRunByUserId     String?
+  dryRunByName       String?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
   @@index([adapterId])
   @@index([category])
   @@index([uploadStatus])
+  @@index([dryRunStatus])
+  @@index([dryRunAt])
   @@index([uploadedAt])
 }
 
