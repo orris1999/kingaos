@@ -302,6 +302,37 @@ AuditLog：
 - 当前不能生成报价草稿。
 - 当前不能生成正式报价。
 
+## Quote Task 009H condenser row import mapper / parser
+
+009H 在 009G precheck 之后新增 local / test only 的 row import mapper / parser。它用于验证行级候选 metadata 的映射规则，不新增 UI、API route、server action、Prisma schema 或 migration。
+
+第一版只支持：
+
+1. `adapterId = condenser-cost-2026`。
+2. `category = 冷凝器`。
+3. local / test DB 写入验证。
+
+009H mapper 输出 `CreateQuoteSourceStagingRowInput[]`，只包含脱敏 metadata：
+
+1. KJ 候选和标准化 KJ。
+2. 产品名称 / 车型 / 规格候选。
+3. 包装信息是否存在。
+4. OEM / OE 信息是否存在，但不做自动匹配。
+5. 成本候选列 / 报价候选列是否存在。
+6. `visibility = finance_only`。
+7. `rowStatus = candidate` 或 `needs_manual_review`。
+
+009H 明确不保存：
+
+1. 具体价格。
+2. 成本价 / 报价价 / 单价 / 金额。
+3. 底价 / 毛利。
+4. FinanceApprovedPrice。
+5. 完整 Excel 行。
+6. 可发客户的正式报价状态。
+
+`rowStatus = candidate` 仍不等于出口部可用。后续必须经过财务确认和 visibility promotion，才可能成为 `export_draft_candidate`，且仍只用于询价 / 报价草稿。
+
 ## Quote Task 006F finance confirmation domain action
 
 006F 增加 Finance staging confirmation domain action。该 action 仍然只服务 staging metadata，只允许在 local / test DB 中测试，不开放 UI、API route 或 server action，不读取真实 Excel，不导入报价表，不写 production 数据。

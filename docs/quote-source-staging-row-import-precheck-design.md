@@ -121,6 +121,35 @@ precheck 不保存：
 2. 销售侧不能把成本候选当正式报价或财务批准价格。
 3. 价格字段的保存、脱敏、可见性和审批必须单独设计。
 
+## Quote Task 009H local/test row import mapper
+
+009H 在 precheck 之后补充第一版行级导入 mapper / parser，但范围只限 local / test DB 验证，不写 production。
+
+第一版只支持：
+
+- adapterId：`condenser-cost-2026`
+- category：`冷凝器`
+
+009H mapper 做的事情：
+
+1. 从 workbook 行数据中提取脱敏 row metadata。
+2. 识别 KJ 候选、产品名称候选、包装存在性和 OEM / OE 存在性。
+3. 检测成本候选列和报价候选列是否有值。
+4. 只写 `hasCostCandidate` / `hasQuoteCandidate` 布尔值，不保存单元格金额。
+5. 默认 `visibility = finance_only`。
+6. `rowStatus = candidate` 仍只表示财务侧候选，不等于出口部可用。
+7. 缺 KJ、缺产品名或缺价格候选时进入 `needs_manual_review`。
+
+009H mapper 不做：
+
+1. 不保存具体价格、底价、毛利或财务批准价格。
+2. 不保存完整 Excel 行。
+3. 不做 OEM 自动匹配。
+4. 不自动设置 `export_draft_candidate`。
+5. 不生成报价草稿。
+6. 不生成正式报价。
+7. 不写 production。
+
 ## 后续分阶段建议
 
 后续 row import 应拆成独立阶段：

@@ -253,6 +253,15 @@ Quote Task 009G 补充 Finance staging batch 后续查看和 row import precheck
 - 本轮不新增 API route、server action、Prisma schema 或 migration。
 - 本轮不创建 `QuoteSourceStagingRow`，不解析 Excel 行，不保存具体价格、KJ 行、OEM 行，不生成报价草稿或正式报价。
 
+Quote Task 009H 补充 Finance row import mapper / parser 的 local / test DB 验证：
+
+- 第一版只支持 `condenser-cost-2026 / 冷凝器`。
+- mapper 将 workbook 行数据转换为 `CreateQuoteSourceStagingRowInput[]`。
+- parser 只保留脱敏 row metadata；如果读到候选价格单元格，只记录 `hasCostCandidate` / `hasQuoteCandidate`，不保存金额。
+- row visibility 默认 `finance_only`，`candidate` 不等于 `export_draft_candidate`。
+- 本轮不新增 API route、server action、Prisma schema 或 migration。
+- 本轮不写 production，不生成报价草稿，不生成正式报价。
+
 ## V2｜KJ / OEM 混合匹配
 
 目标：在 KJ 精确匹配稳定后，把 OEM / OE 作为候选匹配能力接入。
