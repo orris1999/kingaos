@@ -529,3 +529,21 @@ Excel 不包含：
 8. Excel 草稿不包含具体价格、底价、毛利、`FinanceApprovedPrice`、`officialQuote` 或 `sentToCustomer`。
 
 008G 仍不启用 production feature flags，不写 production 数据，不读取真实 Excel，不导入报价表，不保存草稿，不生成正式报价。
+
+## Quote Task 009M｜Candidate amount design boundary
+
+009L 已完成真实 staging 数据源 UAT：Workbench 可以使用一个 `finance_confirmed` 冷凝器 batch 的 `export_draft_candidate` 行生成不带金额的草稿预览，并导出带非正式报价警示的草稿 Excel。该 UAT 不保存 `QuoteDraft` / `QuoteDraftLine`，不修改 row visibility，也不暴露具体价格、底价、毛利或财务批准价格。
+
+009M 只定义候选金额 domain policy，不把金额接入 Workbench，也不新增查询字段。
+
+后续金额候选规则：
+
+1. `export_usd` 使用 `2026.5.11 出口成本报价` 作为外销 / 美金 / 有退税场景候选来源。
+2. `domestic_cny` 使用 `2026.5.11 出口部内销成本报价` 作为内销 / 人民币场景候选来源。
+3. `unknown` 不自动选择候选金额。
+4. 这两类候选来源都不是 `FinanceApprovedPrice`，不能直接发客户。
+5. 出口部可见性必须受 `finance_only`、`masked_for_export`、`export_draft_visible` 控制。
+6. `masked_for_export` 只能让出口部看到“有候选金额 / 币种 / 需要财务确认”，不得显示具体金额。
+7. `export_draft_visible` 即使未来开放，也必须带“非正式报价 / 不是财务批准价格 / 不能直接发客户 / 需要 FinancePricing”的强警示。
+
+正式报价仍必须后续接 FinancePricing；候选金额进入草稿预览不等于价格审批，也不等于可发客户报价。

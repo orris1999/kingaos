@@ -498,6 +498,34 @@ No-Go 条件：
 - rows 包含价格字段、`export_draft_candidate`、完整 Excel 行或正式报价字段。
 - 本轮自动执行 production row import 或修改 ECS `.env`。
 
+## Quote Task 009M Candidate Amount Design 验收
+
+009M 只验收候选金额设计和 domain types，不新增 production 可见能力，不新增 schema / migration，不保存真实金额。
+
+验收条件：
+
+1. 必须新增候选金额设计文档，说明 009L 已完成不带金额的真实 staging UAT。
+2. 必须定义 `QuoteCandidateAmountPolicy`，且固定 `isFinanceApprovedPrice = false`。
+3. `canBeSentToCustomer` 必须固定为 `false`。
+4. `requiresFinancePricing` 必须固定为 `true`。
+5. `export_usd` 必须映射到 USD 候选来源，并说明使用 `2026.5.11 出口成本报价`。
+6. `domestic_cny` 必须映射到 CNY 候选来源，并说明使用 `2026.5.11 出口部内销成本报价`。
+7. `unknown` 不得自动选择候选金额。
+8. 类型和 policy 输出不得定义具体金额字段：`amount`、`unitPrice`、`costPrice`、`quotePrice`。
+9. 类型和 policy 输出不得定义正式报价 / 财务批准字段：`financeApprovedPrice`、`approvedPrice`、`officialQuote`、`sentToCustomer`。
+10. `export_draft_visible` 必须包含非正式报价 warning。
+11. `masked_for_export` 不得显示具体金额，只能显示有候选金额、币种和需要财务确认。
+12. 009M 不新增 API route、server action、UI 页面、Prisma schema 或 migration。
+13. 009M 不读取真实 Excel，不解析真实金额，不修改 production 数据。
+14. 后续如保存候选金额，必须另立 FinancePricing / 权限脱敏 / AuditLog / 审批任务。
+
+No-Go 条件：
+
+- 将候选金额写入 staging row schema。
+- 将候选金额命名或处理为 `FinanceApprovedPrice`。
+- 让出口部直接看到底价 / 毛利。
+- 生成 `QuoteDraft` / `QuoteDraftLine` 或正式报价。
+
 ## Go / No-Go
 
 Go 条件：

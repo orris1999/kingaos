@@ -292,6 +292,22 @@ Quote Task 009J-Fix 补充 row import controlled production guard：
 - repository 层继续拒绝具体价格字段、完整 Excel 行、`export_draft_candidate`、正式报价字段和面向客户发送字段。
 - controlled path 不给出口部消费，不生成报价草稿，不生成正式报价；production UAT 另由 009J-Retry 执行。
 
+Quote Task 009L 完成真实 finance-confirmed staging rows 的 Workbench UAT：
+
+- batch `cmp5fqlze0002kyb2igzs3j77` 已进入 `finance_confirmed`。
+- `export_draft_candidate` rows 可以在 feature flag 控制下作为 Export 草稿预览来源。
+- `needs_manual_review` rows 仍保持不可消费。
+- 页面和草稿 Excel 均不显示具体价格、底价、毛利、`FinanceApprovedPrice`、`officialQuote` 或 `sentToCustomer`。
+- Workbench 不保存 `QuoteDraft` / `QuoteDraftLine`，不修改 staging row visibility，不生成正式报价。
+
+Quote Task 009M 进入候选金额设计，但仍不新增 production 能力：
+
+- 新增候选金额 domain types，明确 `candidateAmount` 不是 `FinanceApprovedPrice`，不能发客户，必须后续进入 FinancePricing。
+- `export_usd` 使用 `2026.5.11 出口成本报价` 作为外销 / 美金 / 有退税场景候选来源。
+- `domestic_cny` 使用 `2026.5.11 出口部内销成本报价` 作为内销 / 人民币场景候选来源。
+- `unknown` 不自动选择候选金额。
+- 009M 不新增 API、server action、UI、Prisma schema 或 migration，不保存真实金额，不读取真实 Excel。
+
 ## V2｜KJ / OEM 混合匹配
 
 目标：在 KJ 精确匹配稳定后，把 OEM / OE 作为候选匹配能力接入。

@@ -873,3 +873,26 @@ Feature flag：
 9. rows 全部默认 `finance_only`。
 
 repository 层继续复核敏感字段和 visibility。该 controlled path 不开放给出口部，不保存具体价格，不创建正式价格，不生成报价草稿，也不生成正式报价。009J-Retry 才会执行 production row import UAT。
+
+## Quote Task 009M candidate amount design boundary
+
+009L 已完成真实 finance-confirmed staging rows 的 Export Workbench UAT。该 UAT 证明出口部可以在 feature flag 控制下读取 `export_draft_candidate` 行并生成不带金额的草稿预览 / 草稿 Excel，同时 `needs_manual_review` 行不会被出口部消费。
+
+009M 只设计候选金额如何在后续阶段进入 staging / quote draft preview，不实现入库、不解析真实 Excel 金额、不新增 Prisma schema / migration。
+
+候选金额边界：
+
+1. `candidateAmount` 不是 `FinanceApprovedPrice`。
+2. `candidateAmount` 不是正式报价。
+3. `candidateAmount` 不能直接发客户。
+4. `candidateAmount` 必须后续进入 FinancePricing / 财务确认 / 价格快照链路。
+5. 带金额的草稿 Excel 即使未来开放，也仍然必须标注非正式报价。
+
+外销 / 内销候选来源：
+
+1. `export_usd` 使用 `2026.5.11 出口成本报价`，作为外销 / 境外收美金 / 有退税场景的候选来源。
+2. `domestic_cny` 使用 `2026.5.11 出口部内销成本报价`，作为内销 / 收人民币场景的候选来源。
+3. `unknown` 不自动选择候选金额，必须提示选择外销或内销。
+4. 历史日期列不进入默认候选。
+
+如果未来保存候选金额，必须单独设计来源字段、visibility、财务确认人、AuditLog 和权限脱敏。本阶段只新增 domain types，不保存真实金额，不让出口部看到底价 / 毛利，不改变 staging row schema。
