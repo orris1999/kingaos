@@ -47,6 +47,17 @@ export type CreateQuoteCandidateAmountInput = {
   warnings?: string[];
 };
 
+export type QuoteCandidateAmountSourceKey = {
+  stagingRowId: string;
+  tradeMode: QuoteCandidateAmountTradeMode;
+  sourceColumnName: string;
+  sourceColumnDate: string;
+};
+
+export type QuoteCandidateAmountRepositoryOptions = {
+  databaseUrl?: string;
+};
+
 export type QuoteCandidateAmountStorageBoundary = {
   isFinanceApprovedPrice: false;
   canBeSentToCustomer: false;

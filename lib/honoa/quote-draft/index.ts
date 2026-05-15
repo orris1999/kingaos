@@ -1,4 +1,6 @@
 export * from "./draft-generator";
+export * from "./candidate-amount-importer";
+export * from "./candidate-amount-repository";
 export * from "./candidate-amount-repository-types";
 export * from "./candidate-amount-types";
 export * from "./export-quote-draft-excel";

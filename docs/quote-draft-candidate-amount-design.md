@@ -53,7 +53,7 @@ type QuoteCandidateAmountPolicy = {
 外销 / 境外收美金 / 有退税场景使用：
 
 ```text
-2026.5.11 出口成本报价
+2026.5.11出口成本报价
 ```
 
 该列只作为外销 USD 候选金额来源：
@@ -70,7 +70,7 @@ type QuoteCandidateAmountPolicy = {
 内销 / 收人民币场景使用：
 
 ```text
-2026.5.11 出口部内销成本报价
+2026.5.11出口部内销成本报价
 ```
 
 该列只作为内销 CNY 候选金额来源：
@@ -203,3 +203,40 @@ QuoteCandidateAmount
 9. 默认 `requiresFinancePricing = true`。
 
 009N 不新增 API route、server action、UI 页面或导入脚本。后续如果要导入真实候选金额，必须单独做 feature-gated action、权限、AuditLog 和 UAT。
+
+## Quote Task 009O local/test importer
+
+009O 新增候选金额 importer 和 repository，但只允许 local/test DB 写入。本轮不读取真实 Excel，不导入 production，不开放 API route / server action / UI 页面，不让出口部看到金额。
+
+第一版只支持：
+
+1. `adapterId = condenser-cost-2026`
+2. `category = 冷凝器`
+
+来源列规则：
+
+| tradeMode | sourceColumnName | sourceColumnDate | currency |
+|---|---|---|---|
+| `export_usd` | `2026.5.11出口成本报价` | `2026.5.11` | `USD` |
+| `domestic_cny` | `2026.5.11出口部内销成本报价` | `2026.5.11` | `CNY` |
+| `unknown` | 不自动选择 | 不自动选择 | 不自动选择 |
+
+009O 明确不导入 `2026.4.10` 等历史日期列作为默认候选。
+
+写入 `QuoteCandidateAmount` 时仍固定边界：
+
+1. `visibility = finance_only`
+2. `status = not_finance_approved`
+3. `source = finance_quote_source_staging`
+4. `isFinanceApprovedPrice = false`
+5. `canBeSentToCustomer = false`
+6. `requiresFinancePricing = true`
+
+repository 写入必须通过 local/test guard：
+
+1. `NODE_ENV=production` 拒绝。
+2. production-like / RDS URL 拒绝。
+3. 数据库名必须包含 dev / test / verify / local。
+4. 同一个 `stagingRowId + tradeMode + sourceColumnName + sourceColumnDate` 不允许重复导入。
+
+009O 不写真实 AuditLog。后续 production 导入必须单独接 `quote_candidate_amount.imported`，且 metadata 只能包含 batch / row / source column / tradeMode / currency / visibility / status 等脱敏字段，不得包含 `candidateValue`、底价、毛利或完整 Excel 行。

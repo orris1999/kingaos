@@ -18,6 +18,26 @@ export type QuoteCandidateAmountTradeMode = "export_usd" | "domestic_cny" | "unk
 
 export type QuoteCandidateAmountCurrency = "USD" | "CNY";
 
+export const QUOTE_CANDIDATE_AMOUNT_SOURCE_COLUMNS = {
+  export_usd: {
+    sourceColumnName: "2026.5.11出口成本报价",
+    sourceColumnDate: "2026.5.11",
+    currency: "USD"
+  },
+  domestic_cny: {
+    sourceColumnName: "2026.5.11出口部内销成本报价",
+    sourceColumnDate: "2026.5.11",
+    currency: "CNY"
+  }
+} as const satisfies Record<
+  Exclude<QuoteCandidateAmountTradeMode, "unknown">,
+  {
+    sourceColumnName: string;
+    sourceColumnDate: string;
+    currency: QuoteCandidateAmountCurrency;
+  }
+>;
+
 export type QuoteCandidateAmountPolicy = {
   tradeMode: QuoteCandidateAmountTradeMode;
   source: QuoteCandidateAmountSource;
@@ -80,8 +100,8 @@ export function getQuoteCandidateAmountTradeModeDecision(
     return {
       tradeMode,
       autoSelectsCandidateSource: true,
-      currency: "USD",
-      sourceColumnLabel: "2026.5.11 出口成本报价",
+      currency: QUOTE_CANDIDATE_AMOUNT_SOURCE_COLUMNS.export_usd.currency,
+      sourceColumnLabel: QUOTE_CANDIDATE_AMOUNT_SOURCE_COLUMNS.export_usd.sourceColumnName,
       warnings: [
         "外销 / 境外收美金 / 有退税场景使用出口成本候选来源。",
         QUOTE_CANDIDATE_AMOUNT_WARNINGS.notFinanceApproved
@@ -93,8 +113,8 @@ export function getQuoteCandidateAmountTradeModeDecision(
     return {
       tradeMode,
       autoSelectsCandidateSource: true,
-      currency: "CNY",
-      sourceColumnLabel: "2026.5.11 出口部内销成本报价",
+      currency: QUOTE_CANDIDATE_AMOUNT_SOURCE_COLUMNS.domestic_cny.currency,
+      sourceColumnLabel: QUOTE_CANDIDATE_AMOUNT_SOURCE_COLUMNS.domestic_cny.sourceColumnName,
       warnings: [
         "内销 / 收人民币场景使用出口部内销成本候选来源。",
         QUOTE_CANDIDATE_AMOUNT_WARNINGS.notFinanceApproved

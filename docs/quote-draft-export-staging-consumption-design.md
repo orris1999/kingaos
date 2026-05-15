@@ -538,8 +538,8 @@ Excel 不包含：
 
 后续金额候选规则：
 
-1. `export_usd` 使用 `2026.5.11 出口成本报价` 作为外销 / 美金 / 有退税场景候选来源。
-2. `domestic_cny` 使用 `2026.5.11 出口部内销成本报价` 作为内销 / 人民币场景候选来源。
+1. `export_usd` 使用 `2026.5.11出口成本报价` 作为外销 / 美金 / 有退税场景候选来源。
+2. `domestic_cny` 使用 `2026.5.11出口部内销成本报价` 作为内销 / 人民币场景候选来源。
 3. `unknown` 不自动选择候选金额。
 4. 这两类候选来源都不是 `FinanceApprovedPrice`，不能直接发客户。
 5. 出口部可见性必须受 `finance_only`、`masked_for_export`、`export_draft_visible` 控制。
@@ -559,3 +559,20 @@ Excel 不包含：
 3. `candidateValue` 不是 `FinanceApprovedPrice`，也不是可发客户报价。
 4. 即使后续有 `export_draft_visible`，页面和 Excel 仍必须显示“非正式报价 / 不是财务批准价格 / 不能直接发客户”。
 5. 后续带金额草稿 Excel 仍然不是正式报价；正式报价必须进入 FinancePricing。
+
+## Quote Task 009O｜Candidate amount local/test importer
+
+009O 只新增 local/test importer 和 repository，不改变 Export Workbench consumption 行为，也不把候选金额展示给出口部。
+
+Importer 边界：
+
+1. 第一版只支持 `condenser-cost-2026 / 冷凝器`。
+2. `export_usd` 使用 `2026.5.11出口成本报价`，币种 `USD`。
+3. `domestic_cny` 使用 `2026.5.11出口部内销成本报价`，币种 `CNY`。
+4. `unknown` 不自动导入候选金额。
+5. 旧日期列不作为默认候选。
+6. `QuoteCandidateAmount.visibility` 默认 `finance_only`，出口部不可见。
+7. `QuoteCandidateAmount.status` 默认 `not_finance_approved`。
+8. `candidateValue` 仍不是 `FinanceApprovedPrice`，不能直接发客户。
+
+009O 不新增 API route、server action 或 UI，也不生成 `QuoteDraft` / `QuoteDraftLine`。后续如果要让 Export 看到金额，必须另立 visibility / FinancePricing / AuditLog / UAT 任务，并保留“非正式报价”警示。

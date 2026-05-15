@@ -508,8 +508,8 @@ No-Go 条件：
 2. 必须定义 `QuoteCandidateAmountPolicy`，且固定 `isFinanceApprovedPrice = false`。
 3. `canBeSentToCustomer` 必须固定为 `false`。
 4. `requiresFinancePricing` 必须固定为 `true`。
-5. `export_usd` 必须映射到 USD 候选来源，并说明使用 `2026.5.11 出口成本报价`。
-6. `domestic_cny` 必须映射到 CNY 候选来源，并说明使用 `2026.5.11 出口部内销成本报价`。
+5. `export_usd` 必须映射到 USD 候选来源，并说明使用 `2026.5.11出口成本报价`。
+6. `domestic_cny` 必须映射到 CNY 候选来源，并说明使用 `2026.5.11出口部内销成本报价`。
 7. `unknown` 不得自动选择候选金额。
 8. 类型和 policy 输出不得定义具体金额字段：`amount`、`unitPrice`、`costPrice`、`quotePrice`。
 9. 类型和 policy 输出不得定义正式报价 / 财务批准字段：`financeApprovedPrice`、`approvedPrice`、`officialQuote`、`sentToCustomer`。
@@ -553,6 +553,36 @@ No-Go 条件：
 - 使用 `costPrice` / `quotePrice` / `approvedPrice` / `financeApprovedPrice` 等字段名保存候选金额。
 - 默认给出口部可见。
 - 把 schema migration 当作真实金额导入。
+
+## Quote Task 009O Candidate Amount Importer 验收
+
+009O 只验收候选金额 importer / repository 的 local/test DB 行为，不验收 production 导入。
+
+验收条件：
+
+1. 必须新增 local/test repository 和 importer。
+2. 第一版只支持 `condenser-cost-2026 / 冷凝器`。
+3. `export_usd` 必须使用 `2026.5.11出口成本报价`，币种 `USD`。
+4. `domestic_cny` 必须使用 `2026.5.11出口部内销成本报价`，币种 `CNY`。
+5. `unknown` 不得自动导入候选金额。
+6. `2026.4.10` 等旧日期列不得作为默认候选来源。
+7. 创建的 `QuoteCandidateAmount` 必须默认 `visibility = finance_only`。
+8. 创建的 `QuoteCandidateAmount` 必须默认 `status = not_finance_approved`。
+9. `isFinanceApprovedPrice` 必须为 false。
+10. `canBeSentToCustomer` 必须为 false。
+11. `requiresFinancePricing` 必须为 true。
+12. repository 必须防止同一 `stagingRowId + tradeMode + sourceColumnName + sourceColumnDate` 重复导入。
+13. repository 必须拒绝 production / production-like 数据库写入。
+14. DTO / repository input / output 不得包含 `costPrice`、`quotePrice`、`unitPrice`、`amount`、`financeApprovedPrice`、`minimumPrice`、`grossMargin`、`officialQuote` 或 `sentToCustomer`。
+15. 不得生成 `QuoteDraft` / `QuoteDraftLine` 或正式报价。
+16. local/test DB 测试必须创建并读回 `QuoteCandidateAmount`，测试后清理。
+
+No-Go 条件：
+
+- 写 production 数据。
+- 读取真实 Excel 或把真实金额写入 docs / test fixture。
+- 新增 API route、server action、UI、Prisma model 或 migration。
+- 让出口部看到候选金额。
 
 ## Go / No-Go
 
