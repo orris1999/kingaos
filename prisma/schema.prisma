@@ -427,3 +427,35 @@ model AuditLog {
   @@index([entityType])
   @@index([createdAt])
 }
+
+model QuoteCandidateAmount {
+  id                     String   @id @default(cuid())
+  stagingBatchId         String
+  stagingRowId           String
+  sourceUploadId         String?
+  sourceColumnName       String?
+  sourceColumnDate       String?
+  tradeMode              String
+  currency               String
+  candidateValue         Decimal  @db.Decimal(18, 4)
+  source                 String   @default("finance_quote_source_staging")
+  status                 String   @default("not_finance_approved")
+  visibility             String   @default("finance_only")
+  isFinanceApprovedPrice Boolean  @default(false)
+  canBeSentToCustomer    Boolean  @default(false)
+  requiresFinancePricing Boolean  @default(true)
+  importedByUserId       String?
+  importedByName         String?
+  importedAt             DateTime @default(now())
+  warnings               Json?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@index([stagingBatchId])
+  @@index([stagingRowId])
+  @@index([sourceUploadId])
+  @@index([tradeMode])
+  @@index([currency])
+  @@index([status])
+  @@index([visibility])
+}

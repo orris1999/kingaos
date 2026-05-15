@@ -526,6 +526,34 @@ No-Go 条件：
 - 让出口部直接看到底价 / 毛利。
 - 生成 `QuoteDraft` / `QuoteDraftLine` 或正式报价。
 
+## Quote Task 009N Candidate Amount Storage Schema 验收
+
+009N 只验收候选金额 storage schema 和 local/test migration，不验收真实金额导入。
+
+验收条件：
+
+1. Prisma schema 必须包含独立 `QuoteCandidateAmount` model。
+2. `QuoteCandidateAmount` 必须有 `stagingBatchId` 和 `stagingRowId`。
+3. `QuoteCandidateAmount` 必须有 `tradeMode`、`currency` 和 `candidateValue`。
+4. `candidateValue` 可以是 Decimal，但不得命名为 `amount`、`unitPrice`、`costPrice` 或 `quotePrice`。
+5. 默认 `visibility = finance_only`。
+6. 默认 `status = not_finance_approved`。
+7. `isFinanceApprovedPrice` 必须是 Boolean 且默认 false。
+8. `canBeSentToCustomer` 必须默认 false。
+9. `requiresFinancePricing` 必须默认 true。
+10. 不得修改 `QuoteSourceStagingRow` 既有字段。
+11. migration 必须只创建 `QuoteCandidateAmount` 表和索引，不得 DROP / TRUNCATE / DELETE。
+12. 不得新增 API route、server action 或 UI。
+13. 不得读取真实 Excel，不得保存真实金额，不得写 production 数据。
+14. 不得生成 `QuoteDraft` / `QuoteDraftLine` 或正式报价。
+
+No-Go 条件：
+
+- 把候选金额直接加进 `QuoteSourceStagingRow`。
+- 使用 `costPrice` / `quotePrice` / `approvedPrice` / `financeApprovedPrice` 等字段名保存候选金额。
+- 默认给出口部可见。
+- 把 schema migration 当作真实金额导入。
+
 ## Go / No-Go
 
 Go 条件：

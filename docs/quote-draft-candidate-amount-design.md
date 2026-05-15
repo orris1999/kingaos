@@ -179,3 +179,27 @@ AuditLog metadata 不得包含底价、毛利、完整 Excel 行、signed URL、
 4. Masked export UAT：出口部只看到“有候选金额 / 币种 / 需确认”。
 5. Export draft visible UAT：在强警示下展示候选金额，但仍不生成正式报价。
 6. FinancePricing design：正式价格事实和可发客户报价必须在这里完成。
+
+## Quote Task 009N storage schema
+
+009N 只建立候选金额 storage schema，不导入真实金额，不读取真实 Excel，不把金额展示给出口部。
+
+新增独立 Prisma model：
+
+```text
+QuoteCandidateAmount
+```
+
+设计规则：
+
+1. 使用独立表，不把金额字段塞进 `QuoteSourceStagingRow`。
+2. 使用 `stagingBatchId`、`stagingRowId` 和可选 `sourceUploadId` 记录来源链路。
+3. 使用 `sourceColumnName` 和 `sourceColumnDate` 记录未来来源列，但本轮不写真实来源列数据。
+4. 使用 `candidateValue` 存储候选值；该字段不是 `costPrice`、不是 `quotePrice`、不是正式报价字段。
+5. 默认 `visibility = finance_only`。
+6. 默认 `status = not_finance_approved`。
+7. 默认 `isFinanceApprovedPrice = false`。
+8. 默认 `canBeSentToCustomer = false`。
+9. 默认 `requiresFinancePricing = true`。
+
+009N 不新增 API route、server action、UI 页面或导入脚本。后续如果要导入真实候选金额，必须单独做 feature-gated action、权限、AuditLog 和 UAT。

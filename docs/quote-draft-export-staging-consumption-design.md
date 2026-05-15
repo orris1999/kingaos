@@ -547,3 +547,15 @@ Excel 不包含：
 7. `export_draft_visible` 即使未来开放，也必须带“非正式报价 / 不是财务批准价格 / 不能直接发客户 / 需要 FinancePricing”的强警示。
 
 正式报价仍必须后续接 FinancePricing；候选金额进入草稿预览不等于价格审批，也不等于可发客户报价。
+
+## Quote Task 009N｜Candidate amount storage schema
+
+009N 只新增候选金额存储结构，不改变 Export Workbench consumption 行为。
+
+对 Export 的影响：
+
+1. `QuoteCandidateAmount` 默认 `visibility = finance_only`，出口部不可见。
+2. 本轮没有查询接口、server action 或 UI，不会让出口部读取金额。
+3. `candidateValue` 不是 `FinanceApprovedPrice`，也不是可发客户报价。
+4. 即使后续有 `export_draft_visible`，页面和 Excel 仍必须显示“非正式报价 / 不是财务批准价格 / 不能直接发客户”。
+5. 后续带金额草稿 Excel 仍然不是正式报价；正式报价必须进入 FinancePricing。

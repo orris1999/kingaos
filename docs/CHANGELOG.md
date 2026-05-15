@@ -7,6 +7,23 @@
 - `docs/CHANGELOG.md`：给团队阅读，记录背景和规则。
 - `lib/honoa/shared/release-notes.ts`：给管理员页面展示。
 
+## 2026.05.15-09 Quote Task 009N Quote candidate amount storage schema
+
+- 类型：数据
+- 影响范围：财务部、报价草稿候选、候选金额 storage、Prisma schema
+- Migration：additive
+- 生产数据命令：待后续部署确认；本轮未运行 production migration
+- 生产数据风险：低
+- Release note id：`2026-05-15-09-quote-candidate-amount-storage-schema`
+- Commit：待填写
+
+主要变化：
+
+- 新增独立 `QuoteCandidateAmount` Prisma model，为未来候选金额导入保留 storage 结构。
+- 使用 `candidateValue` 保存未来候选值，避免 `costPrice`、`quotePrice`、`approvedPrice`、`financeApprovedPrice` 等正式或敏感价格字段名。
+- 默认 `visibility = finance_only`、`status = not_finance_approved`、`isFinanceApprovedPrice = false`、`canBeSentToCustomer = false`、`requiresFinancePricing = true`。
+- 本轮不导入真实金额、不读取真实 Excel、不新增 API route / server action / UI、不生成报价草稿或正式报价。
+
 ## 2026.05.14-08 Quote Task 009E Finance quote source dry-run confirmation
 
 - 类型：功能 / 数据

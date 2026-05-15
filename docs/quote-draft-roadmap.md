@@ -308,6 +308,14 @@ Quote Task 009M 进入候选金额设计，但仍不新增 production 能力：
 - `unknown` 不自动选择候选金额。
 - 009M 不新增 API、server action、UI、Prisma schema 或 migration，不保存真实金额，不读取真实 Excel。
 
+Quote Task 009N 新增候选金额 storage schema，但仍不导入真实金额：
+
+- 新增独立 `QuoteCandidateAmount` Prisma model，不修改 `QuoteSourceStagingRow` 既有字段。
+- 使用 `candidateValue` 保存未来候选值，避免 `costPrice` / `quotePrice` / `approvedPrice` / `financeApprovedPrice` 等正式或敏感价格命名。
+- 默认 `visibility = finance_only`，`status = not_finance_approved`。
+- `isFinanceApprovedPrice = false`、`canBeSentToCustomer = false`、`requiresFinancePricing = true`。
+- 009N 只做 local/test migration 验证，不新增 API、server action、UI，不读取真实 Excel，不写 production 数据，不生成报价草稿或正式报价。
+
 ## V2｜KJ / OEM 混合匹配
 
 目标：在 KJ 精确匹配稳定后，把 OEM / OE 作为候选匹配能力接入。

@@ -25,6 +25,23 @@ export const RELEASE_CATEGORY_LABELS: Record<ReleaseNoteCategory, string> = {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-05-15-09-quote-candidate-amount-storage-schema",
+    date: "2026-05-15",
+    version: "2026.05.15-09",
+    title: "Quote Task 009N Quote candidate amount storage schema",
+    category: "data",
+    summary: [
+      "新增独立 QuoteCandidateAmount Prisma model，为未来候选金额导入保留 storage 结构，不修改 QuoteSourceStagingRow 既有字段。",
+      "候选值使用 candidateValue，默认 visibility=finance_only、status=not_finance_approved，且 isFinanceApprovedPrice=false、canBeSentToCustomer=false、requiresFinancePricing=true。",
+      "本轮只做 schema / migration 和 local/test 验证，不导入真实金额、不读取真实 Excel、不新增 API route / server action / UI，也不生成报价草稿或正式报价。"
+    ],
+    affectedAreas: ["财务部", "报价草稿候选", "候选金额 storage", "Prisma schema"],
+    migration: "additive",
+    productionDataCommand: "migration",
+    productionDataRisk: "low",
+    commitHash: "待填写"
+  },
+  {
     id: "2026-05-14-08-finance-quote-source-dry-run-confirmation",
     date: "2026-05-14",
     version: "2026.05.14-08",
