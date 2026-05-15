@@ -77,10 +77,12 @@ function canBecomeExportDraftCandidate(row: QuoteSourceStagingDetailRow) {
 
 export function FinanceQuoteSourceStagingDetail({
   batch,
-  confirmationEnabled = false
+  confirmationEnabled = false,
+  rowImportEnabled = false
 }: {
   batch: QuoteSourceStagingDetailData | null;
   confirmationEnabled?: boolean;
+  rowImportEnabled?: boolean;
 }) {
   if (!batch) {
     return (
@@ -203,6 +205,19 @@ export function FinanceQuoteSourceStagingDetail({
             </ul>
           </div>
         </div>
+      </section>
+
+      <section className="panel stack">
+        <h2>行级导入</h2>
+        <p className="muted">
+          本阶段受服务端 feature flag 控制，只用于 local / test DB 验证。production 默认关闭，不自动创建 rows。
+        </p>
+        <button className="button" type="button" disabled>
+          {rowImportEnabled ? "行级导入仅限 local/test 验证" : "行级导入暂未开放"}
+        </button>
+        <p className="muted">
+          第一版只支持 condenser-cost-2026 / 冷凝器；导入 rows 仍默认 finance_only，不会给出口部直接消费。
+        </p>
       </section>
 
       <section className="panel stack">

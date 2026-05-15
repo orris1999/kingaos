@@ -76,8 +76,9 @@ describe("Quote Task 007C Finance staging confirmation UI wiring", () => {
     expect(form).toContain("<button type=\"button\" disabled>取消批次（下一阶段开放）</button>");
   });
 
-  it("keeps API routes and Prisma migrations unchanged", () => {
-    expect(existsSync(path.join(root, "app/api/finance/quote-source-staging"))).toBe(false);
+  it("keeps confirmation API routes and Prisma migrations unchanged", () => {
+    expect(existsSync(path.join(root, "app/api/finance/quote-source-staging/[batchId]/import-rows/route.ts"))).toBe(true);
+    expect(existsSync(path.join(root, "app/api/finance/quote-source-staging/[batchId]/confirm/route.ts"))).toBe(false);
     expect(existsSync(path.join(root, "prisma/migrations/20260513160000_finance_staging_confirm_ui_wiring"))).toBe(false);
   });
 

@@ -150,6 +150,39 @@ precheck 不保存：
 6. 不生成正式报价。
 7. 不写 production。
 
+## Quote Task 009I feature-gated row import action
+
+009I 在 009H mapper / parser 之后补充 row import action / route，但仍然只作为 local / test DB 验证能力。
+
+Feature flag：
+
+- `KINGA_ENABLE_FINANCE_QUOTE_SOURCE_ROW_IMPORT`
+- 缺失或 `false` 时默认关闭。
+- 不使用 `NEXT_PUBLIC_`，不暴露给前端。
+- production 默认关闭，不自动修改 ECS `.env`。
+
+第一版执行边界：
+
+1. 只允许 `super_admin`。
+2. 只允许已存在的 `QuoteSourceStagingBatch`。
+3. 只允许 `status = dry_run_passed`。
+4. 只支持 `adapterId = condenser-cost-2026` 和 `category = 冷凝器`。
+5. 通过 `QuoteSourceUpload.stagingBatchId` 反查上传文件，只在 server 侧读取。
+6. 调用 009H parser + mapper 创建 `QuoteSourceStagingRow`。
+7. rows 默认 `visibility = finance_only`。
+8. `rowStatus = candidate` 不等于 `export_draft_candidate`。
+
+009I 继续禁止：
+
+1. 不保存具体价格、底价、毛利或财务批准价格。
+2. 不保存完整 Excel 行。
+3. 不自动设置 `export_draft_candidate`。
+4. 不生成报价草稿。
+5. 不生成正式报价。
+6. 不写 production 数据。
+
+后续如要给出口部消费，必须另做财务确认、visibility promotion 和 export consumption UAT。
+
 ## 后续分阶段建议
 
 后续 row import 应拆成独立阶段：

@@ -787,3 +787,39 @@ Production rollout runbook：
 6. AuditLog 和导入批次审计。
 
 本轮不做这些实现。
+
+## Quote Task 009I feature-gated row import action
+
+009I 新增 row import action / route，但只用于 local / test DB 验证，production 默认关闭。
+
+Feature flag：
+
+- `KINGA_ENABLE_FINANCE_QUOTE_SOURCE_ROW_IMPORT`
+- 缺失或 `false` 时关闭。
+- `true` 时仍需通过 server-side 权限、batch 状态和非 production 数据库 guard。
+- 不使用 `NEXT_PUBLIC_`，不暴露给前端。
+
+第一版只支持：
+
+- `adapterId = condenser-cost-2026`
+- `category = 冷凝器`
+
+执行流程：
+
+1. `super_admin` 对已存在的 `QuoteSourceStagingBatch` 触发 row import。
+2. batch 必须是 `status = dry_run_passed`。
+3. 系统通过 `QuoteSourceUpload.stagingBatchId` 查找对应上传文件。
+4. parser + mapper 只生成脱敏 row metadata。
+5. 创建 `QuoteSourceStagingRow` 时默认 `visibility = finance_only`。
+6. 写入 `quote_source_staging.rows_imported` AuditLog。
+
+继续不做：
+
+1. 不保存具体价格、底价、毛利或财务批准价格。
+2. 不保存完整 Excel 行。
+3. 不自动设置 `export_draft_candidate`。
+4. 不生成报价草稿。
+5. 不生成正式报价。
+6. 不开放给出口部消费。
+
+后续必须单独完成 finance confirmation / visibility promotion / export consumption UAT，才能让出口部消费确认后的 staging 候选。

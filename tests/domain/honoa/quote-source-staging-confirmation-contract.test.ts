@@ -179,6 +179,7 @@ describe("quote source staging confirmation UI/action contract", () => {
     expect(detailPage).not.toContain("confirmQuoteSourceStagingBatchAction");
     expect(listPage).not.toContain("form action");
     expect(detailPage).not.toContain("form action");
-    expect(existsSync(join(root, "app/api/finance/quote-source-staging"))).toBe(false);
+    expect(existsSync(join(root, "app/api/finance/quote-source-staging/[batchId]/import-rows/route.ts"))).toBe(true);
+    expect(existsSync(join(root, "app/api/finance/quote-source-staging/[batchId]/confirm/route.ts"))).toBe(false);
   });
 });

@@ -109,12 +109,14 @@ describe("Quote Task 006B Finance quote source staging Prisma schema", () => {
     expect(sql).not.toMatch(/ALTER\s+TABLE[\s\S]*\bDROP\b/i);
   });
 
-  it("no quote source staging import or quote draft API route was added", () => {
+  it("only the feature-gated quote source staging row import API route was added", () => {
     const apiFiles = listFiles(path.join(repoRoot, "app/api"));
     const quoteSourceApiFiles = apiFiles.filter((file) =>
       /quote-source|quoteSource|quote-draft|quoteDraft/.test(file)
     ).filter((file) => !file.includes("quote-source-upload"));
 
-    expect(quoteSourceApiFiles).toEqual([]);
+    expect(quoteSourceApiFiles).toEqual([
+      path.join(repoRoot, "app/api/finance/quote-source-staging/[batchId]/import-rows/route.ts")
+    ]);
   });
 });

@@ -84,13 +84,14 @@ describe("Quote Task 007A Finance quote source staging 只读页面", () => {
     expect(source).not.toContain("'use server'");
   });
 
-  it("页面没有新增 API route，确认表单由服务端 feature flag 控制", () => {
+  it("页面只允许 feature-gated row import API route，确认表单由服务端 feature flag 控制", () => {
     const listComponent = readRepoFile("components/finance-quote-source-staging-list.tsx");
     const detailComponent =
       readRepoFile("components/finance-quote-source-staging-detail.tsx") +
       readRepoFile("components/finance-quote-source-staging-confirm-form.tsx");
 
-    expect(existsSync(path.join(root, "app/api/finance/quote-source-staging"))).toBe(false);
+    expect(existsSync(path.join(root, "app/api/finance/quote-source-staging/[batchId]/import-rows/route.ts"))).toBe(true);
+    expect(existsSync(path.join(root, "app/api/finance/quote-source-staging/[batchId]/confirm/route.ts"))).toBe(false);
     expect(detailComponent).toContain("enabled: boolean");
     expect(detailComponent).toContain("rowVisibilityPolicy");
     expect(detailComponent).toContain("strict_candidate_only");

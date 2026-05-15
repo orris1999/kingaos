@@ -22,6 +22,10 @@ export function isFinanceQuoteSourceDryRunConfirmEnabled() {
   return process.env.KINGA_ENABLE_FINANCE_QUOTE_SOURCE_DRY_RUN_CONFIRM?.trim().toLowerCase() === "true";
 }
 
+export function isFinanceQuoteSourceRowImportEnabled() {
+  return process.env.KINGA_ENABLE_FINANCE_QUOTE_SOURCE_ROW_IMPORT?.trim().toLowerCase() === "true";
+}
+
 export type QuoteDraftWorkbenchAccessUser = {
   department: string;
   role: string;

@@ -6,7 +6,10 @@ import {
 import { Forbidden, KingaShell } from "@/components/kinga-shell";
 import { requireCurrentUser } from "@/lib/honoa/server/auth";
 import { prisma } from "@/lib/honoa/server/db";
-import { isFinanceStagingConfirmEnabled } from "@/lib/honoa/server/feature-flags";
+import {
+  isFinanceQuoteSourceRowImportEnabled,
+  isFinanceStagingConfirmEnabled
+} from "@/lib/honoa/server/feature-flags";
 import type { Prisma } from "@prisma/client";
 
 type QuoteSourceStagingBatchWithRows = Prisma.QuoteSourceStagingBatchGetPayload<{
@@ -94,6 +97,7 @@ export default async function FinanceQuoteSourceStagingDetailPage({
     }
   });
   const confirmationEnabled = isFinanceStagingConfirmEnabled();
+  const rowImportEnabled = isFinanceQuoteSourceRowImportEnabled();
 
   return (
     <KingaShell user={user}>
@@ -112,6 +116,7 @@ export default async function FinanceQuoteSourceStagingDetailPage({
         <FinanceQuoteSourceStagingDetail
           batch={mapBatch(batch)}
           confirmationEnabled={confirmationEnabled}
+          rowImportEnabled={rowImportEnabled}
         />
       </div>
     </KingaShell>
