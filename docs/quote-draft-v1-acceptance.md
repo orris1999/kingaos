@@ -451,6 +451,28 @@ No-Go 条件：
 - rows 包含 `costPrice`、`quotePrice`、`unitPrice`、`amount`、`financeApprovedPrice`、`minimumPrice`、`grossMargin`。
 - rows 直接对出口部可见或直接生成报价草稿。
 
+## Quote Task 009J-Fix Controlled Row Import Guard 验收
+
+009J-Fix 只验收 production row import 写入 guard 的受控通道，不执行 production row import。
+
+验收条件：
+
+1. repository 默认 production write guard 继续拒绝写入。
+2. 缺少 `allowControlledProductionWrite` 时 production 写入仍拒绝。
+3. controlled reason 不是 `finance_quote_source_row_import_uat` 时 production 写入仍拒绝。
+4. 只有 `quote-source-row-import` action 可以在完成业务校验后传入 controlled option。
+5. action 必须校验 feature flag、`super_admin`、batch status、adapter/category、rowCount、upload 状态和 `storageKey`。
+6. repository 必须继续拒绝具体价格字段、完整 Excel 行、`export_draft_candidate`、正式报价字段和面向客户发送字段。
+7. 成功 AuditLog metadata 只能包含脱敏统计，不得包含价格、完整 Excel 行、storageKey、signed URL 或 AccessKey。
+8. controlled path 不生成报价草稿，不生成正式报价，不给出口部消费。
+
+No-Go 条件：
+
+- 删除或关闭 repository 默认 production guard。
+- 任意 production row import 不带 controlled reason 也能写入。
+- rows 包含价格字段、`export_draft_candidate`、完整 Excel 行或正式报价字段。
+- 本轮自动执行 production row import 或修改 ECS `.env`。
+
 ## Go / No-Go
 
 Go 条件：

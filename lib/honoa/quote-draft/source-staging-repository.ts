@@ -39,8 +39,19 @@ const SENSITIVE_PRICE_FIELDS = [
   "margin",
   "profit",
   "sentToCustomer",
-  "officialQuote"
+  "officialQuote",
+  "excelRows",
+  "rawRow",
+  "fullRow",
+  "columns",
+  "signedUrl",
+  "accessKey",
+  "storageKey"
 ] as const;
+
+export const FINANCE_QUOTE_SOURCE_ROW_IMPORT_UAT_REASON = "finance_quote_source_row_import_uat";
+
+type ControlledProductionWriteContext = "quote_source_staging_rows";
 
 const BATCH_STATUSES: QuoteSourceStagingBatchStatus[] = [
   "draft",
@@ -73,8 +84,22 @@ const PRICE_CANDIDATE_STATUSES: QuoteSourceStagingPriceCandidateStatus[] = [
   "requires_finance_review"
 ];
 
-export function assertNonProductionDatabaseUrl(databaseUrl = process.env.DATABASE_URL) {
+export function assertNonProductionDatabaseUrl(
+  databaseUrl = process.env.DATABASE_URL,
+  options: QuoteSourceStagingRepositoryOptions = {},
+  controlledProductionWriteContext?: ControlledProductionWriteContext
+) {
   if (process.env.NODE_ENV === "production") {
+    const controlledRowImportWrite =
+      controlledProductionWriteContext === "quote_source_staging_rows" &&
+      options.allowControlledProductionWrite &&
+      options.productionWriteReason === FINANCE_QUOTE_SOURCE_ROW_IMPORT_UAT_REASON;
+    if (controlledRowImportWrite) {
+      return;
+    }
+    if (options.allowControlledProductionWrite) {
+      throw new Error("controlled production write reason is invalid for quote source staging repository writes");
+    }
     throw new Error("quote source staging repository writes are disabled in production");
   }
 
@@ -116,7 +141,7 @@ export async function createQuoteSourceStagingBatch(
   input: CreateQuoteSourceStagingBatchInput,
   options: QuoteSourceStagingRepositoryOptions = {}
 ): Promise<QuoteSourceStagingBatch> {
-  assertNonProductionDatabaseUrl(options.databaseUrl);
+  assertNonProductionDatabaseUrl(options.databaseUrl, options);
   assertNoSensitivePriceFields(input);
 
   const submittedByRole = input.submittedByRole ?? "finance";
@@ -155,12 +180,13 @@ export async function createQuoteSourceStagingRows(
   rows: CreateQuoteSourceStagingRowInput[],
   options: QuoteSourceStagingRepositoryOptions = {}
 ): Promise<QuoteSourceStagingRow[]> {
-  assertNonProductionDatabaseUrl(options.databaseUrl);
+  assertNonProductionDatabaseUrl(options.databaseUrl, options, "quote_source_staging_rows");
 
   const createdRows: QuoteSourceStagingRow[] = [];
 
   for (const row of rows) {
     assertNoSensitivePriceFields(row);
+    assertControlledProductionRowVisibility(row, options);
     assertEquals(row.batchId, batchId, "row batchId must match the target batchId");
     assertAllowed(row.rowStatus, ROW_STATUSES, "invalid quote source staging row status");
     assertAllowed(row.visibility, VISIBILITIES, "invalid quote source staging visibility");
@@ -209,7 +235,7 @@ export async function getQuoteSourceStagingBatchById(
   batchId: string,
   options: QuoteSourceStagingRepositoryOptions = {}
 ): Promise<(QuoteSourceStagingBatch & { rows: QuoteSourceStagingRow[] }) | null> {
-  assertNonProductionDatabaseUrl(options.databaseUrl);
+  assertNonProductionDatabaseUrl(options.databaseUrl, options);
 
   const batch = await prisma.quoteSourceStagingBatch.findUnique({
     where: { id: batchId },
@@ -228,7 +254,7 @@ export async function listQuoteSourceStagingBatches(
   filter: QuoteSourceStagingBatchFilter = {},
   options: QuoteSourceStagingRepositoryOptions = {}
 ): Promise<QuoteSourceStagingBatch[]> {
-  assertNonProductionDatabaseUrl(options.databaseUrl);
+  assertNonProductionDatabaseUrl(options.databaseUrl, options);
 
   if (filter.status) {
     assertAllowed(filter.status, BATCH_STATUSES, "invalid quote source staging batch status");
@@ -252,7 +278,7 @@ export async function listQuoteSourceStagingRows(
   filter: QuoteSourceStagingRowFilter = {},
   options: QuoteSourceStagingRepositoryOptions = {}
 ): Promise<QuoteSourceStagingRow[]> {
-  assertNonProductionDatabaseUrl(options.databaseUrl);
+  assertNonProductionDatabaseUrl(options.databaseUrl, options);
 
   if (filter.rowStatus) {
     assertAllowed(filter.rowStatus, ROW_STATUSES, "invalid quote source staging row status");
@@ -280,7 +306,7 @@ export async function updateQuoteSourceStagingBatchStatus(
   actor: QuoteSourceStagingStatusActor = {},
   options: QuoteSourceStagingRepositoryOptions = {}
 ): Promise<QuoteSourceStagingBatch> {
-  assertNonProductionDatabaseUrl(options.databaseUrl);
+  assertNonProductionDatabaseUrl(options.databaseUrl, options);
   assertNoSensitivePriceFields(actor);
   assertAllowed(nextStatus, BATCH_STATUSES, "invalid quote source staging batch status");
 
@@ -323,6 +349,17 @@ function assertRowVisibilityAllowed(
 
   if ((rowStatus === "blocked" || rowStatus === "ignored") && visibility === "export_draft_candidate") {
     throw new Error("blocked or ignored rows cannot be export_draft_candidate");
+  }
+}
+
+function assertControlledProductionRowVisibility(
+  row: CreateQuoteSourceStagingRowInput,
+  options: QuoteSourceStagingRepositoryOptions
+) {
+  if (!options.allowControlledProductionWrite) return;
+  if (options.productionWriteReason !== FINANCE_QUOTE_SOURCE_ROW_IMPORT_UAT_REASON) return;
+  if (row.visibility === "export_draft_candidate") {
+    throw new Error("controlled production row import cannot create export_draft_candidate rows");
   }
 }
 

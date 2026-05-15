@@ -272,6 +272,13 @@ Quote Task 009I 补充 feature-gated row import action / route 的 local / test 
 - 本轮不新增 Prisma schema / migration，不写 production，不生成报价草稿，不生成正式报价。
 - 后续需要单独做财务确认、visibility promotion 和 export consumption UAT。
 
+Quote Task 009J-Fix 补充 row import controlled production guard：
+
+- repository 默认 production write guard 继续保留。
+- 只有 row import action 在 feature flag、`super_admin`、单个 `dry_run_passed` 冷凝器 batch、rowCount=0、upload 已 uploaded 且 dry-run completed、rows 全部 `finance_only` 且不含价格字段时，才能传入 `finance_quote_source_row_import_uat` controlled reason。
+- repository 层继续拒绝具体价格字段、完整 Excel 行、`export_draft_candidate`、正式报价字段和面向客户发送字段。
+- controlled path 不给出口部消费，不生成报价草稿，不生成正式报价；production UAT 另由 009J-Retry 执行。
+
 ## V2｜KJ / OEM 混合匹配
 
 目标：在 KJ 精确匹配稳定后，把 OEM / OE 作为候选匹配能力接入。

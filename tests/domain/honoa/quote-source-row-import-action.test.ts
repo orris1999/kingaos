@@ -1,6 +1,11 @@
 import { PrismaClient } from "@prisma/client";
 import * as XLSX from "xlsx";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import {
+  createQuoteSourceStagingBatch,
+  createQuoteSourceStagingRows,
+  FINANCE_QUOTE_SOURCE_ROW_IMPORT_UAT_REASON
+} from "@/lib/honoa/quote-draft";
 import { isFinanceQuoteSourceRowImportEnabled } from "@/lib/honoa/server/feature-flags";
 import { importQuoteSourceRows } from "@/lib/honoa/server/quote-source-row-import";
 
@@ -9,6 +14,7 @@ const resolvedTestDatabaseUrl =
   testDatabaseUrl ?? "postgresql://missing@127.0.0.1:1/missing_quote_source_row_import_action_test";
 const describeWithDb = testDatabaseUrl ? describe : describe.skip;
 const safeDatabaseUrl = "postgresql://user@127.0.0.1:5433/kingaos_test?schema=public";
+const productionLikeDatabaseUrl = "postgresql://user@prod-rds.aliyuncs.com:5432/kingaos_prod?schema=public";
 const sourcePrefix = `row-import-action-test-${Date.now()}`;
 
 function actor(role: string, department = "finance") {
@@ -153,6 +159,48 @@ function importOptions(overrides: Record<string, unknown> = {}) {
   } as any;
 }
 
+function makeRepositoryRow(overrides: Record<string, unknown> = {}) {
+  return {
+    batchId: "batch_repo_1",
+    sourceRowNumber: 1,
+    rawKjCode: "KJMOCK-REPO-001",
+    standardKjCode: "KJMOCK-REPO-001",
+    productNameCandidate: "Mock repository condenser",
+    category: "冷凝器",
+    tradeMode: "unknown",
+    priceCandidateStatus: "cost_candidate_available",
+    hasCostCandidate: true,
+    hasQuoteCandidate: false,
+    hasPackagingInfo: true,
+    hasOemInfo: false,
+    visibility: "finance_only",
+    rowStatus: "candidate",
+    warnings: [],
+    ...overrides
+  } as any;
+}
+
+function fakeRepositoryPrisma() {
+  const createdRows: any[] = [];
+  return {
+    prisma: {
+      quoteSourceStagingRow: {
+        create: async ({ data }: any) => {
+          const row = {
+            id: `repo_row_${createdRows.length + 1}`,
+            createdAt: new Date("2026-05-15T08:00:00.000Z"),
+            updatedAt: new Date("2026-05-15T08:00:00.000Z"),
+            ...data
+          };
+          createdRows.push(row);
+          return row;
+        }
+      }
+    } as any,
+    createdRows
+  };
+}
+
 describe("Quote Task 009I quote source row import action", () => {
   it("feature flag is server-only and defaults off", () => {
     expect(withEnv("KINGA_ENABLE_FINANCE_QUOTE_SOURCE_ROW_IMPORT", undefined, isFinanceQuoteSourceRowImportEnabled)).toBe(false);
@@ -216,14 +264,174 @@ describe("Quote Task 009I quote source row import action", () => {
     expect(serializedAudit).not.toMatch(/amount|unitPrice|costPrice|quotePrice|financeApprovedPrice|minimumPrice|grossMargin|signedUrl|accessKey/i);
   });
 
-  it("production guard blocks production writes before reading the workbook", async () => {
+  it("allows the action controlled production path only after all row import guards pass", async () => {
     vi.stubEnv("NODE_ENV", "production");
     try {
-      await expect(importQuoteSourceRows(actor("super_admin", "admin"), { batchId: "batch_import_1" }, importOptions({
-        readObjectBuffer: async () => {
-          throw new Error("must not read workbook in production guard test");
-        }
-      }))).rejects.toThrow("disabled in production");
+      const db = fakeDb(makeBatch(), makeUpload());
+      const result = await importQuoteSourceRows(actor("super_admin", "admin"), { batchId: "batch_import_1" }, importOptions({
+        db,
+        databaseUrl: productionLikeDatabaseUrl
+      }));
+      const state = db.getState();
+
+      expect(result.rows.length).toBeGreaterThan(0);
+      expect(result.rows.every((row: any) => row.visibility === "finance_only")).toBe(true);
+      expect(result.rows.map((row: any) => row.visibility)).not.toContain("export_draft_candidate");
+      expect(state.calls).toContain("quoteSourceStagingRow.create");
+      expect(state.audits).toHaveLength(1);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("validates the linked upload before reading the workbook", async () => {
+    await expect(importQuoteSourceRows(actor("super_admin", "admin"), { batchId: "batch_import_1" }, importOptions({
+      db: fakeDb(makeBatch(), null),
+      readObjectBuffer: async () => {
+        throw new Error("must not read workbook without upload");
+      }
+    }))).rejects.toThrow("未找到");
+    await expect(importQuoteSourceRows(actor("super_admin", "admin"), { batchId: "batch_import_1" }, importOptions({
+      db: fakeDb(makeBatch(), makeUpload({ uploadStatus: "pending" })),
+      readObjectBuffer: async () => {
+        throw new Error("must not read workbook before upload status check");
+      }
+    }))).rejects.toThrow("uploaded");
+    await expect(importQuoteSourceRows(actor("super_admin", "admin"), { batchId: "batch_import_1" }, importOptions({
+      db: fakeDb(makeBatch(), makeUpload({ dryRunStatus: "not_run" })),
+      readObjectBuffer: async () => {
+        throw new Error("must not read workbook before dryRunStatus check");
+      }
+    }))).rejects.toThrow("completed");
+    await expect(importQuoteSourceRows(actor("super_admin", "admin"), { batchId: "batch_import_1" }, importOptions({
+      db: fakeDb(makeBatch(), makeUpload({ stagingBatchId: "other_batch" })),
+      readObjectBuffer: async () => {
+        throw new Error("must not read workbook before stagingBatchId check");
+      }
+    }))).rejects.toThrow("未关联");
+    await expect(importQuoteSourceRows(actor("super_admin", "admin"), { batchId: "batch_import_1" }, importOptions({
+      db: fakeDb(makeBatch(), makeUpload({ storageKey: "" })),
+      readObjectBuffer: async () => {
+        throw new Error("must not read workbook before storageKey check");
+      }
+    }))).rejects.toThrow("storageKey");
+  });
+
+  it("does not write rows_imported AuditLog when row creation fails", async () => {
+    const db = fakeDb(makeBatch(), makeUpload());
+
+    await expect(importQuoteSourceRows(actor("super_admin", "admin"), { batchId: "batch_import_1" }, importOptions({
+      db,
+      readObjectBuffer: async () => {
+        throw new Error("OSS read failed");
+      }
+    }))).rejects.toThrow("OSS read failed");
+
+    const state = db.getState();
+    expect(state.createdRows).toHaveLength(0);
+    expect(state.audits).toHaveLength(0);
+  });
+});
+
+describe("Quote Task 009J-Fix controlled production row import repository guard", () => {
+  it("keeps the default production write guard closed", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    try {
+      const { prisma, createdRows } = fakeRepositoryPrisma();
+
+      await expect(createQuoteSourceStagingRows(prisma, "batch_repo_1", [makeRepositoryRow()], {
+        databaseUrl: productionLikeDatabaseUrl
+      })).rejects.toThrow("disabled in production");
+      expect(createdRows).toHaveLength(0);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("rejects controlled production writes when the reason is missing or invalid", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    try {
+      const missingReason = fakeRepositoryPrisma();
+      const invalidReason = fakeRepositoryPrisma();
+
+      await expect(createQuoteSourceStagingRows(missingReason.prisma, "batch_repo_1", [makeRepositoryRow()], {
+        databaseUrl: productionLikeDatabaseUrl,
+        allowControlledProductionWrite: true
+      })).rejects.toThrow("reason is invalid");
+      await expect(createQuoteSourceStagingRows(invalidReason.prisma, "batch_repo_1", [makeRepositoryRow()], {
+        databaseUrl: productionLikeDatabaseUrl,
+        allowControlledProductionWrite: true,
+        productionWriteReason: "wrong_reason" as any
+      })).rejects.toThrow("reason is invalid");
+      expect(missingReason.createdRows).toHaveLength(0);
+      expect(invalidReason.createdRows).toHaveLength(0);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("does not let the row import production reason bypass other repository writes", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    try {
+      const { prisma } = fakeRepositoryPrisma();
+
+      await expect(createQuoteSourceStagingBatch(prisma, {
+        sourceFileName: "repo-source.xls",
+        adapterId: "condenser-cost-2026",
+        category: "冷凝器",
+        dryRunDecisionStatus: "manual_review_required",
+        status: "dry_run_passed"
+      }, {
+        databaseUrl: productionLikeDatabaseUrl,
+        allowControlledProductionWrite: true,
+        productionWriteReason: FINANCE_QUOTE_SOURCE_ROW_IMPORT_UAT_REASON
+      })).rejects.toThrow("reason is invalid");
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("allows the controlled production row import reason for sanitized finance_only rows", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    try {
+      const { prisma, createdRows } = fakeRepositoryPrisma();
+
+      const rows = await createQuoteSourceStagingRows(prisma, "batch_repo_1", [makeRepositoryRow()], {
+        databaseUrl: productionLikeDatabaseUrl,
+        allowControlledProductionWrite: true,
+        productionWriteReason: FINANCE_QUOTE_SOURCE_ROW_IMPORT_UAT_REASON
+      });
+
+      expect(rows).toHaveLength(1);
+      expect(createdRows).toHaveLength(1);
+      expect(rows[0].visibility).toBe("finance_only");
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("rejects sensitive fields and export_draft_candidate in the controlled production path", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    try {
+      const sensitive = fakeRepositoryPrisma();
+      const exportVisible = fakeRepositoryPrisma();
+
+      await expect(createQuoteSourceStagingRows(sensitive.prisma, "batch_repo_1", [
+        makeRepositoryRow({ costPrice: "MOCK_PRICE" })
+      ], {
+        databaseUrl: productionLikeDatabaseUrl,
+        allowControlledProductionWrite: true,
+        productionWriteReason: FINANCE_QUOTE_SOURCE_ROW_IMPORT_UAT_REASON
+      })).rejects.toThrow("sensitive price field");
+      await expect(createQuoteSourceStagingRows(exportVisible.prisma, "batch_repo_1", [
+        makeRepositoryRow({ visibility: "export_draft_candidate" })
+      ], {
+        databaseUrl: productionLikeDatabaseUrl,
+        allowControlledProductionWrite: true,
+        productionWriteReason: FINANCE_QUOTE_SOURCE_ROW_IMPORT_UAT_REASON
+      })).rejects.toThrow("export_draft_candidate");
+      expect(sensitive.createdRows).toHaveLength(0);
+      expect(exportVisible.createdRows).toHaveLength(0);
     } finally {
       vi.unstubAllEnvs();
     }

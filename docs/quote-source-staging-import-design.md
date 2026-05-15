@@ -796,7 +796,7 @@ Feature flag：
 
 - `KINGA_ENABLE_FINANCE_QUOTE_SOURCE_ROW_IMPORT`
 - 缺失或 `false` 时关闭。
-- `true` 时仍需通过 server-side 权限、batch 状态和非 production 数据库 guard。
+- `true` 时仍需通过 server-side 权限、batch 状态、adapter/category、rowCount 和 production write guard。
 - 不使用 `NEXT_PUBLIC_`，不暴露给前端。
 
 第一版只支持：
@@ -823,3 +823,24 @@ Feature flag：
 6. 不开放给出口部消费。
 
 后续必须单独完成 finance confirmation / visibility promotion / export consumption UAT，才能让出口部消费确认后的 staging 候选。
+
+## Quote Task 009J-Fix controlled production row import write channel
+
+009J production UAT 中，row import action 在 repository production guard 前被拒绝，错误为 `quote source staging repository writes are disabled in production`。009J-Fix 保留默认 guard，并增加一条显式 controlled production write option，只允许 Finance row import UAT 使用：
+
+- `allowControlledProductionWrite = true`
+- `productionWriteReason = finance_quote_source_row_import_uat`
+
+该 option 只能由 `quote-source-row-import` action 在完成全部业务校验后传入。校验包括：
+
+1. feature flag 已开启。
+2. 当前账号是 `super_admin`。
+3. batch 存在且 `status = dry_run_passed`。
+4. batch 是 `condenser-cost-2026 / 冷凝器`。
+5. batch 当前没有 rows。
+6. 能通过 `QuoteSourceUpload.stagingBatchId` 找到 upload。
+7. upload 是 `uploaded`，dry-run 已 `completed`，且有 server-side `storageKey`。
+8. parser / mapper 生成 rows 后，rows 不含价格字段、完整 Excel 行、`export_draft_candidate` 或正式报价字段。
+9. rows 全部默认 `finance_only`。
+
+repository 层继续复核敏感字段和 visibility。该 controlled path 不开放给出口部，不保存具体价格，不创建正式价格，不生成报价草稿，也不生成正式报价。009J-Retry 才会执行 production row import UAT。

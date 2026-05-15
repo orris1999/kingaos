@@ -70,4 +70,6 @@ export type QuoteSourceStagingStatusActor = {
 
 export type QuoteSourceStagingRepositoryOptions = {
   databaseUrl?: string;
+  allowControlledProductionWrite?: boolean;
+  productionWriteReason?: "finance_quote_source_row_import_uat";
 };

@@ -183,6 +183,27 @@ Feature flag：
 
 后续如要给出口部消费，必须另做财务确认、visibility promotion 和 export consumption UAT。
 
+## Quote Task 009J-Fix controlled production row import guard
+
+009J production UAT 暴露出 repository 默认 production write guard 会阻止 row import。009J-Fix 的处理方式不是删除 guard，而是增加一条显式、受控、只服务单次 Finance row import UAT 的 production 写入通道。
+
+受控通道必须同时满足：
+
+1. `KINGA_ENABLE_FINANCE_QUOTE_SOURCE_ROW_IMPORT = true`。
+2. 当前账号是 `super_admin`。
+3. 目标 batch 是单个 `dry_run_passed` batch。
+4. 第一版仅允许 `adapterId = condenser-cost-2026` 且 `category = 冷凝器`。
+5. 当前 batch 的 rowCount 必须为 0，不能重复导入。
+6. 必须能通过 `QuoteSourceUpload.stagingBatchId` 找到对应上传文件。
+7. upload 必须是 `uploadStatus = uploaded`、`dryRunStatus = completed`，并且存在 server-side `storageKey`。
+8. parser / mapper 输出必须不包含价格字段。
+9. rows 必须全部是 `visibility = finance_only`。
+10. rows 不能自动设置为 `export_draft_candidate`。
+
+repository 默认 production guard 仍然保留。只有 row import action 在完成上述校验后，才可以传入受控写入 reason：`finance_quote_source_row_import_uat`。repository 层仍会再次拒绝具体价格字段、完整 Excel 行、`export_draft_candidate`、正式报价字段和面向客户发送字段。
+
+该通道不保存价格，不给出口部消费，不生成报价草稿，不生成正式报价。真正 production UAT 放在 009J-Retry 单独执行。
+
 ## 后续分阶段建议
 
 后续 row import 应拆成独立阶段：

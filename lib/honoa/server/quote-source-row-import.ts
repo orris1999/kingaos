@@ -4,8 +4,8 @@ import { prisma } from "./db";
 import { isFinanceQuoteSourceRowImportEnabled } from "./feature-flags";
 import { readQuoteSourceUploadObjectBuffer } from "./quote-source-upload-dry-run";
 import {
-  assertNonProductionDatabaseUrl,
   createQuoteSourceStagingRows,
+  FINANCE_QUOTE_SOURCE_ROW_IMPORT_UAT_REASON,
   mapQuoteSourceWorkbookRowsToStagingRows,
   parseQuoteSourceWorkbookRowsFromBuffer
 } from "../quote-draft";
@@ -45,8 +45,12 @@ const FORBIDDEN_ROW_IMPORT_METADATA_KEYS = [
   "sentToCustomer",
   "officialQuote",
   "excelRows",
+  "rawRow",
+  "fullRow",
+  "columns",
   "signedUrl",
-  "accessKey"
+  "accessKey",
+  "storageKey"
 ];
 
 function assertNoForbiddenRowImportMetadataKeys(value: unknown) {
@@ -100,6 +104,38 @@ function assertBatchCanImportRows(batch: {
   }
 }
 
+function assertUploadCanImportRows(upload: {
+  uploadStatus: string;
+  dryRunStatus: string | null;
+  stagingBatchId: string | null;
+  storageKey: string;
+}, batchId: string) {
+  if (upload.uploadStatus !== "uploaded") {
+    throw new Error("只有 uploaded 状态的报价表上传记录可以导入 rows。");
+  }
+  if (upload.dryRunStatus !== "completed") {
+    throw new Error("只有 dryRunStatus=completed 的报价表上传记录可以导入 rows。");
+  }
+  if (upload.stagingBatchId !== batchId) {
+    throw new Error("报价表上传记录未关联到当前 staging batch。");
+  }
+  if (!upload.storageKey) {
+    throw new Error("报价表上传记录缺少 storageKey，不能导入 rows。");
+  }
+}
+
+function assertRowsSafeForImport(rows: CreateQuoteSourceStagingRowInput[]) {
+  if (rows.length === 0) {
+    throw new Error("未识别到可导入的行级候选 metadata。");
+  }
+  assertNoForbiddenRowImportMetadataKeys(rows);
+  for (const row of rows) {
+    if (row.visibility !== "finance_only") {
+      throw new Error("row import 只能创建 finance_only rows。");
+    }
+  }
+}
+
 async function getQuoteSourceUploadByStagingBatchId(stagingBatchId: string, db: QuoteSourceRowImportPrisma) {
   return db.quoteSourceUpload.findFirst({
     where: { stagingBatchId },
@@ -132,8 +168,6 @@ export async function importQuoteSourceRows(
   }
 
   const databaseUrl = options.databaseUrl ?? process.env.DATABASE_URL;
-  assertNonProductionDatabaseUrl(databaseUrl);
-
   const db = options.db ?? prisma;
   const batch = await db.quoteSourceStagingBatch.findUnique({
     where: { id: input.batchId },
@@ -150,9 +184,7 @@ export async function importQuoteSourceRows(
   if (!upload) {
     throw new Error("未找到与该 staging batch 关联的报价表上传记录。");
   }
-  if (upload.uploadStatus !== "uploaded") {
-    throw new Error("只有 uploaded 状态的报价表上传记录可以导入 rows。");
-  }
+  assertUploadCanImportRows(upload, batch.id);
 
   const readObjectBuffer = options.readObjectBuffer ?? readQuoteSourceUploadObjectBuffer;
   const fileBuffer = await readObjectBuffer(upload);
@@ -169,9 +201,7 @@ export async function importQuoteSourceRows(
     rows: workbookRows
   });
 
-  if (rows.length === 0) {
-    throw new Error("未识别到可导入的行级候选 metadata。");
-  }
+  assertRowsSafeForImport(rows);
 
   const auditMetadata = {
     batchId: batch.id,
@@ -197,9 +227,16 @@ export async function importQuoteSourceRows(
     if (!currentBatch) throw new Error("staging batch 不存在。");
     assertBatchCanImportRows(currentBatch);
 
-    const createdRows = await createQuoteSourceStagingRows(tx, currentBatch.id, rows, {
-      databaseUrl
-    });
+    const createdRows = await createQuoteSourceStagingRows(
+      tx,
+      currentBatch.id,
+      rows,
+      {
+        databaseUrl,
+        allowControlledProductionWrite: true,
+        productionWriteReason: FINANCE_QUOTE_SOURCE_ROW_IMPORT_UAT_REASON
+      }
+    );
     await tx.auditLog.create({
       data: {
         actorUserId: actor.id,
