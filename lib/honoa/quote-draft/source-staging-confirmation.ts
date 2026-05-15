@@ -1,6 +1,9 @@
 import type { PrismaClient } from "@prisma/client";
 import type { QuoteSourceStagingRepositoryOptions } from "./source-staging-repository-types";
-import { assertNonProductionDatabaseUrl } from "./source-staging-repository";
+import {
+  assertNonProductionDatabaseUrl,
+  FINANCE_STAGING_CONFIRM_UAT_REASON
+} from "./source-staging-repository";
 import { assertQuoteSourceStagingBatchTransition } from "./source-staging-status";
 import type {
   QuoteSourceStagingBatchStatus,
@@ -75,13 +78,16 @@ export async function confirmQuoteSourceStagingBatchForDraftCandidates(
   input: ConfirmQuoteSourceStagingBatchInput,
   options: QuoteSourceStagingRepositoryOptions = {}
 ): Promise<ConfirmQuoteSourceStagingBatchResult> {
-  assertNonProductionDatabaseUrl(options.databaseUrl);
+  assertNonProductionDatabaseUrl(options.databaseUrl, options, "quote_source_staging_confirmation");
 
   if (!input.actorUserId.trim()) {
     throw new Error("actorUserId is required to confirm quote source staging batch");
   }
 
   const policy = input.rowVisibilityPolicy ?? "strict_candidate_only";
+  if (policy !== "strict_candidate_only") {
+    throw new Error("quote source staging confirmation only supports strict_candidate_only");
+  }
 
   return prisma.$transaction(async (tx) => {
     const batch = await tx.quoteSourceStagingBatch.findUnique({
@@ -92,6 +98,8 @@ export async function confirmQuoteSourceStagingBatchForDraftCandidates(
     if (!batch) {
       throw new Error("quote source staging batch not found");
     }
+
+    assertConfirmationReady(batch, policy, options);
 
     const previousStatus = batch.status as QuoteSourceStagingBatchStatus;
     assertQuoteSourceStagingBatchTransition(previousStatus, "finance_confirmed");
@@ -147,6 +155,45 @@ export async function confirmQuoteSourceStagingBatchForDraftCandidates(
       }
     };
   });
+}
+
+function assertConfirmationReady(
+  batch: {
+    adapterId: string;
+    category: string | null;
+    status: string;
+    confirmedAt: Date | null;
+    rows: StoredConfirmationRow[];
+  },
+  policy: ConfirmQuoteSourceStagingBatchInput["rowVisibilityPolicy"],
+  options: QuoteSourceStagingRepositoryOptions
+) {
+  if (batch.status !== "dry_run_passed") {
+    return;
+  }
+  if (batch.confirmedAt) {
+    throw new Error("quote source staging batch is already confirmed");
+  }
+  if (batch.rows.length === 0) {
+    throw new Error("quote source staging confirmation requires existing staging rows");
+  }
+  if (!batch.rows.some((row) => row.visibility === "finance_only")) {
+    throw new Error("quote source staging confirmation requires finance_only rows");
+  }
+  if (policy !== "strict_candidate_only") {
+    throw new Error("quote source staging confirmation only supports strict_candidate_only");
+  }
+  if (process.env.NODE_ENV === "production" && options.allowControlledProductionWrite) {
+    if (options.productionWriteReason !== FINANCE_STAGING_CONFIRM_UAT_REASON) {
+      throw new Error("controlled production finance confirmation reason is invalid");
+    }
+    if (batch.adapterId !== "condenser-cost-2026") {
+      throw new Error("controlled production finance confirmation only supports condenser-cost-2026");
+    }
+    if (batch.category !== "冷凝器") {
+      throw new Error("controlled production finance confirmation only supports 冷凝器");
+    }
+  }
 }
 
 function canPromoteRowToExportDraftCandidate(

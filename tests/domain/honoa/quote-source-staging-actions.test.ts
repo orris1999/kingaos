@@ -174,6 +174,7 @@ function makeFakePrisma(overrides: {
 async function loadAction(fakePrisma: unknown) {
   vi.resetModules();
   vi.stubEnv("DATABASE_URL", "postgresql://user@127.0.0.1:55432/kingaos_action_unit_test?schema=public");
+  vi.stubEnv("KINGA_ENABLE_FINANCE_STAGING_CONFIRM", "true");
   mocks.prismaRef.current = fakePrisma as PrismaClient;
   return (await import("@/lib/honoa/quote-draft/source-staging-actions"))
     .confirmQuoteSourceStagingBatchAction;
@@ -237,6 +238,17 @@ describe("quote source staging confirmation server action boundary", () => {
     expect(JSON.stringify(result)).not.toContain("costPrice");
     expect(JSON.stringify(result)).not.toContain("minimumPrice");
     expect(JSON.stringify(result)).not.toContain("grossMargin");
+  });
+
+  it("rejects when the Finance staging confirmation feature flag is false", async () => {
+    const fake = makeFakePrisma();
+    const action = await loadAction(fake.prisma);
+    vi.stubEnv("KINGA_ENABLE_FINANCE_STAGING_CONFIRM", "false");
+    mocks.requireCurrentUser.mockResolvedValue(makeUser());
+
+    await expect(action({ batchId: fake.state.batch.id })).rejects.toThrow("not enabled");
+    expect(fake.prisma.$transaction).not.toHaveBeenCalled();
+    expect(fake.state.auditLogs).toHaveLength(0);
   });
 
   it("rejects regular admin, export staff, and unauthenticated callers", async () => {
@@ -313,6 +325,7 @@ describeWithDb("quote source staging confirmation server action local/test DB wr
   });
 
   beforeEach(() => {
+    vi.stubEnv("KINGA_ENABLE_FINANCE_STAGING_CONFIRM", "true");
     mocks.requireCurrentUser.mockResolvedValue(makeUser());
   });
 

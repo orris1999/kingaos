@@ -354,6 +354,37 @@ pm2 restart kingaos --update-env
 
 Codex 不应自动修改 ECS `.env`，也不应自动启用该 flag。
 
+## 009K-Fix controlled production confirmation path
+
+Quote Task 009K-Fix 修复 Finance staging confirmation action path。009K production UAT 失败的最可能原因是 confirmation domain 仍使用默认 production write guard，导致 feature flag 开启后也不能走受控生产确认写入。
+
+修复边界：
+
+1. 默认 production write guard 继续保留。
+2. Finance confirmation 只能通过 `confirmQuoteSourceStagingBatchAction` / confirmation domain 传入受控 production write reason。
+3. `KINGA_ENABLE_FINANCE_STAGING_CONFIRM` 仍必须为 `true`。
+4. 仍只允许 `super_admin`。
+5. `rowVisibilityPolicy` 只能是 `strict_candidate_only`。
+6. 不允许 `include_manual_review`。
+7. `dryRunDecisionStatus = manual_review_required` 不代表失败；它表示需要人工确认，`super_admin` 在该 action 中执行的正是人工确认。
+
+009K-Fix 后的 visibility promotion 仍然只允许：
+
+- `candidate + finance_only + cost_candidate_available`
+- `candidate + finance_only + quote_candidate_available`
+- `candidate + finance_only + not_finance_approved`
+
+以下行仍不会给出口部消费：
+
+- `needs_manual_review`
+- `addon_only`
+- `blocked`
+- `ignored`
+- `missing`
+- `requires_finance_review`
+
+009K-Fix 不执行 production UAT，不开启 production flag，不生成报价草稿或正式报价。production UAT 留到 009K-Retry。
+
 ## 错误状态
 
 未来页面应展示清晰错误：

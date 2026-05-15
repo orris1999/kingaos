@@ -153,6 +153,7 @@ function makeFakePrisma() {
 async function loadAction(fakePrisma: unknown) {
   vi.resetModules();
   vi.stubEnv("DATABASE_URL", "postgresql://user@127.0.0.1:55432/kingaos_flag_verify_test?schema=public");
+  vi.stubEnv("KINGA_ENABLE_FINANCE_STAGING_CONFIRM", "true");
   mocks.prismaRef.current = fakePrisma as PrismaClient;
   return (await import("@/lib/honoa/quote-draft/source-staging-actions"))
     .confirmQuoteSourceStagingBatchAction;
@@ -259,6 +260,17 @@ describe("Quote Task 007D Finance staging confirmation feature flag verification
     expect(JSON.stringify(auditLog.metadata)).not.toContain("sentToCustomer");
   });
 
+  it("server action rejects while the feature flag is false", async () => {
+    const fake = makeFakePrisma();
+    const action = await loadAction(fake.prisma);
+    vi.stubEnv("KINGA_ENABLE_FINANCE_STAGING_CONFIRM", "false");
+    mocks.requireCurrentUser.mockResolvedValue(makeUser());
+
+    await expect(action({ batchId: fake.state.batch.id })).rejects.toThrow("not enabled");
+    expect(fake.prisma.$transaction).not.toHaveBeenCalled();
+    expect(fake.state.auditLogs).toHaveLength(0);
+  });
+
   it("rejects regular admin, finance staff, export users, unauthenticated callers, and include_manual_review", async () => {
     const fake = makeFakePrisma();
     const action = await loadAction(fake.prisma);
@@ -288,13 +300,14 @@ describe("Quote Task 007D Finance staging confirmation feature flag verification
     ).rejects.toThrow("strict_candidate_only");
   });
 
-  it("keeps the production guard active before confirmation writes", async () => {
+  it("keeps production confirmation constrained to the controlled condenser path", async () => {
     vi.stubEnv("NODE_ENV", "production");
     const fake = makeFakePrisma();
     const action = await loadAction(fake.prisma);
     mocks.requireCurrentUser.mockResolvedValue(makeUser());
 
-    await expect(action({ batchId: fake.state.batch.id })).rejects.toThrow("disabled in production");
-    expect(fake.prisma.$transaction).not.toHaveBeenCalled();
+    await expect(action({ batchId: fake.state.batch.id })).rejects.toThrow("only supports condenser-cost-2026");
+    expect(fake.state.batch.status).toBe("dry_run_passed");
+    expect(fake.state.auditLogs).toHaveLength(0);
   });
 });

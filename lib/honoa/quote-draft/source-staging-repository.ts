@@ -50,8 +50,9 @@ const SENSITIVE_PRICE_FIELDS = [
 ] as const;
 
 export const FINANCE_QUOTE_SOURCE_ROW_IMPORT_UAT_REASON = "finance_quote_source_row_import_uat";
+export const FINANCE_STAGING_CONFIRM_UAT_REASON = "finance_staging_confirm_uat";
 
-type ControlledProductionWriteContext = "quote_source_staging_rows";
+type ControlledProductionWriteContext = "quote_source_staging_rows" | "quote_source_staging_confirmation";
 
 const BATCH_STATUSES: QuoteSourceStagingBatchStatus[] = [
   "draft",
@@ -90,11 +91,13 @@ export function assertNonProductionDatabaseUrl(
   controlledProductionWriteContext?: ControlledProductionWriteContext
 ) {
   if (process.env.NODE_ENV === "production") {
-    const controlledRowImportWrite =
-      controlledProductionWriteContext === "quote_source_staging_rows" &&
+    const controlledProductionWriteAllowed =
       options.allowControlledProductionWrite &&
-      options.productionWriteReason === FINANCE_QUOTE_SOURCE_ROW_IMPORT_UAT_REASON;
-    if (controlledRowImportWrite) {
+      ((controlledProductionWriteContext === "quote_source_staging_rows" &&
+        options.productionWriteReason === FINANCE_QUOTE_SOURCE_ROW_IMPORT_UAT_REASON) ||
+        (controlledProductionWriteContext === "quote_source_staging_confirmation" &&
+          options.productionWriteReason === FINANCE_STAGING_CONFIRM_UAT_REASON));
+    if (controlledProductionWriteAllowed) {
       return;
     }
     if (options.allowControlledProductionWrite) {

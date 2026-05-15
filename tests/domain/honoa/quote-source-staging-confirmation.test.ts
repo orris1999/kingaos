@@ -4,6 +4,7 @@ import {
   confirmQuoteSourceStagingBatchForDraftCandidates,
   createQuoteSourceStagingBatch,
   createQuoteSourceStagingRows,
+  FINANCE_STAGING_CONFIRM_UAT_REASON,
   getQuoteSourceStagingBatchById
 } from "@/lib/honoa/quote-draft";
 import type {
@@ -85,6 +86,129 @@ describe("quote source staging confirmation guard", () => {
           { databaseUrl: "postgresql://user@127.0.0.1:55432/kingaos_confirmation_test?schema=public" }
         )
       ).rejects.toThrow("disabled in production");
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("allows the controlled production confirmation path for condenser only", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const rows = [
+      {
+        id: "candidate-row",
+        rowStatus: "candidate",
+        visibility: "finance_only",
+        priceCandidateStatus: "cost_candidate_available"
+      },
+      {
+        id: "manual-row",
+        rowStatus: "needs_manual_review",
+        visibility: "finance_only",
+        priceCandidateStatus: "not_finance_approved"
+      }
+    ];
+    const fakePrisma = {
+      $transaction: async (callback: (tx: unknown) => Promise<unknown>) =>
+        callback({
+          quoteSourceStagingBatch: {
+            findUnique: async () => ({
+              id: "controlled-production-batch",
+              sourceFileName: "controlled-production-condenser.xlsx",
+              adapterId: "condenser-cost-2026",
+              category: "冷凝器",
+              status: "dry_run_passed",
+              notes: null,
+              confirmedAt: null,
+              rows
+            }),
+            update: async ({ data }: { data: { confirmedAt: Date; status: string } }) => ({
+              id: "controlled-production-batch",
+              sourceFileName: "controlled-production-condenser.xlsx",
+              adapterId: "condenser-cost-2026",
+              category: "冷凝器",
+              status: data.status,
+              confirmedAt: data.confirmedAt,
+              notes: null,
+              rows
+            })
+          },
+          quoteSourceStagingRow: {
+            updateMany: async ({ where, data }: { where: { id: { in: string[] } }; data: { visibility: string } }) => {
+              for (const row of rows) {
+                if (where.id.in.includes(row.id)) {
+                  row.visibility = data.visibility;
+                }
+              }
+              return { count: where.id.in.length };
+            },
+            findMany: async () => rows
+          }
+        })
+    };
+
+    try {
+      const result = await confirmQuoteSourceStagingBatchForDraftCandidates(
+        fakePrisma as Parameters<typeof confirmQuoteSourceStagingBatchForDraftCandidates>[0],
+        makeConfirmInput("controlled-production-batch"),
+        {
+          databaseUrl: "postgresql://user@127.0.0.1:55432/kingaos_confirmation_test?schema=public",
+          allowControlledProductionWrite: true,
+          productionWriteReason: FINANCE_STAGING_CONFIRM_UAT_REASON
+        }
+      );
+
+      expect(result.nextStatus).toBe("finance_confirmed");
+      expect(result.exportDraftCandidateRows).toBe(1);
+      expect(rows.find((row) => row.id === "candidate-row")?.visibility).toBe("export_draft_candidate");
+      expect(rows.find((row) => row.id === "manual-row")?.visibility).toBe("finance_only");
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("rejects controlled production confirmation for non-condenser batches", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const fakePrisma = {
+      $transaction: async (callback: (tx: unknown) => Promise<unknown>) =>
+        callback({
+          quoteSourceStagingBatch: {
+            findUnique: async () => ({
+              id: "controlled-production-radiator-batch",
+              sourceFileName: "controlled-production-radiator.xlsx",
+              adapterId: "radiator-cost-2026",
+              category: "水箱",
+              status: "dry_run_passed",
+              notes: null,
+              confirmedAt: null,
+              rows: [
+                {
+                  id: "candidate-row",
+                  rowStatus: "candidate",
+                  visibility: "finance_only",
+                  priceCandidateStatus: "cost_candidate_available"
+                }
+              ]
+            })
+          },
+          quoteSourceStagingRow: {
+            updateMany: async () => ({ count: 0 }),
+            findMany: async () => []
+          }
+        })
+    };
+
+    try {
+      await expect(
+        confirmQuoteSourceStagingBatchForDraftCandidates(
+          fakePrisma as Parameters<typeof confirmQuoteSourceStagingBatchForDraftCandidates>[0],
+          makeConfirmInput("controlled-production-radiator-batch"),
+          {
+            databaseUrl: "postgresql://user@127.0.0.1:55432/kingaos_confirmation_test?schema=public",
+            allowControlledProductionWrite: true,
+            productionWriteReason: FINANCE_STAGING_CONFIRM_UAT_REASON
+          }
+        )
+      ).rejects.toThrow("only supports condenser-cost-2026");
     } finally {
       vi.unstubAllEnvs();
     }
@@ -268,7 +392,7 @@ describeWithDb("quote source staging confirmation local/test DB action", () => {
     expect(found?.rows[0].visibility).toBe("finance_only");
   });
 
-  it("can explicitly include manual-review rows without changing addon, blocked, or ignored rows", async () => {
+  it("rejects include_manual_review and keeps strict_candidate_only as the only policy", async () => {
     const batch = await createQuoteSourceStagingBatch(
       prisma,
       makeBatchInput({ sourceFileName: `${sourcePrefix}-manual-include.xlsx` }),
@@ -296,23 +420,73 @@ describeWithDb("quote source staging confirmation local/test DB action", () => {
       repositoryOptions()
     );
 
+    await expect(
+      confirmQuoteSourceStagingBatchForDraftCandidates(
+        prisma,
+        makeConfirmInput(batch.id, { rowVisibilityPolicy: "include_manual_review" }),
+        repositoryOptions()
+      )
+    ).rejects.toThrow("strict_candidate_only");
+    const found = await getQuoteSourceStagingBatchById(prisma, batch.id, repositoryOptions());
+
+    expect(found?.rows.every((row) => row.visibility !== "export_draft_candidate")).toBe(true);
+  });
+
+  it("allows manual_review_required dry-run decision after super_admin human confirmation", async () => {
+    const batch = await createQuoteSourceStagingBatch(
+      prisma,
+      makeBatchInput({
+        sourceFileName: `${sourcePrefix}-manual-review-decision.xlsx`,
+        dryRunDecisionStatus: "manual_review_required"
+      }),
+      repositoryOptions()
+    );
+    await createQuoteSourceStagingRows(
+      prisma,
+      batch.id,
+      [
+        makeRowInput(batch.id, {
+          sourceRowNumber: 1,
+          priceCandidateStatus: "cost_candidate_available"
+        })
+      ],
+      repositoryOptions()
+    );
+
     const result = await confirmQuoteSourceStagingBatchForDraftCandidates(
       prisma,
-      makeConfirmInput(batch.id, { rowVisibilityPolicy: "include_manual_review" }),
+      makeConfirmInput(batch.id),
       repositoryOptions()
     );
     const found = await getQuoteSourceStagingBatchById(prisma, batch.id, repositoryOptions());
 
+    expect(result.nextStatus).toBe("finance_confirmed");
     expect(result.exportDraftCandidateRows).toBe(1);
-    expect(found?.rows.find((row) => row.sourceRowNumber === 1)?.visibility).toBe(
-      "export_draft_candidate"
+    expect(found?.rows[0].visibility).toBe("export_draft_candidate");
+  });
+
+  it("rejects dry_run_passed batches that already have confirmedAt", async () => {
+    const batch = await createQuoteSourceStagingBatch(
+      prisma,
+      makeBatchInput({
+        sourceFileName: `${sourcePrefix}-confirmed-at-existing.xlsx`,
+        status: "dry_run_passed",
+        confirmedAt: new Date().toISOString(),
+        confirmedByUserId: "existing-confirmer",
+        confirmedByName: "Existing Confirmer"
+      }),
+      repositoryOptions()
     );
-    expect(found?.rows.find((row) => row.rowStatus === "addon_only")?.visibility).not.toBe(
-      "export_draft_candidate"
+    await createQuoteSourceStagingRows(
+      prisma,
+      batch.id,
+      [makeRowInput(batch.id, { priceCandidateStatus: "cost_candidate_available" })],
+      repositoryOptions()
     );
-    expect(found?.rows.find((row) => row.rowStatus === "blocked")?.visibility).not.toBe(
-      "export_draft_candidate"
-    );
+
+    await expect(
+      confirmQuoteSourceStagingBatchForDraftCandidates(prisma, makeConfirmInput(batch.id), repositoryOptions())
+    ).rejects.toThrow("already confirmed");
   });
 
   it("keeps the confirmation result free of formal quote fields", async () => {

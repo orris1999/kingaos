@@ -1,6 +1,8 @@
 import { requireCurrentUser } from "@/lib/honoa/server/auth";
 import { prisma } from "@/lib/honoa/server/db";
+import { isFinanceStagingConfirmEnabled } from "@/lib/honoa/server/feature-flags";
 import { confirmQuoteSourceStagingBatchForDraftCandidates } from "./source-staging-confirmation";
+import { FINANCE_STAGING_CONFIRM_UAT_REASON } from "./source-staging-repository";
 import type {
   ConfirmQuoteSourceStagingBatchActionInput,
   ConfirmQuoteSourceStagingBatchActionResult,
@@ -51,6 +53,9 @@ export async function confirmQuoteSourceStagingBatchAction(
   if (actor.role !== "super_admin") {
     throw new Error("当前账号不能确认 Finance 报价表 staging。");
   }
+  if (!isFinanceStagingConfirmEnabled()) {
+    throw new Error("Finance staging confirmation is not enabled.");
+  }
 
   const rowVisibilityPolicy = normalizeRowVisibilityPolicy(input);
   const result = await confirmQuoteSourceStagingBatchForDraftCandidates(
@@ -62,7 +67,11 @@ export async function confirmQuoteSourceStagingBatchAction(
       confirmationNote: input.confirmationNote,
       rowVisibilityPolicy
     },
-    { databaseUrl: process.env.DATABASE_URL }
+    {
+      databaseUrl: process.env.DATABASE_URL,
+      allowControlledProductionWrite: true,
+      productionWriteReason: FINANCE_STAGING_CONFIRM_UAT_REASON
+    }
   );
 
   const metadata: QuoteSourceStagingConfirmationActionAuditMetadata = {

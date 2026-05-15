@@ -333,6 +333,35 @@ AuditLog：
 
 `rowStatus = candidate` 仍不等于出口部可用。后续必须经过财务确认和 visibility promotion，才可能成为 `export_draft_candidate`，且仍只用于询价 / 报价草稿。
 
+## Quote Task 009K-Fix finance confirmation action path
+
+009K-Fix 只修复受控 production finance-confirm action path，不新增 schema / migration，不执行 production confirm。
+
+修复原则：
+
+1. 保留 staging repository 默认 production guard。
+2. 只允许 Finance confirmation action 使用专用受控 production write reason。
+3. action 必须先通过 feature flag 和 `super_admin` 校验。
+4. `rowVisibilityPolicy` 必须是 `strict_candidate_only`。
+5. `include_manual_review` 必须拒绝。
+6. `manual_review_required` 不等于失败；它表示进入行级导入 / 可见性提升前需要人工确认。
+
+受控确认成功后才允许：
+
+1. `QuoteSourceStagingBatch.status` 从 `dry_run_passed` 变为 `finance_confirmed`。
+2. 写入确认人和确认时间。
+3. 只把合格 `candidate + finance_only` rows 提升为 `export_draft_candidate`。
+4. 写入脱敏 AuditLog `quote_source_staging.finance_confirmed`。
+
+仍然禁止：
+
+1. 提升 `needs_manual_review` / `addon_only` / `blocked` / `ignored` rows。
+2. 提升 `missing` / `requires_finance_review` rows。
+3. 保存具体价格、底价、毛利或 FinanceApprovedPrice。
+4. 生成报价草稿或正式报价。
+
+009K-Retry 才执行 production UAT。
+
 ## Quote Task 006F finance confirmation domain action
 
 006F 增加 Finance staging confirmation domain action。该 action 仍然只服务 staging metadata，只允许在 local / test DB 中测试，不开放 UI、API route 或 server action，不读取真实 Excel，不导入报价表，不写 production 数据。

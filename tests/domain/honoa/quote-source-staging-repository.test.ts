@@ -2,8 +2,10 @@ import { PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   assertNonProductionDatabaseUrl,
+  FINANCE_STAGING_CONFIRM_UAT_REASON,
   createQuoteSourceStagingBatch,
   createQuoteSourceStagingRows,
+  FINANCE_QUOTE_SOURCE_ROW_IMPORT_UAT_REASON,
   getQuoteSourceStagingBatchById,
   listQuoteSourceStagingBatches,
   listQuoteSourceStagingRows,
@@ -79,6 +81,41 @@ describe("Quote source staging repository guard", () => {
       expect(() =>
         assertNonProductionDatabaseUrl("postgresql://user@127.0.0.1:55432/kingaos_test?schema=public")
       ).toThrow("disabled in production");
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("keeps the default production guard while allowing only explicit controlled reasons", () => {
+    vi.stubEnv("NODE_ENV", "production");
+
+    try {
+      expect(() =>
+        assertNonProductionDatabaseUrl("postgresql://user@127.0.0.1:55432/kingaos_test?schema=public", {
+          allowControlledProductionWrite: true,
+          productionWriteReason: FINANCE_QUOTE_SOURCE_ROW_IMPORT_UAT_REASON
+        })
+      ).toThrow("reason is invalid");
+      expect(() =>
+        assertNonProductionDatabaseUrl(
+          "postgresql://user@127.0.0.1:55432/kingaos_test?schema=public",
+          {
+            allowControlledProductionWrite: true,
+            productionWriteReason: FINANCE_QUOTE_SOURCE_ROW_IMPORT_UAT_REASON
+          },
+          "quote_source_staging_rows"
+        )
+      ).not.toThrow();
+      expect(() =>
+        assertNonProductionDatabaseUrl(
+          "postgresql://user@127.0.0.1:55432/kingaos_test?schema=public",
+          {
+            allowControlledProductionWrite: true,
+            productionWriteReason: FINANCE_STAGING_CONFIRM_UAT_REASON
+          },
+          "quote_source_staging_confirmation"
+        )
+      ).not.toThrow();
     } finally {
       vi.unstubAllEnvs();
     }
