@@ -619,6 +619,37 @@ No-Go 条件：
 - 让出口部看到候选金额。
 - 生成正式报价或绕过 FinancePricing。
 
+## Quote Task 009Q Candidate Amount Import Guard 验收
+
+009Q 只验收 candidate amount import 的 controlled production guard，不验收 production import。
+
+验收条件：
+
+1. repository 默认 production write guard 必须保留。
+2. production 中缺少 `allowControlledProductionWrite` 必须拒绝写入。
+3. production 中 reason 不匹配必须拒绝写入。
+4. reason 必须固定为 `finance_quote_candidate_amount_import_uat`。
+5. 只有 candidate amount import action 可以传入 controlled option。
+6. action 必须校验 feature flag 和 `super_admin`。
+7. action 必须校验 `finance_confirmed` batch。
+8. action 必须校验 `export_draft_candidate` rows 存在。
+9. action 不得处理 `needs_manual_review` rows。
+10. action 只允许 `export_usd` / `domestic_cny`。
+11. action 必须拒绝 `unknown`。
+12. repository 必须强制 `visibility = finance_only`。
+13. repository 必须强制 `status = not_finance_approved`。
+14. repository 必须强制 `isFinanceApprovedPrice = false`。
+15. repository 必须强制 `canBeSentToCustomer = false`。
+16. action result 和 AuditLog metadata 不得包含 `candidateValue`、真实金额、底价、毛利或正式报价字段。
+17. 不得生成 `QuoteDraft` / `QuoteDraftLine` 或正式报价。
+
+No-Go 条件：
+
+- 本轮执行 production import。
+- 修改 ECS `.env` 或启用 production feature flag。
+- 新增 Prisma schema / migration。
+- 让出口部看到候选金额。
+
 ## Go / No-Go
 
 Go 条件：

@@ -591,3 +591,18 @@ Action 边界：
 6. action result 不返回 `candidateValue`，也不返回 `costPrice`、`quotePrice`、`amount`、`financeApprovedPrice`、底价或毛利。
 
 009P 不生成 `QuoteDraft` / `QuoteDraftLine`，不生成正式报价。后续如果候选金额要进入 Export preview，必须先做 visibility promotion / masking / FinancePricing 设计和 UAT。
+
+## Quote Task 009Q｜Candidate amount controlled production guard
+
+009Q 只准备受控 production import path，不改变 Export Workbench consumption 行为，也不向出口部展示候选金额。
+
+controlled path 约束：
+
+1. 必须同时满足 feature flag、`super_admin`、`finance_confirmed` batch、`export_draft_candidate` rows。
+2. `unknown` tradeMode 不允许进入 import。
+3. `needs_manual_review` rows 不导入候选金额。
+4. 写入结果仍是 `visibility = finance_only`，出口部不可见。
+5. 候选金额不是 `FinanceApprovedPrice`，不能发客户。
+6. 009R 才执行 production UAT。
+
+即使后续完成 production import，Export 仍不能直接消费金额；必须另做 visibility / masking / FinancePricing / AuditLog 任务。

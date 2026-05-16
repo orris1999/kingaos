@@ -5,9 +5,11 @@ import { prisma } from "./db";
 import { isFinanceQuoteCandidateAmountImportEnabled } from "./feature-flags";
 import { readQuoteSourceUploadObjectBuffer } from "./quote-source-upload-dry-run";
 import {
+  FINANCE_QUOTE_CANDIDATE_AMOUNT_IMPORT_UAT_REASON,
   QUOTE_CANDIDATE_AMOUNT_SOURCE_COLUMNS,
   getQuoteSourceWorkbookConfig,
   importQuoteCandidateAmounts,
+  type QuoteCandidateAmountStorageRecord,
   type QuoteCandidateAmountTradeMode,
   type QuoteCandidateAmountWorkbookRowLike
 } from "../quote-draft";
@@ -53,7 +55,7 @@ type CandidateAmountBatchRow = {
 
 const SUPPORTED_ADAPTER_ID = "condenser-cost-2026";
 const SUPPORTED_CATEGORY = "冷凝器";
-const ALLOWED_TRADE_MODES: QuoteCandidateAmountTradeMode[] = ["export_usd", "domestic_cny", "unknown"];
+const ALLOWED_TRADE_MODES: QuoteCandidateAmountTradeMode[] = ["export_usd", "domestic_cny"];
 const IMPORTABLE_PRICE_STATUSES = new Set(["cost_candidate_available", "quote_candidate_available", "not_finance_approved"]);
 const FORBIDDEN_RESULT_KEYS = [
   "candidateValue",
@@ -111,6 +113,9 @@ function normalizeTradeModes(tradeModes: QuoteCandidateAmountTradeMode[]) {
     throw new Error("候选金额导入至少需要一个 tradeMode。");
   }
   for (const tradeMode of normalized) {
+    if (tradeMode === "unknown") {
+      throw new Error("candidate amount import 不允许 unknown tradeMode。");
+    }
     if (!ALLOWED_TRADE_MODES.includes(tradeMode)) {
       throw new Error("候选金额导入 tradeMode 不合法。");
     }
@@ -285,6 +290,29 @@ function buildSanitizedResult(input: {
   return result;
 }
 
+function assertImportedCandidateAmountsSafe(records: QuoteCandidateAmountStorageRecord[]) {
+  if (records.length === 0) {
+    throw new Error("未识别到可导入的候选金额。");
+  }
+  for (const record of records) {
+    if (record.visibility !== "finance_only") {
+      throw new Error("candidate amount import 只能创建 finance_only 候选金额。");
+    }
+    if (record.status !== "not_finance_approved") {
+      throw new Error("candidate amount import 只能创建 not_finance_approved 候选金额。");
+    }
+    if (record.isFinanceApprovedPrice !== false) {
+      throw new Error("candidate amount import 不能生成 FinanceApprovedPrice。");
+    }
+    if (record.canBeSentToCustomer !== false) {
+      throw new Error("candidate amount import 不能生成可发客户金额。");
+    }
+    if (record.requiresFinancePricing !== true) {
+      throw new Error("candidate amount import 必须要求后续 FinancePricing。");
+    }
+  }
+}
+
 export async function importQuoteCandidateAmountsForBatch(
   actor: AuthUser,
   input: ImportQuoteCandidateAmountsActionInput,
@@ -361,8 +389,13 @@ export async function importQuoteCandidateAmountsForBatch(
         importedByUserId: actor.id,
         importedByName: actor.name
       },
-      { databaseUrl }
+      {
+        databaseUrl,
+        allowControlledProductionWrite: true,
+        productionWriteReason: FINANCE_QUOTE_CANDIDATE_AMOUNT_IMPORT_UAT_REASON
+      }
     );
+    assertImportedCandidateAmountsSafe(imported.records);
 
     const auditMetadata = {
       batchId: currentBatch.id,

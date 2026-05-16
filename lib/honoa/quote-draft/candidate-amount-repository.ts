@@ -18,6 +18,8 @@ type QuoteCandidateAmountPrisma = Pick<PrismaClient, "quoteCandidateAmount">;
 
 type StoredQuoteCandidateAmount = Awaited<ReturnType<PrismaClient["quoteCandidateAmount"]["create"]>>;
 
+export const FINANCE_QUOTE_CANDIDATE_AMOUNT_IMPORT_UAT_REASON = "finance_quote_candidate_amount_import_uat";
+
 const SOURCES: QuoteCandidateAmountSource[] = [
   "finance_quote_source_staging",
   "manual_finance_review",
@@ -73,7 +75,7 @@ export async function findQuoteCandidateAmountBySourceKey(
   key: QuoteCandidateAmountSourceKey,
   options: QuoteCandidateAmountRepositoryOptions = {}
 ): Promise<QuoteCandidateAmountStorageRecord | null> {
-  assertNonProductionDatabaseUrl(options.databaseUrl);
+  assertCandidateAmountRepositoryWriteAllowed(options);
   assertNoSensitiveCandidateAmountFields(key);
   assertAllowed(key.tradeMode, TRADE_MODES, "invalid quote candidate amount tradeMode");
 
@@ -94,12 +96,14 @@ export async function createQuoteCandidateAmount(
   input: CreateQuoteCandidateAmountInput,
   options: QuoteCandidateAmountRepositoryOptions = {}
 ): Promise<QuoteCandidateAmountStorageRecord> {
-  assertNonProductionDatabaseUrl(options.databaseUrl);
+  assertCandidateAmountRepositoryWriteAllowed(options);
   assertNoSensitiveCandidateAmountFields(input);
 
   const source = input.source ?? "finance_quote_source_staging";
   const status = input.status ?? "not_finance_approved";
   const visibility = input.visibility ?? "finance_only";
+
+  assertCandidateAmountStorageBoundary(input, status, visibility);
 
   assertAllowed(input.tradeMode, TRADE_MODES, "invalid quote candidate amount tradeMode");
   assertAllowed(input.currency, CURRENCIES, "invalid quote candidate amount currency");
@@ -153,7 +157,7 @@ export async function deleteQuoteCandidateAmountsForTest(
   filter: { stagingBatchId: string },
   options: QuoteCandidateAmountRepositoryOptions = {}
 ) {
-  assertNonProductionDatabaseUrl(options.databaseUrl);
+  assertCandidateAmountRepositoryWriteAllowed(options);
 
   await prisma.quoteCandidateAmount.deleteMany({
     where: {
@@ -173,10 +177,59 @@ export function assertNoSensitiveCandidateAmountFields(value: unknown, path: str
   }
 
   for (const key of Object.keys(value)) {
-    if (SENSITIVE_CANDIDATE_AMOUNT_FIELDS.includes(key as (typeof SENSITIVE_CANDIDATE_AMOUNT_FIELDS)[number])) {
+    const normalizedKey = key.toLowerCase();
+    const sensitiveField = SENSITIVE_CANDIDATE_AMOUNT_FIELDS.find((field) =>
+      normalizedKey.includes(field.toLowerCase())
+    );
+    if (sensitiveField) {
       throw new Error(`quote candidate amount cannot include sensitive fields: ${[...path, key].join(".")}`);
     }
     assertNoSensitiveCandidateAmountFields((value as Record<string, unknown>)[key], [...path, key]);
+  }
+}
+
+function assertCandidateAmountRepositoryWriteAllowed(options: QuoteCandidateAmountRepositoryOptions = {}) {
+  if (process.env.NODE_ENV === "production") {
+    if (
+      options.allowControlledProductionWrite &&
+      options.productionWriteReason === FINANCE_QUOTE_CANDIDATE_AMOUNT_IMPORT_UAT_REASON
+    ) {
+      return;
+    }
+    if (options.allowControlledProductionWrite) {
+      throw new Error("controlled production write reason is invalid for quote candidate amount repository writes");
+    }
+    throw new Error("quote candidate amount repository writes are disabled in production");
+  }
+
+  assertNonProductionDatabaseUrl(options.databaseUrl);
+}
+
+function assertCandidateAmountStorageBoundary(
+  input: CreateQuoteCandidateAmountInput,
+  status: QuoteCandidateAmountStatus,
+  visibility: QuoteCandidateAmountVisibility
+) {
+  const rawInput = input as CreateQuoteCandidateAmountInput & {
+    isFinanceApprovedPrice?: unknown;
+    canBeSentToCustomer?: unknown;
+    requiresFinancePricing?: unknown;
+  };
+
+  if (visibility !== "finance_only") {
+    throw new Error("quote candidate amount visibility must be finance_only");
+  }
+  if (status !== "not_finance_approved") {
+    throw new Error("quote candidate amount status must be not_finance_approved");
+  }
+  if ("isFinanceApprovedPrice" in rawInput && rawInput.isFinanceApprovedPrice !== false) {
+    throw new Error("quote candidate amount cannot be FinanceApprovedPrice");
+  }
+  if ("canBeSentToCustomer" in rawInput && rawInput.canBeSentToCustomer !== false) {
+    throw new Error("quote candidate amount cannot be sent to customer");
+  }
+  if ("requiresFinancePricing" in rawInput && rawInput.requiresFinancePricing !== true) {
+    throw new Error("quote candidate amount must require FinancePricing");
   }
 }
 

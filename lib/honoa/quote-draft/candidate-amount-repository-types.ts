@@ -56,6 +56,8 @@ export type QuoteCandidateAmountSourceKey = {
 
 export type QuoteCandidateAmountRepositoryOptions = {
   databaseUrl?: string;
+  allowControlledProductionWrite?: boolean;
+  productionWriteReason?: "finance_quote_candidate_amount_import_uat";
 };
 
 export type QuoteCandidateAmountStorageBoundary = {

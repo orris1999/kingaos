@@ -275,3 +275,20 @@ action result 和 AuditLog metadata 只返回脱敏统计，不返回 `candidate
 5. `requiresFinancePricing = true`
 
 009P 不生成 `QuoteDraft` / `QuoteDraftLine`，不生成正式报价。production 导入需要 009Q 单独做受控 production write path 和 UAT。
+
+## Quote Task 009Q controlled production guard
+
+009Q 只修复 / 确认 candidate amount import 的受控 production 写入通道，不执行 production import，不启用 production feature flag。
+
+production candidate amount import 必须走 controlled path：
+
+1. repository 默认 production guard 保留，缺少 controlled option 时仍拒绝 production 写入。
+2. controlled option 必须显式传入 `productionWriteReason = finance_quote_candidate_amount_import_uat`。
+3. 只有 `quote-candidate-amount-import` action 可以传入该 option。
+4. action 必须先完成 feature flag、`super_admin`、`finance_confirmed` batch、`export_draft_candidate` rows、upload/storageKey、tradeMode 和 importer 输出校验。
+5. `unknown` 不允许进入 production import。
+6. repository 写入前再次复核 `visibility = finance_only`、`status = not_finance_approved`、`isFinanceApprovedPrice = false`、`canBeSentToCustomer = false`、`requiresFinancePricing = true`。
+
+AuditLog `quote_candidate_amount.imported` 只允许写脱敏统计，不得包含 `candidateValue`、真实金额、底价、毛利、完整 Excel 行、signed URL 或 AccessKey。
+
+009Q 不生成 `QuoteDraft` / `QuoteDraftLine`，不生成正式报价。真正 production UAT 留到 009R。

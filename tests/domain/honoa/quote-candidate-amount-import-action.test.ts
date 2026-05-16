@@ -297,12 +297,30 @@ describe("Quote Task 009P candidate amount import action", () => {
     expect(JSON.stringify(created)).not.toContain("2026.4.10");
   });
 
-  it("does not import unknown trade mode or old-date-only values", async () => {
-    const unknown = await runAction({ tradeModes: ["unknown"] });
-    expect(unknown.result.candidateAmountCount).toBe(0);
-    expect(unknown.db.auditLog.create).not.toHaveBeenCalled();
+  it("rejects unknown trade mode and old-date-only values without writing success audit log", async () => {
+    await expect(runAction({ tradeModes: ["unknown"] })).rejects.toThrow("unknown tradeMode");
 
-    const oldDateOnly = await runAction({
+    const { db } = makeDb();
+    await expect(importQuoteCandidateAmountsForBatch(
+      SUPER_ADMIN,
+      { batchId: TEST_BATCH_ID, tradeModes: ["export_usd"] },
+      {
+        db: db as never,
+        databaseUrl: SAFE_DATABASE_URL,
+        importEnabled: true,
+        workbookRows: [
+          {
+            stagingRowId: EXPORT_ROW.id,
+            columns: {
+              "2026.4.10出口成本报价": "0.0000"
+            }
+          }
+        ]
+      }
+    )).rejects.toThrow("未识别到可导入的候选金额");
+    expect(db.auditLog.create).not.toHaveBeenCalled();
+
+    await expect(runAction({
       tradeModes: ["export_usd"],
       workbookRows: [
         {
@@ -312,9 +330,7 @@ describe("Quote Task 009P candidate amount import action", () => {
           }
         }
       ]
-    });
-    expect(oldDateOnly.result.candidateAmountCount).toBe(0);
-    expect(oldDateOnly.db.auditLog.create).not.toHaveBeenCalled();
+    })).rejects.toThrow("未识别到可导入的候选金额");
   });
 
   it("sets fixed finance-only and not-finance-approved boundaries", async () => {
@@ -367,24 +383,23 @@ describe("Quote Task 009P candidate amount import action", () => {
     expect(combined).not.toContain("officialQuote");
   });
 
-  it("keeps the repository production guard effective", async () => {
+  it("uses the controlled production write option only after action-level checks pass", async () => {
     vi.stubEnv("NODE_ENV", "production");
     try {
-      const { db } = makeDb();
-      await expect(
-        importQuoteCandidateAmountsForBatch(
-          SUPER_ADMIN,
-          { batchId: TEST_BATCH_ID, tradeModes: ["export_usd"] },
-          {
-            db: db as never,
-            databaseUrl: SAFE_DATABASE_URL,
-            importEnabled: true,
-            workbookRows: DEFAULT_WORKBOOK_ROWS
-          }
-        )
-      ).rejects.toThrow("production");
-      expect(db.quoteCandidateAmount.create).not.toHaveBeenCalled();
-      expect(db.auditLog.create).not.toHaveBeenCalled();
+      const { result, db, created } = await runAction({ tradeModes: ["export_usd"] });
+
+      expect(result.candidateAmountCount).toBe(1);
+      expect(created).toHaveLength(1);
+      expect(db.auditLog.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            action: "quote_candidate_amount.imported",
+            metadata: expect.not.objectContaining({
+              candidateValue: expect.anything()
+            })
+          })
+        })
+      );
     } finally {
       vi.unstubAllEnvs();
     }
