@@ -326,6 +326,17 @@ Quote Task 009O 新增候选金额 local/test importer，但仍不新增 product
 - repository 防止重复导入，并继续拒绝 production-like 写入。
 - 009O 不新增 API、server action、UI，不读取真实 Excel，不写 production 数据，不生成报价草稿或正式报价。
 
+Quote Task 009P 新增候选金额 local/test action / route，但 production 默认关闭：
+
+- 新增服务端 flag `KINGA_ENABLE_FINANCE_QUOTE_CANDIDATE_AMOUNT_IMPORT`，缺失 / false 默认关闭，不使用 `NEXT_PUBLIC_`。
+- 只允许 `super_admin` 调用。
+- 第一版只支持 `finance_confirmed + condenser-cost-2026 / 冷凝器` batch。
+- 只处理 `export_draft_candidate` rows，`needs_manual_review` rows 不导入金额。
+- `export_usd` / `domestic_cny` 分别导入 USD / CNY 当前候选金额，`unknown` 和旧日期列不导入。
+- 写入仍为 `finance_only` / `not_finance_approved`，不是 `FinanceApprovedPrice`，不能发客户。
+- action result 和 AuditLog metadata 脱敏，不返回 `candidateValue`、底价、毛利或正式报价字段。
+- 009P 只在 local/test DB 验证，不写 production 数据，不生成报价草稿或正式报价；production UAT 留到 009Q。
+
 ## V2｜KJ / OEM 混合匹配
 
 目标：在 KJ 精确匹配稳定后，把 OEM / OE 作为候选匹配能力接入。

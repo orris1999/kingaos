@@ -240,3 +240,38 @@ repository 写入必须通过 local/test guard：
 4. 同一个 `stagingRowId + tradeMode + sourceColumnName + sourceColumnDate` 不允许重复导入。
 
 009O 不写真实 AuditLog。后续 production 导入必须单独接 `quote_candidate_amount.imported`，且 metadata 只能包含 batch / row / source column / tradeMode / currency / visibility / status 等脱敏字段，不得包含 `candidateValue`、底价、毛利或完整 Excel 行。
+
+## Quote Task 009P local/test import action
+
+009P 新增 feature-gated candidate amount import action / route，但 production 默认关闭。本轮只在 local/test DB 验证，不写 production 数据，不新增 UI，不让出口部看到金额。
+
+Feature flag：
+
+```text
+KINGA_ENABLE_FINANCE_QUOTE_CANDIDATE_AMOUNT_IMPORT=false
+```
+
+规则：
+
+1. 缺失或非 `true` 时默认关闭。
+2. 只允许 `super_admin` 调用。
+3. 第一版只支持 `condenser-cost-2026 / 冷凝器`。
+4. 只处理 `finance_confirmed` batch。
+5. 只处理 `export_draft_candidate` 且 `rowStatus=candidate` 的 rows。
+6. `needs_manual_review` rows 不导入候选金额。
+7. `export_usd` 导入 USD 候选金额，来源列仍是 `2026.5.11出口成本报价`。
+8. `domestic_cny` 导入 CNY 候选金额，来源列仍是 `2026.5.11出口部内销成本报价`。
+9. `unknown` 不导入金额。
+10. `2026.4.10` 等旧日期列不导入。
+
+action result 和 AuditLog metadata 只返回脱敏统计，不返回 `candidateValue`，也不返回 `costPrice`、`quotePrice`、`unitPrice`、`amount`、`financeApprovedPrice`、底价、毛利、完整 Excel 行、signed URL 或 AccessKey。
+
+009P 仍固定：
+
+1. `QuoteCandidateAmount.visibility = finance_only`
+2. `QuoteCandidateAmount.status = not_finance_approved`
+3. `isFinanceApprovedPrice = false`
+4. `canBeSentToCustomer = false`
+5. `requiresFinancePricing = true`
+
+009P 不生成 `QuoteDraft` / `QuoteDraftLine`，不生成正式报价。production 导入需要 009Q 单独做受控 production write path 和 UAT。

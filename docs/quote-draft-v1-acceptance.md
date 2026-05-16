@@ -584,6 +584,41 @@ No-Go 条件：
 - 新增 API route、server action、UI、Prisma model 或 migration。
 - 让出口部看到候选金额。
 
+## Quote Task 009P Candidate Amount Import Action 验收
+
+009P 只验收 feature-gated candidate amount import action / route 的 local/test DB 行为，不验收 production 导入。
+
+验收条件：
+
+1. 必须新增 `KINGA_ENABLE_FINANCE_QUOTE_CANDIDATE_AMOUNT_IMPORT`，缺失 / false 默认关闭。
+2. 不得使用 `NEXT_PUBLIC_` 暴露该 flag。
+3. 必须新增 candidate amount import action / route。
+4. 只允许 `super_admin`。
+5. 第一版只支持 `condenser-cost-2026 / 冷凝器`。
+6. batch 必须是 `finance_confirmed`。
+7. 只处理 `export_draft_candidate` rows。
+8. `needs_manual_review` rows 不得导入候选金额。
+9. `export_usd` 必须导入 USD 候选金额。
+10. `domestic_cny` 必须导入 CNY 候选金额。
+11. `unknown` 不得导入候选金额。
+12. `2026.4.10` 等旧日期列不得导入。
+13. 创建的 `QuoteCandidateAmount` 必须默认 `visibility = finance_only`。
+14. 创建的 `QuoteCandidateAmount` 必须默认 `status = not_finance_approved`。
+15. `isFinanceApprovedPrice` 必须为 false。
+16. `canBeSentToCustomer` 必须为 false。
+17. `requiresFinancePricing` 必须为 true。
+18. action result 不得返回 `candidateValue`、`costPrice`、`quotePrice`、`unitPrice`、`amount`、`financeApprovedPrice`、`minimumPrice`、`grossMargin`、`officialQuote` 或 `sentToCustomer`。
+19. 不得生成 `QuoteDraft` / `QuoteDraftLine` 或正式报价。
+20. local/test DB 测试必须创建并读回 `QuoteCandidateAmount`，测试后清理。
+21. repository production guard 必须仍然生效。
+
+No-Go 条件：
+
+- 写 production 数据。
+- 启用 production feature flag。
+- 让出口部看到候选金额。
+- 生成正式报价或绕过 FinancePricing。
+
 ## Go / No-Go
 
 Go 条件：

@@ -576,3 +576,18 @@ Importer 边界：
 8. `candidateValue` 仍不是 `FinanceApprovedPrice`，不能直接发客户。
 
 009O 不新增 API route、server action 或 UI，也不生成 `QuoteDraft` / `QuoteDraftLine`。后续如果要让 Export 看到金额，必须另立 visibility / FinancePricing / AuditLog / UAT 任务，并保留“非正式报价”警示。
+
+## Quote Task 009P｜Candidate amount import action
+
+009P 新增 candidate amount import action / route，但仍不改变 Export Workbench consumption 行为，也不把候选金额展示给出口部。
+
+Action 边界：
+
+1. `KINGA_ENABLE_FINANCE_QUOTE_CANDIDATE_AMOUNT_IMPORT` 缺失或 false 时默认关闭。
+2. 只允许 `super_admin`，production 默认不开放。
+3. 只处理 `finance_confirmed` 的冷凝器 batch。
+4. 只处理 `export_draft_candidate` rows，`needs_manual_review` rows 不导入金额。
+5. `export_usd` / `domestic_cny` 分别导入 USD / CNY 候选金额，但默认仍是 `finance_only`。
+6. action result 不返回 `candidateValue`，也不返回 `costPrice`、`quotePrice`、`amount`、`financeApprovedPrice`、底价或毛利。
+
+009P 不生成 `QuoteDraft` / `QuoteDraftLine`，不生成正式报价。后续如果候选金额要进入 Export preview，必须先做 visibility promotion / masking / FinancePricing 设计和 UAT。

@@ -120,12 +120,14 @@ describe("Quote Task 009N quote candidate amount Prisma schema", () => {
     expect(sql).not.toMatch(/ALTER\s+TABLE[\s\S]*\bDROP\b/i);
   });
 
-  it("does not add quote candidate amount API route or server action", () => {
+  it("only adds the feature-gated quote candidate amount import API route", () => {
     const apiFiles = listFiles(path.join(repoRoot, "app/api"));
     const candidateAmountApiFiles = apiFiles.filter((file) =>
       /candidate-amount|candidateAmount|quote-candidate-amount|quoteCandidateAmount/.test(file)
     );
 
-    expect(candidateAmountApiFiles).toEqual([]);
+    expect(candidateAmountApiFiles).toEqual([
+      path.join(repoRoot, "app/api/finance/quote-source-staging/[batchId]/import-candidate-amounts/route.ts")
+    ]);
   });
 });
