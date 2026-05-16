@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { precheckQuoteSourceStagingRowImport } from "@/lib/honoa/quote-draft/source-staging-row-import-precheck";
+import { FinanceQuoteCandidateValueImportForm } from "./finance-quote-candidate-value-import-form";
 import { FinanceQuoteSourceStagingConfirmForm } from "./finance-quote-source-staging-confirm-form";
 
 export type QuoteSourceStagingDetailRow = {
@@ -78,11 +79,13 @@ function canBecomeExportDraftCandidate(row: QuoteSourceStagingDetailRow) {
 export function FinanceQuoteSourceStagingDetail({
   batch,
   confirmationEnabled = false,
-  rowImportEnabled = false
+  rowImportEnabled = false,
+  candidateValueImportEnabled = false
 }: {
   batch: QuoteSourceStagingDetailData | null;
   confirmationEnabled?: boolean;
   rowImportEnabled?: boolean;
+  candidateValueImportEnabled?: boolean;
 }) {
   if (!batch) {
     return (
@@ -239,6 +242,21 @@ export function FinanceQuoteSourceStagingDetail({
           batchId={batch.id}
           batchStatus={batch.status}
           enabled={confirmationEnabled}
+        />
+      </section>
+
+      <section className="panel stack">
+        <h2>候选金额导入</h2>
+        <p className="muted">
+          该入口只用于已登录 super_admin 的 UAT；请求必须由当前页面发起，浏览器会携带 httpOnly session cookie。
+        </p>
+        <p className="muted">
+          不从前端传 actorUserId；服务端只从 requireCurrentUser 识别操作者。
+        </p>
+        <FinanceQuoteCandidateValueImportForm
+          batchId={batch.id}
+          batchStatus={batch.status}
+          enabled={candidateValueImportEnabled}
         />
       </section>
 

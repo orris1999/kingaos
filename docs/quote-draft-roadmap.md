@@ -347,6 +347,15 @@ Quote Task 009Q 修复 candidate amount import controlled production guard，但
 - repository 复核 `finance_only` / `not_finance_approved` / 非 FinanceApprovedPrice / 不可发客户 / requires FinancePricing。
 - 009Q 不写 production、不启用 flag、不生成报价草稿或正式报价；009R 才做 production UAT。
 
+Quote Task 009R-Fix 修复 candidate amount import 的 authenticated UAT path，但不执行 production import：
+
+- 009R production UAT 失败原因是 import route 未获得 authenticated super_admin session；无 cookie curl 会被 `401 未登录` 正确拦截。
+- 新增 `/finance/quote-source-staging/[batchId]` 内的 feature-gated 候选金额导入表单，确保 UAT 由已登录 `super_admin` 页面发起。
+- 表单使用 same-origin request 携带 httpOnly session cookie，不从前端传 `actorUserId`。
+- route/action 继续保留 feature flag、`super_admin`、`finance_confirmed` batch、`export_draft_candidate` rows、tradeMode 和 controlled production reason 校验。
+- 只允许 `export_usd` / `domestic_cny`，拒绝 `unknown`；候选金额仍默认 `finance_only`，不是 `FinanceApprovedPrice`，不能发客户。
+- 009R-Fix 不修改 ECS `.env`、不写 production、不创建 `QuoteCandidateAmount`、不生成报价草稿或正式报价；009R-Retry 才执行 production UAT。
+
 ## V2｜KJ / OEM 混合匹配
 
 目标：在 KJ 精确匹配稳定后，把 OEM / OE 作为候选匹配能力接入。

@@ -650,6 +650,33 @@ No-Go 条件：
 - 新增 Prisma schema / migration。
 - 让出口部看到候选金额。
 
+## Quote Task 009R-Fix Candidate Amount Import Auth Path 验收
+
+009R-Fix 只验收 candidate amount import 的 authenticated UAT path，不验收 production import。
+
+验收条件：
+
+1. 必须定位 009R production UAT 失败原因：route 未获得 authenticated super_admin session。
+2. 无 cookie request 必须继续返回 `401`，不能绕过认证。
+3. 正确 UAT 必须通过已登录 `super_admin` 页面或 authenticated same-origin request。
+4. 不能从前端传 `actorUserId`，actor 只能由服务端 current-user session 识别。
+5. feature flag false 时候选金额导入按钮必须 disabled。
+6. feature flag true 时候选金额导入表单可见，并由浏览器 same-origin request 携带 session cookie。
+7. 表单只允许 `export_usd` / `domestic_cny`，不得提供 `unknown`。
+8. action / route 仍必须校验 feature flag、`super_admin`、`finance_confirmed` batch、`export_draft_candidate` rows、upload/storageKey 和 controlled production reason。
+9. action result 不得返回 `candidateValue`、`costPrice`、`quotePrice`、`unitPrice`、`amount`、`financeApprovedPrice`、`minimumPrice`、`grossMargin`、`officialQuote` 或 `sentToCustomer`。
+10. 不得生成 `QuoteDraft` / `QuoteDraftLine` 或正式报价。
+11. 不得新增 Prisma schema / migration。
+
+No-Go 条件：
+
+- 本轮执行 production import。
+- 修改 ECS `.env` 或启用 production feature flag。
+- 直接用 Prisma 创建候选金额。
+- 让出口部看到候选金额。
+
+009R-Retry 才执行 production UAT。
+
 ## Go / No-Go
 
 Go 条件：

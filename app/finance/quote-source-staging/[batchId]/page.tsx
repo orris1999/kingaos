@@ -7,6 +7,7 @@ import { Forbidden, KingaShell } from "@/components/kinga-shell";
 import { requireCurrentUser } from "@/lib/honoa/server/auth";
 import { prisma } from "@/lib/honoa/server/db";
 import {
+  isFinanceQuoteCandidateAmountImportEnabled,
   isFinanceQuoteSourceRowImportEnabled,
   isFinanceStagingConfirmEnabled
 } from "@/lib/honoa/server/feature-flags";
@@ -98,6 +99,7 @@ export default async function FinanceQuoteSourceStagingDetailPage({
   });
   const confirmationEnabled = isFinanceStagingConfirmEnabled();
   const rowImportEnabled = isFinanceQuoteSourceRowImportEnabled();
+  const candidateValueImportEnabled = isFinanceQuoteCandidateAmountImportEnabled();
 
   return (
     <KingaShell user={user}>
@@ -117,6 +119,7 @@ export default async function FinanceQuoteSourceStagingDetailPage({
           batch={mapBatch(batch)}
           confirmationEnabled={confirmationEnabled}
           rowImportEnabled={rowImportEnabled}
+          candidateValueImportEnabled={candidateValueImportEnabled}
         />
       </div>
     </KingaShell>

@@ -292,3 +292,21 @@ production candidate amount import 必须走 controlled path：
 AuditLog `quote_candidate_amount.imported` 只允许写脱敏统计，不得包含 `candidateValue`、真实金额、底价、毛利、完整 Excel 行、signed URL 或 AccessKey。
 
 009Q 不生成 `QuoteDraft` / `QuoteDraftLine`，不生成正式报价。真正 production UAT 留到 009R。
+
+## Quote Task 009R-Fix authenticated UAT path
+
+009R production UAT 已证明 controlled production guard 之外还需要明确 authenticated session 执行路径。009R 失败原因不是业务校验或 repository guard，而是调用 candidate amount import route 时未获得 authenticated super_admin session：无 cookie 的 curl / 非浏览器同源请求会被 route 返回 `401 未登录` 拦截。
+
+009R-Fix 修复 UAT 执行方式：
+
+1. `/finance/quote-source-staging/[batchId]` 增加 feature-gated 候选金额导入表单。
+2. 表单只在已登录 `super_admin` 页面渲染后发起请求。
+3. 浏览器同源请求必须使用 `credentials: "same-origin"`，自动携带 httpOnly session cookie。
+4. 不能用无 cookie curl 直接调用 route。
+5. 前端不传 `actorUserId`；操作者只能由服务端 `requireCurrentUser` / current-user cookie 识别。
+6. route 仍拒绝未登录请求，返回 `401`。
+7. feature flag、`super_admin`、`finance_confirmed` batch、`export_draft_candidate` rows、tradeMode、upload/storageKey 和 controlled production reason 全部保留。
+
+表单只允许 `export_usd` 和 `domestic_cny`，不提供 `unknown`。候选金额导入后仍默认 `finance_only`，不是 `FinanceApprovedPrice`，不能发客户，不生成 `QuoteDraft` / `QuoteDraftLine`，不生成正式报价。
+
+009R-Fix 不执行 production import，不修改 ECS `.env`，不创建 `QuoteCandidateAmount` production 记录。真正 production UAT 留到 009R-Retry。
